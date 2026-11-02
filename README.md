@@ -20,7 +20,7 @@ data.go.kr  ──┴─▶ krx-lean (download → build) ──▶ LEAN (built 
 data, live trading.
 
 **Platforms:** Linux (Ubuntu 24.04 / 22.04 tested) and Windows through WSL2. Other glibc Linux
-distributions should work. macOS is not supported yet.
+distributions should work. macOS is not tested yet.
 
 ## Pick a track
 
