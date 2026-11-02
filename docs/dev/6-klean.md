@@ -1,0 +1,62 @@
+# 6. klean internals
+
+klean is the local part of the LEAN CLI's workflow, rebuilt on a LEAN source build: standard
+library only, no Docker, no account. Projects keep the LEAN CLI's layout, so a Python project
+also runs under `lean backtest`.
+
+| Module | Does |
+|---|---|
+| `workspace.py` | `klean.json` (load/save, found upwards from the current folder), tested LEAN commit, Python package pins, `dotnet` and libpython lookup, `doctor` checks |
+| `cli.py` | commands; `install-lean`, `install-python` (uv's 3.11), `init`, `data install/status`, `config`, `lean status/update` |
+| `projects.py` | templates (Python, C#), algorithm class detection, `.csproj` (references the launcher DLLs; excludes `backtests/**`, `optimizations/**`) |
+| `backtest.py` | `prepare` (py_compile + requirements, or `dotnet build`), `run_once` (code snapshot, per-run config, launcher, manifest), `backtest` |
+| `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `data status` |
+| `optimize.py` | grid search |
+| `report.py` | LEAN's Report |
+| `gui.py`, `static/index.html` | local web page |
+
+## A run
+
+1. `prepare`: Python — `py_compile` every project `.py` (outside output folders) and
+   `pip install -r requirements.txt` into the 3.11 env; C# — `dotnet build` with
+   `-p:LeanBin=<launcher dir>` into `<project>/bin/<config>/`.
+2. `run_once`: copy the project's source files into `<run>/code/` (excluding `backtests/`,
+   `optimizations/`, `bin/`, `obj/`, `__pycache__/`, hidden folders, `.ipynb_checkpoints/`, files
+   > 10 MB); write `<run>/config.json` = LEAN's `Launcher/config.json` (comments stripped) with
+   `parameters` emptied, plus the workspace's `lean_config` and `--extra-config`; run the
+   launcher with `--config`, `--data-folder <workspace>/data/`, `--results-destination-folder`,
+   `--parameters`; console to `console.txt`.
+3. `manifest.json`: klean version, project, language, algorithm, parameters, LEAN config,
+   build config, times, exit code, `krx_lean_commit` and `lean_commit` (`-dirty` with local
+   changes), the data's last date, Python env, host, sha256 of every source file, where the code
+   snapshot is.
+4. A run counts as successful if `*-summary.json` exists (Python's exit-time GIL abort gives a
+   non-zero exit code after the results are written).
+
+## Optimize
+
+LEAN's `Optimizer.Launcher` starts each backtest with only results folder, ids, parameters and
+algorithm options: no `--data-folder` and no `--config`, so its runs would read LEAN's own
+`Data/`. klean therefore compiles once and runs the grid itself in a thread pool, each
+combination an ordinary `run_once` into `optimizations/<opt>/<NNN>_k=v/` (sharing
+`optimizations/<opt>/code/`). Parameter values use `Decimal` (no float drift). Ranking: runs
+meeting the constraints by target, then runs failing them, then failed runs. Grid only (no Euler).
+
+## Report
+
+Builds `Report/` on first use and installs `matplotlib==3.8.4` into the 3.11 env. LEAN's
+`Report` accepts only some settings as arguments and reads `template.html`, `css/` and
+`ReportCharts.py` from the current folder, so klean runs it in a temporary folder with copies of
+those and a generated `config.json`. Known harmless log line: an `InteractiveBrokersFeeModel():
+unexpected equity Market krx` error at the end of the order replay (its replay algorithm uses the
+default brokerage model); the portfolios are computed before it. PDF: wkhtmltopdf, else headless
+Chromium with `@page { size: 1200px 1698px }` added to a temporary copy (one PDF page per report
+page).
+
+## GUI security
+
+`ThreadingHTTPServer` on 127.0.0.1, random port by default. Every request needs the random token
+(query string or `X-Klean-Token` header); POSTs need the header (a cross-site form can't set it).
+Every project, run and file path is resolved and must be inside the workspace (code files inside
+the run's snapshot). Reports are served with a Content-Security-Policy allowing no scripts.
+`Referrer-Policy: no-referrer` keeps the token out of requests the report page makes.

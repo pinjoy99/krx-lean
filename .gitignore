@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+.build/
+# Market data and workspaces: built locally with your own keys; never commit them.
+data/
+lean.zip
+klean.json
+# Keys
+.env
+*.key

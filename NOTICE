@@ -1,0 +1,12 @@
+krx-lean
+Copyright 2026 pinjoy99
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+krx-lean is an independent project. It is not affiliated with, endorsed by or sponsored by
+QuantConnect Corporation or Korea Exchange (KRX). "LEAN" and "QuantConnect" are names of
+QuantConnect Corporation; LEAN (https://github.com/QuantConnect/Lean, Apache-2.0) is used
+unmodified, cloned and built from source on the user's machine. krx-lean contains no LEAN code.
+
+No market data is included. Users download data with their own API keys (KRX Open API,
+data.go.kr) under those services' terms.
