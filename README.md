@@ -22,6 +22,9 @@ data, live trading.
 **Platforms:** Linux (Ubuntu 24.04 / 22.04 tested) and Windows through WSL2. Other glibc Linux
 distributions should work. macOS is not tested yet.
 
+**New here?** The [beginner's guide](https://pinjoy99.github.io/krx-lean/) walks you from a
+fresh computer to your first backtest in about 30 minutes.
+
 ## Pick a track
 
 | | [Users](docs/user/) | [Developers](docs/dev/) |

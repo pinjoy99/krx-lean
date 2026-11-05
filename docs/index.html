@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>krx-lean · Backtest Korean stocks on your own computer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232459c9'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="description" content="A beginner's guide to krx-lean: test KOSPI stock and ETF strategies in Python or C# with the open-source LEAN engine, locally and for free.">
+<style>
+:root {
+  --bg: #fbfbfa; --panel: #ffffff; --ink: #1d232b; --muted: #5d6773; --line: #e3e6ea;
+  --accent: #2459c9; --accent-soft: #eaf0fc; --code-bg: #f3f4f6; --warn: #9a5b00; --warn-soft: #fdf3e2;
+  --good: #1a7f4b; --radius: 10px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b; --panel: #1b1f24; --ink: #e6e9ed; --muted: #a0a9b4; --line: #2c323a;
+    --accent: #7aa2ff; --accent-soft: #1e2a42; --code-bg: #20252c; --warn: #f0b350; --warn-soft: #2e2618;
+    --good: #4cc38a;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; }
+a { color: var(--accent); }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+header.top { border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header.top .wrap { display: flex; align-items: center; gap: 18px; height: 54px; overflow-x: auto; white-space: nowrap; }
+header.top .brand { font-weight: 700; margin-right: auto; text-decoration: none; color: var(--ink); }
+header.top nav a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 14px; }
+header.top nav a:hover { color: var(--accent); }
+.hero { padding-top: 56px; padding-bottom: 36px; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -0.02em; }
+.hero p.lead { font-size: 19px; color: var(--muted); max-width: 680px; margin: 0 0 22px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
+.pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-block; padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid var(--accent); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.secondary { color: var(--accent); background: transparent; }
+section { padding: 34px 0; border-top: 1px solid var(--line); }
+section, .hero { scroll-margin-top: 60px; }
+h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+h3 { font-size: 18px; margin: 26px 0 6px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.step { display: grid; grid-template-columns: 44px 1fr; gap: 14px; margin-top: 26px; }
+.step .num { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700;
+  display: grid; place-items: center; margin-top: 2px; }
+.step > div { min-width: 0; }
+.step h3 { margin: 4px 0 6px; }
+.step p { margin: 6px 0; }
+.code { position: relative; margin: 10px 0 14px; }
+pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
+  overflow-x: auto; font: 13.5px/1.55 var(--mono); }
+code { font-family: var(--mono); font-size: 0.92em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+pre .c { color: var(--muted); }
+.copy { position: absolute; top: 8px; right: 8px; font: 600 12px system-ui, sans-serif; padding: 4px 9px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
+.copy:hover { color: var(--accent); border-color: var(--accent); }
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 15px; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); }
+.time { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 9px; margin-left: 6px; vertical-align: 2px; }
+figure { margin: 16px 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius); display: block; background: #fff; }
+figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+td code { overflow-wrap: anywhere; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 2px; color: var(--muted); }
+.tabs { display: flex; gap: 6px; margin: 10px 0 0; flex-wrap: wrap; }
+.tabs button { font: 600 14px system-ui, sans-serif; padding: 7px 14px; border-radius: 8px 8px 0 0; border: 1px solid var(--line);
+  border-bottom: none; background: var(--code-bg); color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--panel); color: var(--accent); }
+.tabpanel { border: 1px solid var(--line); border-radius: 0 8px 8px 8px; background: var(--panel); padding: 6px 16px 10px; }
+.tabpanel[hidden] { display: none; }
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+@media (max-width: 560px) {
+  .step { grid-template-columns: 1fr; gap: 4px; }
+  header.top nav a { margin-left: 8px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">krx-lean</a>
+    <nav>
+      <a href="#what">What it is</a>
+      <a href="#start">Get started</a>
+      <a href="#results">Results</a>
+      <a href="#real-data">Real data</a>
+      <a href="#strategy">Your strategy</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/pinjoy99/krx-lean">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="hero wrap">
+  <h1>Backtest Korean stocks<br>on your own computer</h1>
+  <p class="lead">krx-lean lets you test investment ideas on KOSPI stocks and ETFs: write a strategy in
+    Python or C#, run it over years of history, and see how it would have done, including Korean fees and taxes.</p>
+  <div class="pills">
+    <span class="pill">Free and open source</span>
+    <span class="pill">Runs locally</span>
+    <span class="pill">No account needed</span>
+    <span class="pill">Python or C#</span>
+    <span class="pill">Linux &amp; Windows (WSL2)</span>
+  </div>
+  <div class="btns">
+    <a class="btn primary" href="#start">Start in 30 minutes</a>
+    <a class="btn secondary" href="https://github.com/pinjoy99/krx-lean">View on GitHub</a>
+  </div>
+</div>
+
+<section id="what">
+  <div class="wrap">
+    <h2>What you get</h2>
+    <p class="sub">A <em>backtest</em> replays the past: your strategy decides what to buy and sell each day, and you see
+      the money it would have made or lost. krx-lean gives you everything needed to do that for the Korean market.</p>
+    <div class="grid">
+      <div class="card"><h3>Korean market data</h3><p>Daily prices of every KOSPI stock and ETF since 2010, including
+        delisted ones, downloaded from the exchange's official API with your own free key.</p></div>
+      <div class="card"><h3>Korean market rules</h3><p>Commission, securities transaction tax by date, KRX tick sizes,
+        splits and dividends, and the KOSPI 200 as the benchmark to beat.</p></div>
+      <div class="card"><h3>A professional engine</h3><p>Built on <a href="https://github.com/QuantConnect/Lean">LEAN</a>,
+        the open-source engine used by many quant traders, built from source on your machine.</p></div>
+      <div class="card"><h3>One easy tool</h3><p><code>klean</code> sets everything up, runs backtests, compares runs,
+        searches parameters, makes reports, and shows results in your browser.</p></div>
+    </div>
+    <div class="note warn" style="margin-top:18px"><strong>Not investment advice.</strong> Past results don't
+      predict future returns, and a backtest is only as good as its assumptions. krx-lean doesn't model slippage
+      or price limits yet, and it never places real orders.</div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <h2>Get started</h2>
+    <p class="sub">About 30 minutes, most of it waiting for downloads. You'll copy commands into a terminal; each
+      grey box has a <strong>Copy</strong> button. You don't need any API key for these steps: you'll try everything
+      on <strong>synthetic demo data</strong> first.</p>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div>
+        <h3>Open a Linux terminal <span class="time">5–10 min</span></h3>
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" aria-controls="tab-win" id="b-win">Windows</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-linux" id="b-linux">Linux</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-mac" id="b-mac">Mac</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="tab-win" aria-labelledby="b-win">
+          <p>krx-lean runs on Linux. Windows 10/11 can run Linux inside it with <strong>WSL2</strong>. Open
+            <em>PowerShell as Administrator</em> (right-click the Start button → Terminal (Admin)) and run:</p>
+          <div class="code"><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
+          <p>Restart when asked, then open <strong>Ubuntu</strong> from the Start menu and choose a user name and
+            password. That window is your terminal for everything below. Keep your files in Ubuntu's home folder
+            (<code>~</code>), not under <code>/mnt/c</code>, which is much slower.</p>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="tab-linux" aria-labelledby="b-linux" hidden>
+          <p>Open a terminal. Tested on <strong>Ubuntu 24.04 and 22.04</strong>; other Linux distributions should
+            work with the same steps (install the equivalent packages in step 2).</p>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="tab-mac" aria-labelledby="b-mac" hidden>
+          <p>macOS isn't supported yet. You can use a Linux virtual machine, or a Windows PC with WSL2.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <h3>Install the tools <span class="time">10–25 min</span></h3>
+        <p>System packages, the .NET 10 SDK (LEAN is written in C#), and <em>uv</em> (which provides Python 3.11 for
+          LEAN). Your password is asked for the first command.</p>
+        <div class="code"><pre><code>sudo apt update
+sudo apt install -y git curl unzip python3 python3-venv libicu-dev
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
+curl -LsSf https://astral.sh/uv/install.sh | sh
+echo 'export DOTNET_ROOT="$HOME/.dotnet"' &gt;&gt; ~/.bashrc
+echo 'export PATH="$HOME/.dotnet:$HOME/.krx-lean/venv/bin:$PATH"' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre></div>
+        <p>Then krx-lean itself, LEAN, and Python 3.11 for LEAN:</p>
+        <div class="code"><pre><code>git clone https://github.com/pinjoy99/krx-lean.git ~/krx-lean
+python3 -m venv ~/.krx-lean/venv
+~/.krx-lean/venv/bin/pip install -e ~/krx-lean
+klean install-lean --dir ~/Lean              <span class="c"># downloads and builds LEAN (2–10 min)</span>
+klean install-python --dir ~/.klean/py311    <span class="c"># Python 3.11 + pandas for LEAN</span></code></pre></div>
+        <p>Check: <code>klean --version</code> prints a version number. Warnings during the LEAN build are normal.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">3</div>
+      <div>
+        <h3>Set up a demo workspace <span class="time">1 min</span></h3>
+        <p>A <em>workspace</em> is a folder for your strategies and their results. This one gets
+          <strong>synthetic demo data</strong>: made-up stocks and indices that behave like a stock market, so you can
+          learn everything before your API key arrives.</p>
+        <div class="code"><pre><code>klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
+cd ~/krx-demo
+klean data install --demo
+klean doctor                   <span class="c"># every line should say OK</span></code></pre></div>
+        <div class="note warn">The demo data is <strong>not real</strong>: its companies (codes <code>D00010</code>…)
+          don't exist, and klean labels every result "SYNTHETIC DEMO DATA". It's for learning the tools, not for
+          judging strategies.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">4</div>
+      <div>
+        <h3>Run your first backtest <span class="time">2 min</span></h3>
+        <p>Create a project from the ready-made example (buy the 20 largest stocks, equal weights, rebalance every
+          month) and run it over 2011–2026:</p>
+        <div class="code"><pre><code>klean project-create Top20 --template top-market-cap
+klean backtest Top20</code></pre></div>
+        <p>After a minute or two you'll see statistics like the yearly return (CAGR), the worst fall (drawdown) and
+          the final value. Then look at it properly:</p>
+        <div class="code"><pre><code>klean report Top20      <span class="c"># a detailed HTML report</span>
+klean gui               <span class="c"># opens the results in your browser</span></code></pre></div>
+        <p>Under WSL, install <code>sudo apt install -y wslu</code> so <code>klean gui</code> can open your Windows
+          browser, or open the address it prints. Stop it with <kbd>Ctrl</kbd>+<kbd>C</kbd>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2>Reading the results</h2>
+    <p class="sub">What the numbers mean. (The pictures show the demo data, so the figures are made up.)</p>
+    <figure>
+      <img src="assets/gui-run.png" width="1280" height="860" loading="lazy"
+           alt="klean's browser view of a backtest: summary figures, the strategy's equity curve against the KOSPI 200, and the drawdown chart">
+      <figcaption><code>klean gui</code>: a run's figures, its value over time against the KOSPI 200 (dashed), and its drawdowns.</figcaption>
+    </figure>
+    <table>
+      <tr><th style="width:30%">Figure</th><th>Meaning</th></tr>
+      <tr><td>Compounding Annual Return (CAGR)</td><td>The average yearly growth. 8% means money doubles in about 9 years.</td></tr>
+      <tr><td>Drawdown</td><td>The largest fall from a peak. 50% means at the worst moment you'd have lost half. Ask yourself whether you could sit through it.</td></tr>
+      <tr><td>Sharpe Ratio</td><td>Return per unit of risk (ups and downs). Higher is better; above 1 is rare over long periods.</td></tr>
+      <tr><td>Benchmark (KOSPI 200)</td><td>What simply holding the market would have done. A strategy worth the effort should beat it after fees.</td></tr>
+      <tr><td>Total Fees</td><td>Commission and the securities transaction tax you'd have paid. Frequent trading costs a lot.</td></tr>
+      <tr><td>Alpha / Beta</td><td>Beta: how much the strategy moves with the market (1 = same). Alpha: return not explained by the market.</td></tr>
+    </table>
+    <figure>
+      <img src="assets/report.png" width="1000" height="960" loading="lazy"
+           alt="A page of LEAN's strategy report: key statistics, monthly returns heat map, cumulative returns against the benchmark, annual returns, returns per trade and asset allocation">
+      <figcaption><code>klean report</code>: LEAN's report with monthly and yearly returns, the benchmark, and more.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="real-data">
+  <div class="wrap">
+    <h2>Use real data</h2>
+    <p class="sub">When you're comfortable, get the real KOSPI data. It's free, but you need your own keys, and
+      approval can take a day, so apply early.</p>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div>
+        <h3>Get the keys</h3>
+        <p><strong>KRX Open API</strong> (required, prices): sign up at
+          <a href="https://openapi.krx.co.kr/">openapi.krx.co.kr</a>, request a key, and apply for the services
+          유가증권 일별매매정보, ETF 일별매매정보 and KOSPI 시리즈 일별시세정보.
+          <strong>data.go.kr</strong> (recommended, dividends): apply for 금융위원회_주식배당정보 at
+          <a href="https://www.data.go.kr/data/15043284/openapi.do">data.go.kr</a>.
+          <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/2-data.md">Step-by-step instructions</a>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <h3>Store them safely</h3>
+        <p>Put them in a file only you can read (never in your code):</p>
+        <div class="code"><pre><code>mkdir -p ~/.config &amp;&amp; touch ~/.config/krx-lean.env &amp;&amp; chmod 600 ~/.config/krx-lean.env
+nano ~/.config/krx-lean.env</code></pre></div>
+        <div class="code"><pre><code>KRX_API_KEY=your-krx-key
+DATA_GO_KR_KEY=your-data-go-kr-key</code></pre></div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <div>
+        <h3>Download and build the data <span class="time">1.5–2 hours, once</span></h3>
+        <div class="code"><pre><code>set -a; . ~/.config/krx-lean.env; set +a
+krx-lean --root ~/krx-data all</code></pre></div>
+        <p>This downloads every trading day since 2010. If it stops, run the same command again: it continues where it
+          left off. Later updates take a minute.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">4</div>
+      <div>
+        <h3>A workspace for real data</h3>
+        <div class="code"><pre><code>klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
+cd ~/krx-workspace
+klean data install --root ~/krx-data
+klean project-create Top20 --template top-market-cap
+klean backtest Top20</code></pre></div>
+        <p>Keep the demo and real workspaces separate (klean won't mix them). To get new days later, rerun
+          <code>krx-lean --root ~/krx-data all</code> and <code>klean data install --root ~/krx-data</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="strategy">
+  <div class="wrap">
+    <h2>Write your own strategy</h2>
+    <p class="sub">A strategy is a small Python program. Create an empty project and replace its <code>main.py</code>
+      with this one, which keeps two stocks at about half each and rebalances every month:</p>
+    <div class="code"><pre><code>klean project-create MyFirst --template empty
+nano MyFirst/main.py</code></pre></div>
+    <div class="code"><pre><code>from AlgorithmImports import *
+from krx_models import KrxBoards, krx_benchmark, krx_initialize
+
+
+class MyFirstStrategy(QCAlgorithm):
+    """Hold two stocks, half each, and rebalance at the start of every month."""
+
+    def initialize(self):
+        self.set_start_date(2015, 1, 1)
+        self.set_end_date(2025, 12, 31)
+        self.set_cash(100_000_000)                       <span class="c"># ₩100 million</span>
+        self.set_time_zone("Asia/Seoul")
+        self.set_account_currency("KRW")
+        boards = KrxBoards.load()
+        self.set_security_initializer(lambda s: krx_initialize(s, boards))   <span class="c"># KRX fees, taxes, tick sizes</span>
+        self.set_benchmark(krx_benchmark("kospi200"))    <span class="c"># compare with the KOSPI 200</span>
+
+        codes = ["D00010", "D00050"]                     <span class="c"># demo stocks; real data: e.g. ["005930", "000660"]</span>
+        self.stocks = [self.add_equity(c, Resolution.DAILY, Market.KRX).symbol for c in codes]
+        self.last_month = 0
+
+    def on_data(self, data: Slice):
+        if self.time.month == self.last_month:           <span class="c"># once a month</span>
+            return
+        if not all(data.contains_key(s) for s in self.stocks):
+            return
+        self.last_month = self.time.month
+        for s in self.stocks:
+            self.set_holdings(s, 0.49)                   <span class="c"># about half each, a little cash for fees</span></code></pre></div>
+    <div class="code"><pre><code>klean backtest MyFirst</code></pre></div>
+    <p>Keep the lines between <code>set_time_zone</code> and <code>set_benchmark</code> in every strategy: they apply the
+      Korean market's rules. With real data, use real codes such as <code>005930</code> (Samsung Electronics) and
+      <code>000660</code> (SK hynix). To go further, see
+      <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/4-strategies.md">Writing strategies</a> and
+      LEAN's <a href="https://www.quantconnect.com/docs/v2/writing-algorithms">algorithm documentation</a>.</p>
+
+    <h3>Useful next commands</h3>
+    <table>
+      <tr><th style="width:42%">Command</th><th>What it does</th></tr>
+      <tr><td><code>klean backtest P --parameter holdings 30</code></td><td>Run with a different setting (the strategy reads it with <code>get_parameter</code>).</td></tr>
+      <tr><td><code>klean compare A B</code></td><td>Put two runs side by side.</td></tr>
+      <tr><td><code>klean optimize P --parameter holdings 10 30 10</code></td><td>Try several settings and rank them (beware of overfitting).</td></tr>
+      <tr><td><code>klean logs P</code></td><td>Show what the strategy logged, or why a run failed.</td></tr>
+      <tr><td><code>klean doctor</code></td><td>Check the setup when something doesn't work.</td></tr>
+    </table>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <details><summary>Does it cost anything?</summary>
+      <p>No. krx-lean, LEAN and the data APIs are free. You don't need a QuantConnect account or subscription.</p></details>
+    <details><summary>Can it trade with real money?</summary>
+      <p>No. It only tests strategies on history. Nothing connects to a broker.</p></details>
+    <details><summary>Which markets and data are covered?</summary>
+      <p>KOSPI stocks and ETFs, daily prices from 2010. KOSDAQ, KONEX and intraday (minute) data aren't covered yet.</p></details>
+    <details><summary>Python or C#?</summary>
+      <p>Either: they give identical results. Python is easier to start with; C# runs several times faster, which helps
+        with long tests and optimizations.</p></details>
+    <details><summary>A backtest says "backtest FAILED". What now?</summary>
+      <p>klean prints the error from your strategy right below it, often with the line number. Fix that line and run
+        again. <code>klean logs PROJECT --console</code> shows LEAN's full output, and the
+        <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/7-troubleshooting.md">troubleshooting page</a>
+        lists common messages.</p></details>
+    <details><summary>Where is my data stored?</summary>
+      <p>Only on your computer: downloads in <code>~/krx-data</code>, strategies and results in your workspaces. Don't share
+        or publish the downloaded data: it's subject to the sources' terms.</p></details>
+    <details><summary>Is it affiliated with QuantConnect or Korea Exchange?</summary>
+      <p>No. krx-lean is an independent open-source project that uses LEAN (Apache-2.0) unmodified.</p></details>
+  </div>
+</section>
+
+<section id="more">
+  <div class="wrap">
+    <h2>Learn more</h2>
+    <div class="grid">
+      <div class="card"><h3><a href="https://github.com/pinjoy99/krx-lean/tree/main/docs/user">Users guide</a></h3>
+        <p>Every step in detail: install, data, strategies, tools, daily updates, troubleshooting.</p></div>
+      <div class="card"><h3><a href="https://github.com/pinjoy99/krx-lean/tree/main/docs/dev">Developers guide</a></h3>
+        <p>How the data is built and checked, the KRX models, LEAN internals, contributing.</p></div>
+      <div class="card"><h3><a href="https://github.com/pinjoy99/krx-lean/issues">Questions and bugs</a></h3>
+        <p>Open an issue on GitHub.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    krx-lean is open source under the Apache-2.0 license. It is not affiliated with QuantConnect or Korea Exchange
+    (KRX). Screenshots show synthetic demo data. Nothing here is investment advice.
+  </div>
+</footer>
+
+<script>
+// Copy buttons on code blocks
+document.querySelectorAll(".code").forEach(box => {
+  const btn = document.createElement("button");
+  btn.className = "copy"; btn.type = "button"; btn.textContent = "Copy";
+  btn.addEventListener("click", async () => {
+    const text = box.querySelector("pre").innerText.replace(/\s+$/, "") + "\n";
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
+    catch (e) { btn.textContent = "Select and copy"; }
+    setTimeout(() => btn.textContent = "Copy", 1600);
+  });
+  box.appendChild(btn);
+});
+// Windows / Linux / Mac tabs
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+tabs.forEach(tab => tab.addEventListener("click", () => {
+  tabs.forEach(t => {
+    const on = t === tab;
+    t.setAttribute("aria-selected", on);
+    document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+  });
+}));
+if (/Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent)) tabs[1].click();
+else if (/Mac/.test(navigator.platform || navigator.userAgent)) tabs[2].click();
+</script>
+</body>
+</html>
