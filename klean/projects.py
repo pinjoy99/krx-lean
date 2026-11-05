@@ -24,7 +24,8 @@ from krx_models import KrxBoards, krx_benchmark, krx_initialize
 
 
 class {cls}(QCAlgorithm):
-    """KRX strategy template (klean): buy and hold Samsung Electronics with KRX fees and taxes."""
+    """KRX strategy template (klean): buy and hold one stock with KRX fees and taxes.
+    The stock is the parameter "code" (default {code}{code_note})."""
 
     def initialize(self):
         self.set_time_zone("Asia/Seoul")
@@ -34,11 +35,12 @@ class {cls}(QCAlgorithm):
         boards = KrxBoards.load()
         self.set_security_initializer(lambda security: krx_initialize(security, boards))
         self.set_benchmark(krx_benchmark("kospi200"))
-        self.samsung = self.add_equity("005930", Resolution.DAILY, Market.KRX).symbol
+        code = self.get_parameter("code", "{code}")
+        self.stock = self.add_equity(code, Resolution.DAILY, Market.KRX).symbol
 
     def on_data(self, data: Slice):
-        if not self.portfolio.invested:
-            self.set_holdings(self.samsung, 0.9)
+        if not self.portfolio.invested and data.contains_key(self.stock):
+            self.set_holdings(self.stock, 0.9)
 '''
 
 PY_EMPTY = '''# region imports
@@ -96,10 +98,11 @@ CS_TEMPLATE = '''using QuantConnect.Data;
 
 namespace QuantConnect.Algorithm.CSharp
 {{
-    /// <summary>KRX strategy template (klean): buy and hold Samsung Electronics with KRX fees and taxes.</summary>
+    /// <summary>KRX strategy template (klean): buy and hold one stock with KRX fees and taxes.
+    /// The stock is the parameter "code" (default {code}{code_note}).</summary>
     public class {cls} : QCAlgorithm
     {{
-        private Symbol _samsung;
+        private Symbol _stock;
 
         public override void Initialize()
         {{
@@ -114,12 +117,13 @@ namespace QuantConnect.Algorithm.CSharp
                 security.PriceVariationModel = new KrxPriceVariationModel(boards);
             }});
             SetBenchmark(KrxIndex.Benchmark("kospi200"));
-            _samsung = AddEquity("005930", Resolution.Daily, Market.KRX).Symbol;
+            var code = GetParameter("code", "{code}");
+            _stock = AddEquity(code, Resolution.Daily, Market.KRX).Symbol;
         }}
 
         public override void OnData(Slice slice)
         {{
-            if (!Portfolio.Invested) SetHoldings(_samsung, 0.9m);
+            if (!Portfolio.Invested && slice.ContainsKey(_stock)) SetHoldings(_stock, 0.9m);
         }}
     }}
 }}
@@ -166,14 +170,17 @@ def create(ws: Workspace, name: str, language: str, template: str = "buy-hold") 
     if project.exists():
         raise KleanError(f"{project} already exists")
     cls = class_name(Path(name).name)
+    demo = (ws.data / "equity" / "krx" / "SYNTHETIC-DEMO-DATA.txt").exists()
+    fmt = {"cls": cls, "code": "D00010" if demo else "005930",
+           "code_note": ", a SYNTHETIC demo stock" if demo else ", Samsung Electronics"}
     project.mkdir(parents=True)
     if language == "python":
-        main = {"buy-hold": PY_TEMPLATE.format(cls=cls), "empty": PY_EMPTY.format(cls=cls),
+        main = {"buy-hold": PY_TEMPLATE.format(**fmt), "empty": PY_EMPTY.format(cls=cls),
                 "top-market-cap": PY_TOP_MARKET_CAP.read_text(encoding="utf-8")}[template]
         (project / "main.py").write_text(main, encoding="utf-8")
         shutil.copy(PY_MODELS, project / "krx_models.py")
     else:
-        main = {"buy-hold": CS_TEMPLATE.format(cls=cls), "empty": CS_EMPTY.format(cls=cls),
+        main = {"buy-hold": CS_TEMPLATE.format(**fmt), "empty": CS_EMPTY.format(cls=cls),
                 "top-market-cap": CS_TOP_MARKET_CAP.read_text(encoding="utf-8")}[template]
         (project / "Main.cs").write_text(main, encoding="utf-8")
         shutil.copy(CS_MODELS, project / "KrxModels.cs")

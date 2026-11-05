@@ -6,7 +6,7 @@
 klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace
 klean data install --root ~/krx-data      # LEAN data + KRX market hours and symbol properties
-klean doctor                              # every line should say OK
+klean doctor                              # every line should say OK (incl. the KOSPI 200 index)
 klean data status                         # date range, securities, indices
 ```
 
@@ -30,32 +30,36 @@ klean project-create Top20 --template top-market-cap      # Python (default)
 klean backtest Top20
 ```
 
-Templates: `buy-hold` (default: buys Samsung Electronics), `top-market-cap` (the example
+Templates: `buy-hold` (default: buys Samsung Electronics; another stock with
+`--parameter code 000660`), `top-market-cap` (the example
 strategy: the 20 largest KOSPI common stocks, equal weight, rebalanced monthly), `empty`.
 For C#: `klean project-create Top20CS --language csharp --template top-market-cap`.
 
 What `backtest` does: checks (Python) or compiles (C#) the project, runs LEAN with the
-workspace's data, and prints the main statistics. Results go to
+workspace's data, and prints the main statistics. If the algorithm fails (an exception in
+`initialize`, missing data, a bug), it prints **`backtest FAILED`** with LEAN's error and the
+end of LEAN's output instead, and exits with code 1. Results go to
 `Top20/backtests/<date>_<time>/`:
 
 | File | Content |
 |---|---|
 | `<Algorithm>-summary.json` | statistics |
 | `<Algorithm>.json` | full result, with charts |
-| `<Algorithm>-order-events.json` | orders and fills |
+| `<Algorithm>-order-events.json` | orders and fills (only if the run placed orders) |
 | `<Algorithm>-log.txt` | your `log()` lines |
 | `console.txt` | LEAN's output: look here when something fails |
 | `code/` | a copy of the project's files as they were for this run |
 | `config.json`, `manifest.json` | the LEAN config used; what produced the run (krx-lean and LEAN versions, data date, parameters, file fingerprints) |
 
 Python runs are slower than C# (about 2.5 min vs 20 s for the top-20 strategy over the full
-data), and may end with a `GIL must always be released` message after the results are written;
-that's harmless.
+data). At the very end LEAN's Python bridge often prints an `Unhandled exception …
+GIL must always be released …` stack trace while shutting down, after the results are written;
+klean recognises it and prints a one-line note. It doesn't affect the results.
 
 ## Look at the results
 
 ```bash
-klean logs Top20 --tail 20        # the algorithm's log
+klean logs Top20 --tail 20        # the algorithm's log (and the error, if the run failed)
 klean report Top20                # LEAN's HTML report → Top20/backtests/<run>/report.html
 klean gui                         # charts, orders, code, reports in the browser
 ```

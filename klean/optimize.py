@@ -81,10 +81,11 @@ def run_folder_name(i: int, params: dict[str, str]) -> str:
 
 
 def evaluate(run_dir: Path, target: str, constraints: list[tuple[str, str, float]]) -> dict:
-    try:
-        stats = results.statistics(run_dir)
-    except KleanError:
-        return {"ok": False, "target_value": None, "passes": False, "failed_constraints": [], "stats": {}}
+    error = results.run_error(run_dir)
+    if error:
+        return {"ok": False, "target_value": None, "passes": False, "failed_constraints": [], "stats": {},
+                "error": error.splitlines()[0]}
+    stats = results.statistics(run_dir)
     failed = []
     for stat, op, value in constraints:
         v = number(stats.get(stat))
@@ -181,5 +182,5 @@ def ranking(summary: dict) -> tuple[list[str], list[list[str]]]:
                      s.get(summary["target"], "") or ("" if r["target_value"] is None else f"{r['target_value']:g}"),
                      s.get("Compounding Annual Return", ""), s.get("Drawdown", ""), s.get("Total Orders", ""),
                      s.get("End Equity", ""),
-                     "failed run" if not r["ok"] else "ok" if r["passes"] else "fails: " + ", ".join(r["failed_constraints"])])
+                     ("failed run" + (f": {r['error'][:80]}" if r.get("error") else "")) if not r["ok"] else "ok" if r["passes"] else "fails: " + ", ".join(r["failed_constraints"])])
     return header, rows

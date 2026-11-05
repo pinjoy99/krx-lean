@@ -1,7 +1,9 @@
 # 2. Keys and data
 
 krx-lean doesn't ship data. You download it from the official sources with your own free keys
-(approval can take a day, so start here early).
+(approval can take a day, so start here early). **A KRX key is required** for real data:
+without one there are no prices and no KOSPI 200 index, which every template uses as its
+benchmark. While you wait, you can try everything on [synthetic demo data](demo.md).
 
 ## KRX Open API key (required: prices and indices)
 
@@ -63,7 +65,8 @@ krx-lean --root ~/krx-data all
 This downloads KOSPI and ETF daily prices and the KOSPI index family from 2010-01-04, the
 dividend table (if `DATA_GO_KR_KEY` is set), and builds everything LEAN needs under
 `~/krx-data/lean/`. The first run makes about 13,000 calls and takes **1.5–2 hours**; later runs
-fetch only new days. It's resumable: if it stops (network, quota), run it again.
+fetch only new days. It's resumable: if it stops (a quota, or `network error, stopping (re-run
+the same command to resume)`), run the same command again.
 
 Optional extras:
 
@@ -78,7 +81,10 @@ krx-lean --root ~/krx-data build        # rebuild after the extras
 ```bash
 column -s, -t < ~/krx-data/securities.csv | head        # securities with their first/last dates
 grep -E '^(20180503|20180504)' ~/krx-data/ohlcv/005930.csv   # Samsung 50:1 split: 2,650,000 → 51,900
+ls ~/krx-data/lean/index/krx/daily/                           # kospi.zip, kospi200.zip (benchmarks)
 ```
+
+(The Samsung check needs the full download from 2010.)
 
 The data folder (`~/krx-data`):
 

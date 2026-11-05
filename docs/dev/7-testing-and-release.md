@@ -4,8 +4,8 @@
 
 ```bash
 cd ~/krx-lean
-python -m unittest discover -s tests            # pipeline (29)
-python -m unittest discover -s tests/klean      # klean (29; some need dotnet on PATH)
+python -m unittest discover -s tests            # pipeline (34, incl. the demo data through build and install)
+python -m unittest discover -s tests/klean      # klean (32; some need dotnet on PATH)
 ```
 
 They use small synthetic files; no keys, no network, no LEAN build needed.
@@ -41,7 +41,10 @@ zip timestamps differ).
 2. LEAN builds at `LEAN_COMMIT` from scratch (`klean install-lean` into an empty folder).
 3. On real data: parity check ([4. KRX models](4-krx-models.md#parity-check-c--python)) prints
    IDENTICAL; a report and a small optimization complete.
-4. Users-track walkthrough on a clean Ubuntu 24.04 (native or WSL2), following only the docs.
+4. Users-track walkthrough on a clean Ubuntu 24.04 (native or WSL2), following only the docs:
+   once without keys (the demo page: every template runs, everything says SYNTHETIC; a
+   workspace without index data fails with the "no kospi200 index data" message), and once with
+   keys.
 5. Nothing that mustn't be published: `git ls-files` contains no data, keys, workspaces or
    third-party documents; run a secret scan.
 6. `CHANGELOG.md` entry; version in `pyproject.toml`, `krx_lean/__init__.py`, `klean/__init__.py`;

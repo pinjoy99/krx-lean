@@ -32,6 +32,9 @@ distributions should work. macOS is not tested yet.
 
 ## Quick look
 
+No keys yet? `klean data install --demo` installs **synthetic** demo data (made-up prices,
+clearly marked) so you can try everything first: [Try it without keys](docs/user/demo.md).
+
 ```bash
 krx-lean --root ~/krx-data all                 # download KRX prices + dividends, build LEAN data
 klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311

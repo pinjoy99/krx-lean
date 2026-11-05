@@ -30,8 +30,18 @@ also runs under `lean backtest`.
    build config, times, exit code, `krx_lean_commit` and `lean_commit` (`-dirty` with local
    changes), the data's last date, Python env, host, sha256 of every source file, where the code
    snapshot is.
-4. A run counts as successful if `*-summary.json` exists (Python's exit-time GIL abort gives a
-   non-zero exit code after the results are written).
+4. Success is decided by `results.run_error`: the run failed if there's no `*-summary.json`, or
+   its `state.RuntimeError` is set, or `state.Status` isn't `Completed`. LEAN writes a summary
+   (with empty statistics) even when the algorithm throws in `initialize`, so the summary's
+   existence alone means nothing. The exit code isn't used: Python runs often abort with
+   pythonnet's `GIL must always be released` after the results are written (exit −6); klean
+   notes it. A failed run: `backtest` raises with the error and the console tail (exit 1); the
+   manifest has `ok: false` and `error`; `optimize` ranks it as failed; `report` refuses it;
+   `logs` and the GUI show the error.
+5. Demo data (`SYNTHETIC-DEMO-DATA.txt` in `data/equity/krx`): banners in `backtest`,
+   `optimize`, `compare`, `data status`, `doctor`; `"synthetic_demo_data": true` in the
+   manifest; report title and description; a GUI banner and badges; the `buy-hold` template's
+   default stock becomes `D00010`.
 
 ## Optimize
 

@@ -198,6 +198,13 @@ namespace QuantConnect.Algorithm.CSharp
         public static SortedList<DateTime, decimal> LoadDaily(string ticker, string dataFolder = null)
         {
             var path = Path.Combine(dataFolder ?? Globals.DataFolder, "index", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip");
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException(
+                    $"no {ticker} index data at {path}. KRX index files come from `krx-lean krx-index` " +
+                    "(needs a KRX Open API key), then `klean data install --root <data>`; " +
+                    "to try klean without keys, use a new workspace with `klean data install --demo`.", path);
+            }
             var levels = new SortedList<DateTime, decimal>();
             using var zip = System.IO.Compression.ZipFile.OpenRead(path);
             using var reader = new StreamReader(zip.Entries[0].Open());

@@ -1,7 +1,7 @@
 # 1. Install
 
-Tested on Ubuntu 24.04 and 22.04, natively and under WSL2. About 20 minutes, mostly downloads
-and the LEAN build.
+Tested on Ubuntu 24.04 and 22.04, natively and under WSL2. About 20–40 minutes, mostly
+downloads and the LEAN build.
 
 ## WSL2 only: before you start
 
@@ -31,6 +31,9 @@ source ~/.bashrc
 dotnet --version            # 10.0.x
 ```
 
+The installer unpacks in `/tmp` (about 1 GB). If `/tmp` is small and it fails with "No space
+left on device", run it with `TMPDIR=~/tmp` (after `mkdir -p ~/tmp`) in front of `bash`.
+
 ## uv (provides Python 3.11 for LEAN)
 
 LEAN runs Python strategies through pythonnet, which needs CPython **3.11** with its shared
@@ -53,16 +56,13 @@ source ~/.bashrc
 krx-lean --help && klean --version
 ```
 
-While the repository is private, `git clone` asks for your GitHub credentials: use
-`gh auth login` (GitHub CLI) or a personal access token with read access to the repository.
-
 Keep `~/krx-lean`: it's installed in editable mode, and `klean` copies the KRX models from it into
 new projects. To update later: `git -C ~/krx-lean pull`.
 
 ## LEAN
 
 ```bash
-klean install-lean --dir ~/Lean          # clones LEAN at the tested commit and builds it (~2 min)
+klean install-lean --dir ~/Lean          # clones LEAN at the tested commit and builds it (2–10 min)
 klean install-python --dir ~/.klean/py311   # Python 3.11 + pandas/numpy for LEAN (via uv)
 ```
 
@@ -70,4 +70,5 @@ klean install-python --dir ~/.klean/py311   # Python 3.11 + pandas/numpy for LEA
 want to test it (see [5. Tools](5-tools.md#updating-lean)). `install-python` prints the Python
 library it found (`…/libpython3.11.so`).
 
-Next: [2. Keys and data](2-data.md).
+Next: [2. Keys and data](2-data.md). Waiting for your KRX key? Try everything on
+[synthetic demo data](demo.md) meanwhile.

@@ -34,6 +34,7 @@ KRX-specific additions: `doctor`, `data install/status`, run manifest and code s
 
 - macOS (Apple Silicon): check LEAN on .NET 10 arm64, pythonnet with `libpython3.11.dylib`,
   the report; then CI.
-- CI on GitHub Actions: unit tests, LEAN build, a smoke backtest on synthetic data.
+- CI on GitHub Actions: unit tests, LEAN build, backtests on the synthetic demo data
+  (`klean data install --demo`; C# = Python parity).
 - KOSDAQ / KONEX (code paths exist; needs KRX service approval and verification); NXT (no
   source yet); minute data (needs a source with the full session).

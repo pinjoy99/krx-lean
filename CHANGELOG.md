@@ -1,6 +1,31 @@
 # Changelog
 
-## 0.0.1 — 2026-11 (first release, private)
+## 0.0.2 — 2026-11-05
+
+Fixes from the first users-track test (a new user following the docs on Ubuntu 24.04).
+
+- **Failed backtests are reported as failed.** LEAN writes a summary even when the algorithm
+  throws (e.g. in `initialize`); klean now reads its status: `backtest` prints
+  `backtest FAILED` with LEAN's error and exits 1, the manifest records `ok: false` and the
+  error, `optimize` ranks such runs as failed, `report` refuses them, `logs` and the GUI show
+  the error. The pythonnet `GIL` message at exit gets a one-line explanation.
+- **Synthetic demo data** for trying krx-lean without API keys: `klean data install --demo`
+  (or `krx-lean demo`) generates made-up KOSPI-like stocks, ETFs and KOSPI / KOSPI 200 indices
+  in the raw download formats and runs the real build. Clearly marked everywhere (codes `D…`,
+  names, marker files, banners in the CLI, reports and GUI, run manifests); demo and real data
+  can't share a workspace. Doubles as test data. New page: docs/user/demo.md.
+- **Benchmark data:** `krx_benchmark` / `KrxIndex.Benchmark` stop with a message saying how to
+  get the index data; `klean doctor` checks for the KOSPI 200 index.
+- **Network errors** during downloads stop with "re-run the same command to resume" instead of
+  a traceback.
+- `buy-hold` template: the stock is the parameter `code` (default Samsung, or the demo stock in
+  a demo workspace); it buys only once the stock has data.
+- Docs: no more "private repository" notes; realistic install times; `/tmp` space for the .NET
+  installer; failure output; `--sample`'s limits; new troubleshooting rows.
+
+Results on real data are unchanged (top-market-cap C# = Python, identical to 0.0.1).
+
+## 0.0.1 — 2026-11-02 (first release)
 
 First release as krx-lean (previously developed as qc-krx). Tested with LEAN commit
 `80e7843f645673bcbeaab963049f76f20f6785e1` and .NET 10 on Ubuntu (native and WSL2).

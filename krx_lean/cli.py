@@ -8,11 +8,25 @@ import logging
 import os
 from pathlib import Path
 
-from krx_lean import build, dividends, krx_api, lean_install, rights, scraper, verify, yahoo
+import requests
+import urllib3
+
+from krx_lean import build, demo, dividends, krx_api, lean_install, rights, scraper, verify, yahoo
 from krx_lean.client import Client
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
+        # timeouts and dropped connections (after the client's own retries): everything already
+        # downloaded is on disk and is skipped next time
+        logging.error("network error, stopping (re-run the same command to resume): %s: %s",
+                      type(e).__name__, e)
+        return 1
+
+
+def _main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="krx-lean", description="KRX data for QuantConnect LEAN: KOSPI stocks and ETFs from the KRX Open API "
                                 "(daily) and data.go.kr, with aikstockdata.com and Yahoo Finance as cross-checks")
     p.add_argument("--root", type=Path, default=Path("data"), help="output directory (default: data)")
@@ -80,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
     lp.add_argument("out", type=Path, help="zip file to write, e.g. lean.zip")
     lp.add_argument("--prefix", default="data", help="top folder in the zip (default: data; '' for none)")
     lp.add_argument("--market", default="krx")
+
+    dm = sub.add_parser("demo", help="SYNTHETIC demo data (made-up prices, no keys) + build: for trying krx-lean and for tests")
+    dm.add_argument("--start", default=demo.START)
+    dm.add_argument("--end", default=demo.END)
 
     a = sub.add_parser("all", help="krx (KOSPI, ETF) + krx-index (KOSPI) + dividends (if DATA_GO_KR_KEY is set) + build; needs KRX_API_KEY")
     a.add_argument("--no-lean", action="store_true")
@@ -166,6 +184,13 @@ def main(argv: list[str] | None = None) -> int:
             return 1
     elif args.cmd == "verify":
         verify.verify(root)
+    elif args.cmd == "demo":
+        if any((root / "raw" / "krx").glob("*/*/*.csv.gz")) and not demo.is_demo(root):
+            p.error(f"{root} already has real KRX downloads; use another --root for the synthetic demo data")
+        info = demo.generate(root, start=args.start, end=args.end)
+        logging.warning("SYNTHETIC DEMO DATA (not real): %d trading days %s -> %s, %d securities",
+                        info["days"], info["first"], info["last"], info["securities"])
+        build.build(root)
     elif args.cmd == "all":
         failed = False
         try:

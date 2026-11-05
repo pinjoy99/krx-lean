@@ -166,14 +166,20 @@ def run_once(ws: Workspace, project: Path, language: str, location: Path, cls: s
         proc = subprocess.run(args, cwd=ws.launcher_dir, env={**os.environ, **env},
                               stdout=log, stderr=subprocess.STDOUT)
     finished = dt.datetime.now(dt.timezone.utc)
-    ok = results.summary_file(results_dir, required=False) is not None
+    error = results.run_error(results_dir)
+    ok = not error
     write_manifest(ws, project, results_dir, language=language, algorithm=cls, parameters=parameters,
                    lean_config=lean_config, backtest_name=backtest_name, build_config=build_config,
                    started=started, finished=finished, exit_code=proc.returncode, ok=ok, code=code,
+                   **({"error": error} if error else {}),
+                   **({"synthetic_demo_data": True} if results.is_demo_data(ws) else {}),
                    **({"code_skipped_large_files": skipped} if skipped else {}))
-    # Python runs can abort at exit after writing results (pythonnet GIL shutdown); the summary is
-    # what counts, so a non-zero exit code with a summary is a success.
-    return {"results": str(results_dir), "exit_code": proc.returncode, "ok": ok}
+    # A run succeeded if LEAN's summary says it completed. Python runs can still abort at exit
+    # after writing results (pythonnet's GIL shutdown), so a non-zero exit code alone isn't failure.
+    gil = proc.returncode != 0 and ok and language == "python" and "GIL must always be released" in \
+        (results_dir / "console.txt").read_text(encoding="utf-8", errors="replace")[-20000:]
+    return {"results": str(results_dir), "exit_code": proc.returncode, "ok": ok, "error": error,
+            "gil_abort_at_exit": gil}
 
 
 def backtest(ws: Workspace, project: Path, parameters: dict[str, str] | None = None, *,
@@ -185,12 +191,19 @@ def backtest(ws: Workspace, project: Path, parameters: dict[str, str] | None = N
     r = run_once(ws, project, language, location, cls, env, results_dir, parameters or {},
                  {**ws.lean_config, **(extra_config or {})}, backtest_name, build_config)
     if not r["ok"]:
-        tail = (results_dir / "console.txt").read_text(encoding="utf-8", errors="replace").splitlines()[-30:]
-        raise KleanError(f"backtest failed (exit {r['exit_code']}), no *-summary.json. "
-                         f"Last lines of {results_dir / 'console.txt'}:\n" + "\n".join(tail))
+        raise KleanError(failure_message(results_dir, r["error"], r["exit_code"]))
     stats = results.statistics(results_dir)
-    return {"results": str(results_dir), "exit_code": r["exit_code"],
+    return {"results": str(results_dir), "exit_code": r["exit_code"], "gil_abort_at_exit": r["gil_abort_at_exit"],
             "statistics": {k: stats[k] for k in SUMMARY_KEYS if k in stats}}
+
+
+def failure_message(results_dir: Path, error: str, exit_code: int) -> str:
+    tail = (results_dir / "console.txt").read_text(encoding="utf-8", errors="replace").splitlines()[-15:] \
+        if (results_dir / "console.txt").exists() else []
+    error_lines = error.splitlines()
+    shown = "\n".join(error_lines[:12]) + ("\n  …" if len(error_lines) > 12 else "")
+    return (f"backtest FAILED (LEAN exit code {exit_code}): {shown}\n\nresults folder: {results_dir}\n"
+            f"last lines of console.txt (full output: klean logs <run> --console):\n" + "\n".join(tail))
 
 
 def write_manifest(ws: Workspace, project: Path, results_dir: Path, **run_info) -> None:

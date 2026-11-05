@@ -64,6 +64,10 @@ input[type=text] { font: inherit; padding: 5px 8px; border: 1px solid var(--line
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin: 4px 0 6px; }
 .legend i { display: inline-block; width: 12px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
 .err { color: var(--bad); white-space: pre-wrap; }
+.demobar { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); font-weight: 600;
+  text-align: center; padding: 6px 16px; border-bottom: 1px solid var(--warn); }
+.badge.demo { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.failbox { border: 1px solid var(--bad); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
 .tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
 .tabs a { padding: 6px 12px; border-bottom: 2px solid transparent; color: var(--muted); }
 .tabs a.on { color: var(--text); border-color: var(--accent); }
@@ -76,6 +80,7 @@ input[type=text] { font: inherit; padding: 5px 8px; border: 1px solid var(--line
   <nav><a href="#/">Workspace</a><a href="#/compare">Compare</a></nav>
   <span class="ws" id="ws"></span>
 </header>
+<div id="demobar" class="demobar" hidden>SYNTHETIC DEMO DATA — made-up prices, not real market data. Results say nothing about the Korean market.</div>
 <main id="app"><p class="muted">Loading…</p></main>
 <script>
 "use strict";
@@ -182,6 +187,7 @@ async function pageWorkspace() {
   const w = await api("/api/workspace");
   document.getElementById("ws").textContent = w.root;
   const d = w.data || {};
+  document.getElementById("demobar").hidden = !d.synthetic_demo_data;
   const proj = w.projects.map(p => `<tr><td><a href="${href("project", p.name)}">${esc(p.name)}</a></td><td>${esc(p.language)}</td>
       <td class="num">${p.runs}</td>
       <td>${p.last ? `<a href="${href("run", p.last.ref)}">${esc(p.last.name)}</a>` : '<span class="muted">—</span>'}</td>
@@ -213,7 +219,7 @@ async function pageProject(name) {
   setTitle(name);
   const p = await api("/api/project", {name});
   const rows = p.runs.map(r => `<tr><td><input type="checkbox" value="${esc(r.ref)}"></td>
-      <td><a href="${href("run", r.ref)}">${esc(r.name)}</a> ${r.ok ? "" : '<span class="badge no">failed</span>'}</td>
+      <td><a href="${href("run", r.ref)}">${esc(r.name)}</a> ${r.ok ? "" : `<span class="badge no" title="${esc(r.error)}">failed</span>`}${r.demo ? ' <span class="badge demo">demo</span>' : ""}</td>
       <td class="muted">${esc(Object.entries(r.parameters || {}).map(([k, v]) => k + "=" + v).join(", "))}</td>
       ${["Compounding Annual Return", "Drawdown", "Sharpe Ratio", "Total Orders", "End Equity"].map(k => `<td class="num ${k === "Compounding Annual Return" ? signClass(r.stats[k]) : ""}">${esc(statVal(r.stats, k))}</td>`).join("")}
       <td class="num muted">${r.seconds != null ? r.seconds + " s" : ""}</td></tr>`).join("");
@@ -287,7 +293,8 @@ async function pageRun(ref) {
       <td>${esc(o.type)}</td><td class="num ${o.quantity < 0 ? "neg" : "pos"}">${full.format(o.quantity)}</td><td class="num">${full.format(o.price)}</td>
       <td class="num">${won(o.value)}</td><td>${esc(o.status)}</td><td class="muted">${esc(o.tag)}</td></tr>`).join("");
   app.innerHTML = `<div class="crumbs"><a href="#/">Workspace</a> / <a href="${href("project", project)}">${esc(project)}</a> /${optCrumb}</div>
-    <h1>${esc(parts.at(-1))}</h1>
+    <h1>${esc(parts.at(-1))} ${r.demo ? '<span class="badge demo">SYNTHETIC DEMO DATA</span>' : ""}</h1>
+    ${r.error ? `<div class="failbox"><span class="badge no">failed</span> This run did not complete: <pre class="err">${esc(r.error)}</pre>See the Log tab (LEAN console output) for details.</div>` : ""}
     <div class="row" style="margin-bottom:12px"><button class="secondary" id="mkreport">${r.report ? "Remake report" : "Make LEAN report"}</button>
       <a id="openreport" target="_blank" rel="noopener noreferrer" href="/report?${new URLSearchParams({ref: r.ref, token: TOKEN})}" style="${r.report ? "" : "display:none"}">Open report</a>
       <span id="repstate" class="muted"></span></div>
@@ -406,7 +413,9 @@ async function route() {
     else if (parts[0] === "optimization") await pageOptimization(parts[1], parts[2]);
     else if (parts[0] === "compare") await pageCompare(new URLSearchParams(query || "").getAll("ref"));
     else await pageWorkspace();
-    if (!document.getElementById("ws").textContent) api("/api/workspace").then(w => document.getElementById("ws").textContent = w.root).catch(() => {});
+    if (!document.getElementById("ws").textContent) api("/api/workspace").then(w => {
+      document.getElementById("ws").textContent = w.root;
+      document.getElementById("demobar").hidden = !(w.data || {}).synthetic_demo_data; }).catch(() => {});
   } catch (e) { error(e); }
 }
 window.addEventListener("hashchange", route);

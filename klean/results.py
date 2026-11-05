@@ -46,6 +46,36 @@ def resolve_run(ws: Workspace, ref: str) -> Path:
     raise KleanError(f"no run found for {ref!r} (give a results folder, a project, or PROJECT/RUN)")
 
 
+def run_error(run: Path) -> str:
+    """Why a run failed ("" if it completed). LEAN writes a summary even when the algorithm throws
+    (e.g. in initialize): its ``state`` then has Status "RuntimeError" and the error text."""
+    summary = summary_file(run, required=False)
+    if summary is None:
+        return "no *-summary.json (LEAN stopped before writing results)"
+    state = json.loads(summary.read_text(encoding="utf-8")).get("state") or {}
+    error, status = (state.get("RuntimeError") or "").strip(), state.get("Status") or ""
+    if error:
+        stack = (state.get("StackTrace") or "").strip()
+        return error + (f"\n{stack}" if stack and stack not in error else "")
+    if status and status != "Completed":
+        return f"LEAN reports status {status}"
+    return ""
+
+
+# Synthetic demo data (krx_lean/demo.py) is marked with this file in every folder it fills.
+DEMO_MARKER = "SYNTHETIC-DEMO-DATA.txt"
+DEMO_BANNER = "SYNTHETIC DEMO DATA - not real market data; results say nothing about the Korean market"
+
+
+def is_demo_data(ws: Workspace) -> bool:
+    return (ws.data / "equity" / "krx" / DEMO_MARKER).exists()
+
+
+def run_is_demo(run: Path) -> bool:
+    p = run / "manifest.json"
+    return p.exists() and bool(json.loads(p.read_text(encoding="utf-8")).get("synthetic_demo_data"))
+
+
 def summary_file(run: Path, required: bool = True) -> Path | None:
     found = sorted(run.glob("*-summary.json"))
     if not found and required:
@@ -167,7 +197,8 @@ def log_text(run: Path, console: bool = False) -> str:
 def data_status(ws: Workspace) -> dict:
     """What KRX data the workspace has."""
     krx = ws.data / "equity" / "krx"
-    out: dict = {"folder": str(krx), "securities": len(list((krx / "daily").glob("*.zip")))}
+    out: dict = {"folder": str(krx), "securities": len(list((krx / "daily").glob("*.zip"))),
+                 "synthetic_demo_data": is_demo_data(ws)}
     sec = krx / "securities.csv"
     if sec.exists():
         with open(sec, encoding="utf-8", newline="") as f:

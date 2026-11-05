@@ -120,7 +120,12 @@ def check(ws: Workspace | None) -> list[tuple[str, bool, str]]:
     has_krx = mhdb.exists() and "Equity-krx-[*]" in mhdb.read_text(encoding="utf-8")
     rows.append(("Equity-krx market hours", has_krx, "present" if has_krx else "run `klean data install`"))
     n = len(list((ws.data / "equity" / "krx" / "daily").glob("*.zip")))
-    rows.append(("KRX daily data", n > 0, f"{n} securities"))
+    demo = (ws.data / "equity" / "krx" / "SYNTHETIC-DEMO-DATA.txt").exists()
+    rows.append(("KRX daily data", n > 0, f"{n} securities" + (" (SYNTHETIC DEMO DATA, not real)" if demo else "")))
+    k200 = ws.data / "index" / "krx" / "daily" / "kospi200.zip"
+    rows.append(("KOSPI 200 index (benchmark)", k200.exists(),
+                 str(k200) if k200.exists() else "missing: every template uses it; `krx-lean krx-index` "
+                 "(needs a KRX key) + `klean data install`, or try `klean data install --demo` in a new workspace"))
     if ws.python_venv:
         py = venv_python(ws.python_venv)
         ok = py.exists() and subprocess.run([str(py), "-c", "import sys, pandas, numpy; "

@@ -76,7 +76,7 @@ Options: `--report-destination FILE.html`, `--overwrite`, `--strategy-name`,
 (your own template). `--pdf` needs `wkhtmltopdf` or Chromium/Chrome on the PATH
 (`sudo apt install -y wkhtmltopdf`).
 
-Notes: the page loads fonts and the logo from the internet (offline it shows plain styling);
+Reports are only made for runs that completed. Notes: the page loads fonts and the logo from the internet (offline it shows plain styling);
 "Capacity (USD)" shows "-"; the crisis charts are US/global events and are empty outside your
 data's dates.
 

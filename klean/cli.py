@@ -3,7 +3,7 @@
     klean install-lean  [--dir ~/Lean]                  clone LEAN (tested commit) and build it
     klean install-python [--dir ~/.klean/py311]         Python 3.11 env with pandas/numpy for LEAN
     klean init [DIR] --lean ~/Lean [--python-venv ...]  workspace: klean.json + data/ (LEAN config files)
-    klean data install lean.zip | --root DATA_ROOT      KRX data into data/ + KRX market config
+    klean data install lean.zip | --root DATA_ROOT | --demo   KRX data (or SYNTHETIC demo data) into data/
     klean data status                                   KRX data range, securities, indices
     klean project-create NAME [--language] [--template] project with the KRX models next to it
     klean project-delete NAME                           delete a project and its backtests
@@ -135,10 +135,43 @@ def install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None 
 
 def cmd_data_install(args) -> None:
     ws = Workspace.load(Path.cwd())
-    if bool(args.zip) == bool(args.root):
-        raise KleanError("give either a lean.zip or --root <krx-lean data root>")
+    if sum(map(bool, (args.zip, args.root, args.demo))) != 1:
+        raise KleanError("give one of: a lean.zip, --root <krx-lean data root>, or --demo (synthetic data)")
+    if args.demo:
+        install_demo(ws)
+        return
+    if results.is_demo_data(ws):
+        raise KleanError(f"{ws.root} holds SYNTHETIC demo data; install real data into a new workspace "
+                         "(klean init ~/krx-workspace ...) so the two never mix")
     install_data(ws, zip_path=Path(args.zip) if args.zip else None,
                  root=Path(args.root).expanduser() if args.root else None)
+
+
+def install_demo(ws: Workspace) -> None:
+    """Generate the synthetic demo data (krx_lean/demo.py), build it and install it."""
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    import tempfile
+    from krx_lean import build, demo, lean_install
+    krx = ws.data / "equity" / "krx"
+    if any((krx / "daily").glob("*.zip")) and not results.is_demo_data(ws):
+        raise KleanError(f"{ws.root} already has real KRX data; put the synthetic demo data in its own "
+                         "workspace (klean init ~/krx-demo ...)")
+    holidays = set()
+    mhdb = ws.data / "market-hours" / "market-hours-database.json"
+    if mhdb.exists():   # LEAN's KRX holidays, so the demo calendar matches LEAN's
+        entry = json.loads(mhdb.read_text(encoding="utf-8"))["entries"].get("Index-krx-[*]", {})
+        for d in entry.get("holidays", []):
+            m, day, y = d.split("/")
+            holidays.add(f"{int(y):04d}{int(m):02d}{int(day):02d}")
+    print(f"*** {results.DEMO_BANNER} ***")
+    with tempfile.TemporaryDirectory(prefix="klean-demo-") as tmp:
+        info = demo.generate(Path(tmp), holidays)
+        build.build(Path(tmp))
+        lean_install.install(Path(tmp), ws.data)
+    print(f"synthetic demo data installed: {info['securities']} made-up securities (codes D…/E…), "
+          f"{info['first']} → {info['last']}, KOSPI and KOSPI 200 indices.\n"
+          "Every folder is marked SYNTHETIC-DEMO-DATA.txt; runs, reports and the GUI say so.")
 
 
 def cmd_data_status(args) -> None:
@@ -146,6 +179,8 @@ def cmd_data_status(args) -> None:
     if args.json:
         print(json.dumps(st, indent=2))
         return
+    if st.get("synthetic_demo_data"):
+        print(f"*** {results.DEMO_BANNER} ***")
     print(f"KRX data in {st['folder']}")
     print(f"  securities          {st['securities']}")
     if "last_date" in st:
@@ -189,6 +224,8 @@ def cmd_optimize(args) -> int:
     else:
         ws = Workspace.load(Path.cwd())
         project = ws.root / project
+    if results.is_demo_data(ws) and not args.estimate:
+        print(f"*** {results.DEMO_BANNER} ***")
     s = optimize.optimize(ws, project, [tuple(p) for p in args.parameter or []], target=args.target,
                           direction=args.target_direction, constraints=args.constraint,
                           max_concurrent=args.max_concurrent_backtests,
@@ -204,6 +241,8 @@ def cmd_optimize(args) -> int:
         print(f"best ({s['direction']} {s['target']}): {Path(s['folder']) / s['best']}")
     else:
         print("no run met the constraints")
+    if results.is_demo_data(ws):
+        print(f"*** {results.DEMO_BANNER} ***")
     return 0
 
 
@@ -234,6 +273,11 @@ def cmd_logs(args) -> None:
         lines = lines[-args.tail:]
     print(f"# {run_dir}")
     print("\n".join(lines))
+    error = results.run_error(run_dir)
+    if error:
+        print(f"\n# this run FAILED: {error.splitlines()[0]}\n# full output: klean logs {args.run} --console")
+    elif not lines and not args.console:
+        print("# the algorithm logged nothing; LEAN's output: --console")
 
 
 def cmd_compare(args) -> int:
@@ -242,6 +286,11 @@ def cmd_compare(args) -> int:
     if len(run_dirs) < 2:
         raise KleanError("give at least two runs")
     header, rows, verdict = results.compare(run_dirs, all_keys=args.all)
+    if any(results.run_is_demo(r) for r in run_dirs):
+        print(f"*** {results.DEMO_BANNER} ***")
+    for r in run_dirs:
+        if results.run_error(r):
+            print(f"note: {results.label(r)} FAILED: {results.run_error(r).splitlines()[0]}")
     print(results.format_table(header, rows))
     curves = verdict["equity_curves_identical"]
     print(f"\nequity curves: {'identical' if curves else 'different' if curves is False else 'not available'}")
@@ -314,12 +363,20 @@ def cmd_backtest(args) -> int:
     else:
         ws = Workspace.load(Path.cwd())
         project = ws.root / project
+    demo = results.is_demo_data(ws)
+    if demo:
+        print(f"*** {results.DEMO_BANNER} ***", flush=True)
     result = backtest(ws, project, dict(args.parameter or []), extra_config=dict(args.extra_config or []),
                       output=Path(args.output) if args.output else None, backtest_name=args.backtest_name or "",
                       build_config=args.build_config)
     print(f"\nresults: {result['results']}")
     for k, v in result["statistics"].items():
         print(f"  {k:28} {v}")
+    if result.get("gil_abort_at_exit"):
+        print("(LEAN's Python bridge printed a 'GIL must always be released' error while shutting down, after "
+              "the results were written: the run is complete.)")
+    if demo:
+        print(f"*** {results.DEMO_BANNER} ***")
     return 0
 
 
@@ -372,6 +429,8 @@ def main(argv: list[str] | None = None) -> int:
     d = dsub.add_parser("install", help="unzip lean.zip into data/ (or copy from a krx-lean data root) + KRX config")
     d.add_argument("zip", nargs="?")
     d.add_argument("--root", help="krx-lean data root with lean/ (instead of a zip)")
+    d.add_argument("--demo", action="store_true",
+                   help="SYNTHETIC demo data (made-up prices) to try klean without API keys; use its own workspace")
     d.set_defaults(func=cmd_data_install)
     d = dsub.add_parser("status", help="KRX data range, securities, universe files, indices, market hours")
     d.add_argument("--json", action="store_true")

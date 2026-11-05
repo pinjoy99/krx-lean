@@ -101,7 +101,9 @@ def run_row(run: Path) -> dict:
     except KleanError:
         stats = {}
     m = manifest(run)
-    return {"ref": f"{run.parent.parent.name}/{run.name}", "name": run.name, "ok": bool(stats),
+    error = results.run_error(run)
+    return {"ref": f"{run.parent.parent.name}/{run.name}", "name": run.name, "ok": bool(stats) and not error,
+            "error": error.splitlines()[0] if error else "", "demo": bool(m.get("synthetic_demo_data")),
             "stats": {k: stats.get(k, "") for k in ("Compounding Annual Return", "Drawdown", "Sharpe Ratio",
                                                      "Total Orders", "End Equity")},
             "parameters": m.get("parameters", {}), "seconds": m.get("seconds")}
@@ -190,6 +192,7 @@ def api_run(ws: Workspace, q: dict) -> dict:
             "statistics": results.statistics(run), "runtime": full.get("runtimeStatistics", {}),
             "equity": downsample(equity), "benchmark": downsample(bench), "drawdown": downsample(drawdown),
             "orders": orders, "manifest": manifest(run), "log": log, "report": (run / "report.html").exists(),
+            "error": results.run_error(run), "demo": results.run_is_demo(run),
             "code": [p.relative_to(code_dir(run)).as_posix() for p in sorted(code_dir(run).rglob("*")) if p.is_file()]
             if code_dir(run).is_dir() else []}
 

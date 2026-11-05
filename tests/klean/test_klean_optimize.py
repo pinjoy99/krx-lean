@@ -61,7 +61,7 @@ class OptimizeTest(unittest.TestCase):
             self.assertEqual([r[1] for r in rows], ["25", "20", "5", "30"])   # passing, failing, broken
             self.assertEqual(rows[0][0], "★")
             self.assertEqual(rows[2][-1], "fails: Drawdown < 35")
-            self.assertEqual(rows[3][-1], "failed run")
+            self.assertTrue(rows[3][-1].startswith("failed run: no *-summary.json"))
 
     def test_estimate_and_limits(self):
         self.assertEqual(optimize.optimize(None, Path("."), [("h", "1", "10", "1")], estimate=True,

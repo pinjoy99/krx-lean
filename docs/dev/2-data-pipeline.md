@@ -98,6 +98,34 @@ Expected: 0 differences against aikstockdata (21,972 of 21,972 KOSPI stock-days 
 2026-10-11). Yahoo differs before adjustment events (it back-adjusts) and occasionally in ETF
 volume.
 
+## Synthetic demo data (`demo.py`)
+
+`krx-lean --root DIR demo` (or `klean data install --demo`) writes **made-up** raw files in the
+exact formats of the real downloads — `raw/krx/{KOSPI,ETF}/…`, `raw/krx_index/KOSPI/…` (index
+names 코스피 / 코스피 200, so the build writes `kospi` / `kospi200`), and a data.go.kr dividend
+snapshot — then runs the normal `build`. Content: 29 stocks `D00010`…`D00280` (one preferred,
+`D00015`), 3 ETFs `E000x0`, 2011-01-03 → 2026-09-30; a 5:1 split (D00020, 2018-05-04, KRX base
+price = previous close / 5, so the split factor is exactly 0.2), a delisting (D00030,
+2019-06-28), a listing (D00040, 2015-06-01), yearly cash dividends. Prices are seeded random
+walks (one market factor pinned to ~4%/year, noise per stock netting to zero), on the tick grid;
+the output is deterministic. klean passes LEAN's KRX holidays so the calendar matches LEAN's.
+
+Marking: names "SYNTHETIC DEMO …", codes starting with `D`/`E` (no real KRX code does), and
+`SYNTHETIC-DEMO-DATA.txt` in the root, `lean/equity/krx`, `lean/index/krx` and `ohlcv/`
+(`lean-install` copies it into the workspace). klean reads the marker for its banners and the
+`synthetic_demo_data` manifest flag, and refuses to mix demo and real data in one workspace.
+`krx-lean demo` refuses a root that already has real downloads.
+
+It's also the test data for anything that needs a whole data set without keys (unit tests use a
+short range; CI can use the full one).
+
+### `krx --sample`
+
+KRX's public sample endpoint (`/svc/sample/apis`, key published in KRX's docs) returns the first
+10 rows of a response: for prices a rotating handful of KOSPI stocks plus ETFs, for indices the
+same 10 series every day, neither KOSPI nor KOSPI 200. It only smoke-tests the download code; no
+strategy can run on its output.
+
 ## Why no minute data
 
 Yahoo's KRX minute bars (the only free source tried) always stop at 14:59 (no 15:00–15:30 and no

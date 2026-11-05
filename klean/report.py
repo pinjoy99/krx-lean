@@ -95,6 +95,10 @@ def to_pdf(html: Path, pdf: Path) -> None:
 def report(ws: Workspace, run_dir: Path, *, destination: Path | None = None, strategy_name: str = "",
            strategy_version: str = "", strategy_description: str | None = None, overwrite: bool = False,
            css: Path | None = None, html: Path | None = None, pdf: bool = False, log=print) -> dict:
+    error = results.run_error(run_dir)
+    if error:
+        raise KleanError(f"this run failed, so there's nothing to report: {error.splitlines()[0]}")
+    demo = results.run_is_demo(run_dir)
     full = run_dir / results.summary_file(run_dir).name.replace("-summary.json", ".json")
     if not full.exists():
         raise KleanError(f"{full} not found")
@@ -113,10 +117,10 @@ def report(ws: Workspace, run_dir: Path, *, destination: Path | None = None, str
     config = {"data-folder": f"{ws.data}/",
               "backtest-data-source-file": str(full),
               "report-destination": str(dest),
-              "strategy-name": strategy_name or project,
+              "strategy-name": (strategy_name or project) + (" - SYNTHETIC DEMO DATA" if demo else ""),
               "strategy-version": strategy_version,
-              "strategy-description": default_description(run_dir) if strategy_description is None
-              else strategy_description,
+              "strategy-description": (f"{results.DEMO_BANNER.upper()}. " if demo else "")
+              + (default_description(run_dir) if strategy_description is None else strategy_description),
               "close-automatically": True}
     if css:
         config["report-css-override-file"] = str(css.expanduser().resolve())

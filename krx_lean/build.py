@@ -23,7 +23,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
-from krx_lean import factors
+from krx_lean import demo, factors
 from krx_lean.lean_extras import build_lean_extras
 from krx_lean.dividends import build_dividends
 from krx_lean.rights import build_corporate_actions
@@ -254,6 +254,10 @@ def build(root: Path, lean: bool = True, market: str = "krx") -> int:
         log.info("build: wrote %d indices", n_idx)
     if lean and krx_meta:
         build_lean_extras(root, market)
+    if lean and (root / demo.MARKER).exists():   # synthetic demo data: mark every output folder
+        for folder in (lean_dir, root / "lean" / "index" / market, root / "ohlcv"):
+            if folder.is_dir():
+                shutil.copy(root / demo.MARKER, folder / demo.MARKER)
     if lean and (lean_dir / "minute").exists():
         # minute files from before minute data was removed (2026-10-11)
         shutil.rmtree(lean_dir / "minute")
