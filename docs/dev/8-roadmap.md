@@ -4,11 +4,10 @@
 
 | LEAN CLI | klean |
 |---|---|
-| `init`, `create-project`, `delete-project`, `config`, `backtest`, `optimize`, `report`, `logs`, `gui` | ✅ (`optimize`: grid only) |
+| `init`, `create-project`, `delete-project`, `config`, `backtest`, `optimize`, `report`, `logs`, `gui`, `research` | ✅ (`optimize`: grid only; `research`: Python notebooks only) |
 | `build` | `lean status` / `lean update` (no images) |
 | `backtest --detach` | planned |
 | `library add/remove` | planned: one shared copy of the KRX models instead of a copy per project |
-| `research` (Jupyter + QuantBook) | planned, needs investigation on the source build |
 | `backtest --debug` | planned (C# attach, debugpy) |
 | `object-store` | later |
 | `live …` | not in scope for now |

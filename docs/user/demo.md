@@ -19,6 +19,7 @@ klean backtest Hold
 klean backtest Top20
 klean report Top20
 klean gui
+klean research Top20                                # a Jupyter notebook on the demo data
 ```
 
 Use a **separate workspace** for the demo (here `~/krx-demo`): klean refuses to put demo data

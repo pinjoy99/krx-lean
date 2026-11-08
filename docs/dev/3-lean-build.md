@@ -54,3 +54,6 @@ with `--enable-shared`, ships `lib/libpython3.11.so`) and records the library pa
   folder with a generated config.
 - PDF reports: LEAN's image uses wkhtmltopdf + xvfb; klean uses wkhtmltopdf if present, else
   headless Chromium.
+- Research: LEAN's research image runs Jupyter with `start.py` as an IPython startup file and a
+  `config.json` in the notebook folder; klean runs the same `start.py` from a generated config
+  (see [6. klean internals](6-klean.md#research)). Python notebooks only (no .NET Interactive).

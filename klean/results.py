@@ -141,7 +141,7 @@ def sha256(path: Path) -> str:
 
 
 # Folders inside a project that hold outputs, not source code.
-OUTPUT_DIRS = ("backtests", "optimizations", "bin", "obj", "__pycache__")
+OUTPUT_DIRS = ("backtests", "optimizations", "bin", "obj", "__pycache__", "storage")
 
 
 # Files bigger than this are listed in the manifest but not copied into the code snapshot.

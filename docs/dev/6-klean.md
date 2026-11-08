@@ -13,6 +13,7 @@ also runs under `lean backtest`.
 | `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `data status` |
 | `optimize.py` | grid search |
 | `report.py` | LEAN's Report |
+| `research.py` | Jupyter with LEAN's QuantBook |
 | `gui.py`, `static/index.html` | local web page |
 
 ## A run
@@ -62,6 +63,35 @@ unexpected equity Market krx` error at the end of the order replay (its replay a
 default brokerage model); the portfolios are computed before it. PDF: wkhtmltopdf, else headless
 Chromium with `@page { size: 1200px 1698px }` added to a temporary copy (one PDF page per report
 page).
+
+## Research
+
+LEAN's build already has the research parts: `QuantConnect.Research.dll` and `start.py` in
+`Launcher/bin/Release`. `start.py` loads .NET into Python (clr-loader + LEAN's pythonnet),
+imports `AlgorithmImports`, and starts LEAN's handlers from `./config.json`. klean:
+
+1. installs `RESEARCH_PACKAGES` (JupyterLab 4.5.1 and clr-loader 0.2.9, as in LEAN's Docker
+   images; ipykernel; matplotlib 3.8.4) into the workspace's Python 3.11 env, once;
+2. writes `<workspace>/.klean/research/config.json` (data folder, `composer-dll-directory` =
+   the launcher folder, `object-store-root` = `<workspace>/storage`, LEAN's log to
+   `.klean/research/log.txt`, plus the workspace's LEAN keys), a copy of `krx_models.py` in
+   `.klean/research/lib/` (appended to `sys.path`, so a project's own copy wins), and an IPython
+   startup file in `.klean/research/ipython/profile_default/startup/` that puts the launcher
+   folder on `sys.path`, runs LEAN's own `start.py` from the config folder, then calls
+   `Config.SetConfigurationFile(<absolute path>)`;
+3. runs `python -m jupyter lab` from the 3.11 env in the project folder with `IPYTHONDIR`
+   pointing at that profile, `DOTNET_ROOT` (clr-loader needs it), `PYTHONNET_PYDLL`, a random
+   token, 127.0.0.1 only (`--allow-root` only when running as root).
+
+Why `SetConfigurationFile`: `QuantBook()` calls `Config.Reset()`, which re-reads `config.json`
+from the *current* folder, the project's. LEAN's Docker image keeps a config there; klean
+points LEAN at its own file instead, so a project's own `config.json` (the LEAN CLI keeps
+project settings in one) is never read as an engine config.
+
+`--execute` runs `jupyter nbconvert --execute` with the same environment, for scripts and tests.
+Harmless log lines in `log.txt`: `QuantBook failed to determine Notebook kernel language` (only
+outside Jupyter) and `SecurityIdentifier.TryParseProperties … '<label>'` (LEAN's pandas helper
+trying chart labels as symbols).
 
 ## GUI security
 

@@ -10,6 +10,7 @@
     klean backtest NAME [--parameter K V] [--extra-config K V] [--backtest-name N] [--output DIR]
     klean optimize NAME --parameter P MIN MAX STEP [...] [--target T] [--constraint "Drawdown < 25"]
     klean report [RUN] [--report-destination F] [--pdf]  LEAN's HTML report for a run (default: latest)
+    klean research NAME [--port N] [--no-browser]       JupyterLab with LEAN's QuantBook on the workspace's data
     klean logs NAME|RUN [--console] [--tail N]          a run's algorithm log (or LEAN's console output)
     klean compare RUN RUN [...] [--all]                 statistics and equity curves side by side
     klean config list | get KEY | set KEY VALUE | unset KEY
@@ -265,6 +266,24 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_research(args) -> int:
+    from klean import research
+    project = Path(args.project).expanduser()
+    if project.exists():
+        ws = Workspace.load(project)
+    else:
+        ws = Workspace.load(Path.cwd())
+        project = ws.root / project
+    if not project.is_dir():
+        raise KleanError(f"no project {project}: create it with `klean project-create`")
+    project = project.resolve()
+    if args.execute:
+        out = research.execute(ws, project, args.execute, timeout=args.timeout)
+        print(f"executed: {out}")
+        return 0
+    return research.launch(ws, project, port=args.port, open_browser=not args.no_browser)
+
+
 def cmd_logs(args) -> None:
     ws = Workspace.load(Path.cwd())
     run_dir = results.resolve_run(ws, args.run)
@@ -486,6 +505,15 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--html", help="custom HTML template (LEAN's Report/template.html format)")
     s.add_argument("--pdf", action="store_true", help="also write a PDF (wkhtmltopdf or Chromium on the PATH)")
     s.set_defaults(func=cmd_report)
+
+    s = sub.add_parser("research", help="JupyterLab with LEAN's QuantBook on the workspace's data (project's research.ipynb)")
+    s.add_argument("project")
+    s.add_argument("--port", type=int, default=0, help="port (default: a free one)")
+    s.add_argument("--no-browser", action="store_true", help="don't open the browser")
+    s.add_argument("--execute", metavar="NOTEBOOK", nargs="?", const="research.ipynb",
+                   help="run the notebook without a browser; writes NOTEBOOK.executed.ipynb")
+    s.add_argument("--timeout", type=int, default=600, help="seconds per cell with --execute")
+    s.set_defaults(func=cmd_research)
 
     s = sub.add_parser("logs", help="show a run's algorithm log (default: the project's latest run)")
     s.add_argument("run", help="project, PROJECT/RUN (name or prefix) or a results folder")

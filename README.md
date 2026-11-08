@@ -46,6 +46,7 @@ klean project-create Top20 --template top-market-cap
 klean backtest Top20
 klean report Top20
 klean gui
+klean research Top20                           # Jupyter notebook with LEAN's QuantBook
 ```
 
 ## What you need

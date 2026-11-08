@@ -56,5 +56,8 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `this run failed, so there's nothing to report` | run the backtest successfully first |
 | `--pdf needs wkhtmltopdf or Chromium` | `sudo apt install -y wkhtmltopdf` (the HTML report is written anyway) |
 | report fails | read `report-console.txt` next to the report |
+| `klean research`: `LEAN's research files aren't in …` | rebuild LEAN: `klean lean update` |
+| `klean research`: the notebook says `QuantBook` isn't defined | the kernel didn't load LEAN: start Jupyter with `klean research` (not plain `jupyter lab`); see `.klean/research/log.txt` |
+| `klean research`: `port … is already in use` | another Jupyter is running: stop it, or `--port` another number |
 | GUI: `403` | open the full URL klean printed (it has the token) |
 | WSL: the browser doesn't open | `sudo apt install -y wslu`, or open the printed URL yourself |

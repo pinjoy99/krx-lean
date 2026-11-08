@@ -80,6 +80,39 @@ Reports are only made for runs that completed. Notes: the page loads fonts and t
 "Capacity (USD)" shows "-"; the crisis charts are US/global events and are empty outside your
 data's dates.
 
+## Research notebooks
+
+```bash
+klean research Top20                  # JupyterLab in the browser, with the project's research.ipynb
+klean research Top20 --port 8888 --no-browser
+klean research Top20 --execute        # run research.ipynb without a browser → research.executed.ipynb
+```
+
+A Jupyter notebook for exploring data before (or after) writing a strategy, like the LEAN CLI's
+`lean research` but without Docker. LEAN is already loaded in every notebook: `QuantBook()` gives
+history and indicators from the workspace's KRX data, and the project's `krx_models.py` is
+importable (`KrxBoards`, `load_index` for KOSPI / KOSPI 200).
+
+```python
+qb = QuantBook()
+symbol = qb.add_equity("005930", Resolution.DAILY, Market.KRX).symbol
+history = qb.history(symbol, datetime(2020, 1, 1), datetime(2025, 12, 31), Resolution.DAILY)
+sma = qb.indicator(SimpleMovingAverage(60), symbol, datetime(2020, 1, 1), datetime(2025, 12, 31), Resolution.DAILY)
+```
+
+- **First use:** klean installs JupyterLab 4.5.1, ipykernel, clr-loader 0.2.9 and matplotlib
+  into the Python 3.11 environment (the versions of LEAN's Docker image); a few minutes.
+- If the project has no `research.ipynb`, klean writes a starter one (history of one stock, a
+  60-day average, the stock against the KOSPI 200). Your notebooks are never overwritten.
+- Jupyter listens on 127.0.0.1 with a random token in the printed URL; stop it with Ctrl+C.
+  Under WSL2 it opens your Windows browser (with `wslu`), or open the URL yourself.
+- Notebooks are Python, also in C# projects (LEAN's C# notebooks need .NET Interactive; not
+  supported).
+- `from AlgorithmImports import *` (done for you) replaces Python's `time` module with
+  `datetime.time`: use `import time as time_module` if you need it.
+- LEAN's own log goes to `<workspace>/.klean/research/log.txt`, the object store
+  (`qb.object_store`) to `<workspace>/storage/`.
+
 ## GUI
 
 ```bash

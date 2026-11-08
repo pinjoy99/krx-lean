@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.3 — 2026-11-08
+
+- **`klean research PROJECT`**: JupyterLab with LEAN's `QuantBook` on the workspace's data, like
+  `lean research` without Docker. Uses LEAN's own `start.py` from the source build; installs
+  JupyterLab 4.5.1, ipykernel, clr-loader 0.2.9 and matplotlib into the Python 3.11 environment on
+  first use; writes a starter `research.ipynb` (history, a moving average, the stock against the
+  KOSPI 200) if the project has none; `--execute` runs a notebook without a browser. The
+  project's `krx_models.py` is importable (C# projects get a copy on the path). LEAN's config is
+  pinned to klean's file, so a project's own `config.json` isn't read; the object store is
+  `<workspace>/storage/` (now kept out of run code snapshots).
+- Checked on the synthetic demo data: the starter notebook runs headless (`--execute`) and in
+  JupyterLab in a browser, for a Python and a C# project. Real-data notebooks use the same code
+  path with the real data folder.
+- Docs: users 5-tools "Research notebooks", demo page, troubleshooting; developers 6-klean
+  "Research", roadmap; beginner page.
+
 ## 0.0.2 — 2026-11-05
 
 Fixes from the first users-track test (a new user following the docs on Ubuntu 24.04).
