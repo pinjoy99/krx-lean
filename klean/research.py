@@ -144,8 +144,9 @@ def notebook_template(demo: bool) -> dict:
                  "both = pd.DataFrame({\"stock\": close.groupby(close.index.date).last(), \"KOSPI 200\": kospi200}).dropna()\n"
                  "(both / both.iloc[0]).plot(figsize=(10, 4), title=\"growth of 1 won\");"),
     ]
-    return {"cells": [{"cell_type": t, "metadata": {}, "source": s,
-                       **({"execution_count": None, "outputs": []} if t == "code" else {})} for t, s in cells],
+    return {"cells": [{"cell_type": t, "id": f"klean-{i}", "metadata": {}, "source": s,
+                       **({"execution_count": None, "outputs": []} if t == "code" else {})}
+                      for i, (t, s) in enumerate(cells, 1)],
             "metadata": {"kernelspec": {"display_name": "Python 3 (LEAN, klean)", "language": "python",
                                         "name": "python3"},
                          "language_info": {"name": "python"}},
@@ -181,7 +182,9 @@ def launch(ws: Workspace, project: Path, port: int = 0, open_browser: bool = Tru
     py = str(venv_python(ws.python_venv))
     cmd = [py, "-m", "jupyter", "lab", "--no-browser", "--ip=127.0.0.1", f"--port={port}",
            f"--ServerApp.root_dir={project}", f"--IdentityProvider.token={token}",
-           "--ServerApp.port_retries=0"]
+           "--ServerApp.port_retries=0",
+           # no "news" / "new version" pop-ups (and no calls to jupyter.org): a local tool
+           "--LabApp.news_url=None", "--LabApp.check_for_updates_class=jupyterlab.NeverCheckForUpdate"]
     if hasattr(os, "geteuid") and os.geteuid() == 0:     # containers, some WSL setups
         cmd.append("--allow-root")
     try:

@@ -3,8 +3,8 @@
 | Component | Version |
 |---|---|
 | LEAN | `QuantConnect/Lean` commit `80e7843f645673bcbeaab963049f76f20f6785e1` (`klean/workspace.py: LEAN_COMMIT`) |
-| .NET SDK | 10.0 (tested 10.0.401) |
-| Python for LEAN | CPython **3.11** with a shared libpython; pandas 2.3.3, numpy 1.26.4 (LEAN's `DockerfileLeanFoundation` at that commit); matplotlib 3.8.4 for reports |
+| .NET SDK | 10.0 (tested 10.0.401 and 10.0.403) |
+| Python for LEAN | CPython **3.11** with a shared libpython; pandas 2.3.3, numpy 1.26.4 (LEAN's `DockerfileLeanFoundation` at that commit); matplotlib 3.8.4 for reports and notebooks; JupyterLab 4.5.1 and clr-loader 0.2.9 for notebooks (LEAN's Docker images) |
 | Python for the tools | 3.10+ (tested 3.13) |
 
 ## Build by hand
@@ -17,8 +17,8 @@ dotnet build Report/QuantConnect.Report.csproj -c Release              # only fo
 ```
 
 `klean install-lean` does the same with a shallow fetch of that commit. Output:
-`Launcher/bin/Release/` (launcher, engine and LEAN's own example algorithm DLLs),
-`Report/bin/Release/`.
+`Launcher/bin/Release/` (launcher, engine, LEAN's own example algorithm DLLs, and the research
+parts: `QuantConnect.Research.dll`, `start.py`), `Report/bin/Release/`.
 
 ## Python 3.11 for pythonnet
 
@@ -40,9 +40,10 @@ with `--enable-shared`, ships `lib/libpython3.11.so`) and records the library pa
    built).
 2. Rerun the reference backtests (top-market-cap in C# and Python) and `klean compare` them with
    runs on the previous commit.
-3. Check the launcher's and report's config keys still match (`klean/backtest.py`,
-   `klean/report.py`) and that `DockerfileLeanFoundation`'s pandas/numpy/matplotlib versions
-   didn't change (update `PYTHON_PACKAGES` / `REPORT_PACKAGES` if they did).
+3. Check the launcher's, report's and `start.py`'s config keys still match (`klean/backtest.py`,
+   `klean/report.py`, `klean/research.py`) and that the package versions in LEAN's
+   `DockerfileLeanFoundation` / `DockerfileJupyter` didn't change (update `PYTHON_PACKAGES`,
+   `REPORT_PACKAGES`, `RESEARCH_PACKAGES` if they did); run `klean research P --execute`.
 4. Update `LEAN_COMMIT` and this page; note it in the changelog.
 
 ## Things that differ from LEAN's Docker image

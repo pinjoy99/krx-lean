@@ -78,6 +78,27 @@ In `Launcher/bin/Release/` (or `--results-destination-folder DIR`):
 removed), `--parameters k:v,k2:v2`, `--backtest-name`, `--results-destination-folder`.
 LEAN's `config.json` contains comments and trailing commas; strip them before parsing it as JSON.
 
+## A notebook by hand
+
+What `klean research` sets up, by hand (JupyterLab 4.5.1, ipykernel and clr-loader 0.2.9
+installed into the 3.11 env first):
+
+```bash
+mkdir -p ~/research && cd ~/research
+cat > config.json <<END
+{"data-folder": "$HOME/Lean/Data/", "composer-dll-directory": "$HOME/Lean/Launcher/bin/Release/",
+ "algorithm-language": "Python", "messaging-handler": "QuantConnect.Messaging.Messaging",
+ "job-queue-handler": "QuantConnect.Queues.JobQueue", "api-handler": "QuantConnect.Api.Api"}
+END
+export DOTNET_ROOT=$HOME/.dotnet PYTHONNET_PYDLL=…/libpython3.11.so
+export PYTHONPATH=$HOME/Lean/Launcher/bin/Release
+~/.klean/py311/bin/python -m jupyter lab
+```
+
+In a notebook in that folder, the first cell is `%run ~/Lean/Launcher/bin/Release/start.py`,
+then `qb = QuantBook()`. Keep notebooks next to that `config.json`: `QuantBook()` re-reads
+`./config.json` (klean avoids this by pointing LEAN at its config file's absolute path).
+
 ## A report by hand
 
 ```bash

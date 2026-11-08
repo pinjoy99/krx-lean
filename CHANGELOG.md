@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.4 — 2026-11-08
+
+- `klean research`: JupyterLab no longer shows "news" and "new version" pop-ups or contacts
+  jupyter.org for them; starter notebooks have cell ids (no nbformat warning).
+- Docs revised throughout for 0.0.3–0.0.4: research in the README, the users track (install,
+  workspace layout, strategies, tools, troubleshooting), the developers track (architecture,
+  LEAN build versions, manual notebook steps, klean internals, a verification record on the
+  demo data, roadmap) and the beginner page (a "notebook" step with a screenshot).
+
 ## 0.0.3 — 2026-11-08
 
 - **`klean research PROJECT`**: JupyterLab with LEAN's `QuantBook` on the workspace's data, like

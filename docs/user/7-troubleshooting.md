@@ -48,7 +48,7 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | WSL: very slow runs | move the workspace out of `/mnt/c` into `~` |
 | WSL: optimization processes killed | raise WSL's memory (`.wslconfig`) or use fewer `--max-concurrent-backtests` |
 
-## Reports and GUI
+## Reports, research and GUI
 
 | Message | Fix |
 |---|---|

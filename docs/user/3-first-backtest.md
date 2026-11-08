@@ -20,7 +20,11 @@ krx-workspace/
   data/                      market hours, symbol properties, equity/krx, index/krx
   Top20/                     a project
     main.py  krx_models.py
+    research.ipynb           notebook (made by `klean research`)
     backtests/2026-11-02_10-15-00/    one folder per run
+    optimizations/…          one folder per optimization
+  storage/                   LEAN's object store (if a strategy or notebook uses it)
+  .klean/                    klean's own files (research settings); leave them alone
 ```
 
 ## Create a project and run it
@@ -62,6 +66,7 @@ klean recognises it and prints a one-line note. It doesn't affect the results.
 klean logs Top20 --tail 20        # the algorithm's log (and the error, if the run failed)
 klean report Top20                # LEAN's HTML report → Top20/backtests/<run>/report.html
 klean gui                         # charts, orders, code, reports in the browser
+klean research Top20              # explore the data in a Jupyter notebook
 ```
 
 Next: [4. Writing strategies](4-strategies.md).

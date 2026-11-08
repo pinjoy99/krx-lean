@@ -8,7 +8,8 @@ a `.csproj` referencing your LEAN build. Start from a template (`klean project-c
 
 LEAN's own documentation covers the API (orders, indicators, scheduling, universes):
 <https://www.quantconnect.com/docs/v2/writing-algorithms>. This page covers what's specific to
-KRX.
+KRX. To look at the data before writing code (prices, indicators, charts), use a notebook:
+`klean research PROJECT` ([5. Tools](5-tools.md#research-notebooks)).
 
 ## The setup every KRX strategy needs
 
@@ -114,4 +115,4 @@ Both give identical results with the same strategy and data (checked to the won)
 easier to start with; C# runs several times faster, which matters for universe strategies over
 many years and for optimizations. LEAN's Python API uses `snake_case`; its C# API `PascalCase`.
 
-Next: [5. Optimize, report, compare, GUI](5-tools.md).
+Next: [5. Tools](5-tools.md).

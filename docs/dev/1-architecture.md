@@ -5,7 +5,7 @@ KRX Open API ─┐                                                  ┌─▶ C
 data.go.kr ───┼─▶ krx_lean: raw/ ─▶ build ─▶ lean/ ─▶ lean-install ─▶ LEAN (source build, .NET 10)
 aikstockdata ─┤        verify → reports/ (cross-checks only)     └─▶ Python algorithms (pythonnet, 3.11)
 Yahoo daily ──┘                                  ▲
-                                    klean: workspace, projects, runs, optimize, report, GUI
+                      klean: workspace, projects, runs, optimize, report, research notebooks, GUI
 ```
 
 Three parts, connected only through files:
@@ -35,9 +35,10 @@ krx_lean/            data pipeline (command `krx-lean`)
   lean_extras.py     universe files, index files
   lean_install.py    copy into a LEAN data folder, KRX market hours / symbol properties, lean-package
   verify.py          cross-checks against aikstockdata and Yahoo
+  demo.py            synthetic demo data in the raw download formats
   scraper.py         aikstockdata (cross-check source)
   yahoo.py           Yahoo daily bars via yfinance (cross-check source; optional dependency)
-klean/               workspace tool (command `klean`)
+klean/               workspace tool (command `klean`; modules in 6. klean internals)
 examples/            KRX models (C#, Python) and example algorithms; klean copies them into projects
 tests/               pipeline unit tests; tests/klean/ klean unit tests
 docs/user/, docs/dev/
@@ -52,6 +53,6 @@ docs/user/, docs/dev/
   only cross-check them. Dividends come only from data.go.kr.
 - **C# and Python models are equivalent.** Every change is made in both and checked with a
   parity run (identical to the won).
-- **Local only.** No cloud services, no Docker, no QuantConnect account; LEAN's own launchers
-  (`Launcher`, `Report`) do the work.
+- **Local only.** No cloud services, no Docker, no QuantConnect account; LEAN's own programs
+  (`Launcher`, `Report`, the research `start.py`) do the work.
 - **Scope:** KOSPI and ETF, daily. KOSDAQ/KONEX code paths exist but aren't downloaded or verified.

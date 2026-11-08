@@ -1,4 +1,4 @@
-# 5. Optimize, report, compare, GUI
+# 5. Tools: compare, optimize, report, research, GUI
 
 ## Naming runs
 
@@ -76,9 +76,9 @@ Options: `--report-destination FILE.html`, `--overwrite`, `--strategy-name`,
 (your own template). `--pdf` needs `wkhtmltopdf` or Chromium/Chrome on the PATH
 (`sudo apt install -y wkhtmltopdf`).
 
-Reports are only made for runs that completed. Notes: the page loads fonts and the logo from the internet (offline it shows plain styling);
-"Capacity (USD)" shows "-"; the crisis charts are US/global events and are empty outside your
-data's dates.
+Reports are only made for runs that completed. The page loads fonts and the logo from the
+internet (offline it shows plain styling); "Capacity (USD)" shows "-"; the crisis charts are
+US/global events and are empty outside your data's dates.
 
 ## Research notebooks
 
@@ -101,11 +101,15 @@ sma = qb.indicator(SimpleMovingAverage(60), symbol, datetime(2020, 1, 1), dateti
 ```
 
 - **First use:** klean installs JupyterLab 4.5.1, ipykernel, clr-loader 0.2.9 and matplotlib
-  into the Python 3.11 environment (the versions of LEAN's Docker image); a few minutes.
+  into the Python 3.11 environment (the versions of LEAN's Docker image); a few minutes and a few
+  hundred MB.
+- Open notebooks with `klean research`, not plain `jupyter lab`: klean is what loads LEAN into
+  the notebook.
 - If the project has no `research.ipynb`, klean writes a starter one (history of one stock, a
   60-day average, the stock against the KOSPI 200). Your notebooks are never overwritten.
-- Jupyter listens on 127.0.0.1 with a random token in the printed URL; stop it with Ctrl+C.
-  Under WSL2 it opens your Windows browser (with `wslu`), or open the URL yourself.
+- Jupyter listens on 127.0.0.1 with a random token in the printed URL, and doesn't check the
+  internet for news or updates; stop it with Ctrl+C. Under WSL2 it opens your Windows browser
+  (with `wslu`), or open the URL yourself.
 - Notebooks are Python, also in C# projects (LEAN's C# notebooks need .NET Interactive; not
   supported).
 - `from AlgorithmImports import *` (done for you) replaces Python's `time` module with

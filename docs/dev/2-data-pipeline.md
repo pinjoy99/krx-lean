@@ -24,6 +24,8 @@ from the environment only, whitespace stripped.
   missing at 01:23 KST on 10-08 and present at 13:58 KST).
 - **Errors:** the run stops at the first API error (bad key, unapproved service, quota) so a
   rerun resumes. HTTP 200 responses that aren't JSON (KRX error pages) are retried 3 times.
+  Transport errors that outlast the client's retries (timeouts, dropped connections) end every
+  download command with `network error, stopping (re-run the same command to resume)`.
 - **Rate:** ≥ 0.2 s between KRX calls; ~13,000 calls in one afternoon hit no quota (~100
   trading days per minute per market).
 - **data.go.kr:** whole tables, 10,000 rows per page; the gateway resets connections often, so

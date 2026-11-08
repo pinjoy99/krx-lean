@@ -4,7 +4,8 @@ Korean stock market (KRX) data and market models for
 [QuantConnect LEAN](https://github.com/QuantConnect/Lean), the open-source backtesting engine,
 built from source on your own machine. Backtest KOSPI stocks and ETFs in Python or C#, with
 KRX fees, taxes and tick sizes, the KOSPI 200 benchmark, daily universes including delisted
-stocks, and prices adjusted for splits, rights issues and dividends.
+stocks, and prices adjusted for splits, rights issues and dividends; explore the data in Jupyter
+notebooks with LEAN's QuantBook.
 
 Everything runs locally: no Docker, no QuantConnect account, no cloud service. You download the
 data yourself with your own free API keys.
@@ -13,7 +14,7 @@ data yourself with your own free API keys.
 KRX Open API ─┐                                 ┌─▶ Python strategies
 data.go.kr  ──┴─▶ krx-lean (download → build) ──▶ LEAN (built from source)
                                                 └─▶ C# strategies
-                        klean: workspace, projects, backtests, optimization, reports, GUI
+        klean: workspace, projects, backtests, optimization, reports, notebooks, GUI
 ```
 
 **Scope (0.0.x):** KOSPI stocks and ETFs, daily bars. Not covered: KOSDAQ, KONEX, NXT, minute
@@ -23,7 +24,7 @@ data, live trading.
 distributions should work. macOS is not tested yet.
 
 **New here?** The [beginner's guide](https://pinjoy99.github.io/krx-lean/) walks you from a
-fresh computer to your first backtest in about 30 minutes.
+fresh computer to your first backtest and notebook in under an hour.
 
 ## Pick a track
 
@@ -51,7 +52,8 @@ klean research Top20                           # Jupyter notebook with LEAN's Qu
 
 ## What you need
 
-- Linux or WSL2, about 5 GB of disk (LEAN build ~1 GB, data ~1 GB for 2010 onward).
+- Linux or WSL2, about 5 GB of disk (LEAN build ~1 GB, data ~1 GB for 2010 onward, the Python
+  3.11 environment ~0.5 GB with the notebook packages).
 - git, Python 3.10+ for the tools, the .NET 10 SDK, and Python 3.11 for LEAN's Python
   strategies (installed for you by `klean install-python` via [uv](https://docs.astral.sh/uv/)).
 - Free API keys: [KRX Open API](https://openapi.krx.co.kr/) (prices) and

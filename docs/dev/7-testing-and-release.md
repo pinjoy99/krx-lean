@@ -27,6 +27,15 @@ They use small synthetic files; no keys, no network, no LEAN build needed.
 | Optimization | best run of a 6-run grid identical to a plain backtest with those parameters |
 | Strategy sanity (top 20 by market cap, 2011-01 → 2026-09) | CAGR 5.89% after fees; an independent pandas replication without fees: 6.36% |
 
+## Verification record (synthetic demo data, no keys)
+
+| Check | Result |
+|---|---|
+| Demo data through the real build | 32 securities on LEAN's KRX calendar, split factor exactly 0.2, a delisting map file, yearly dividends, both index files; deterministic |
+| Templates on the demo data | buy-hold and top-market-cap run in Python and C#; top-market-cap C# = Python IDENTICAL; report, optimization and GUI carry the SYNTHETIC labels |
+| Failure detection | a workspace without index data: `backtest FAILED` with the "no kospi200 index data" message, exit 1, manifest `ok: false`, in Python and C# |
+| Research | starter notebook runs headless (`--execute`) and in JupyterLab in Chromium (all cells, both charts), for a Python and a C# project, in a fresh Python env (first-use install); a project `config.json` is ignored |
+
 ## Reproducibility
 
 Every klean run records what produced it (`manifest.json`, `code/`, `config.json`). For results

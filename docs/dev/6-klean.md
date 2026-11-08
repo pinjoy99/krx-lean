@@ -7,7 +7,7 @@ also runs under `lean backtest`.
 | Module | Does |
 |---|---|
 | `workspace.py` | `klean.json` (load/save, found upwards from the current folder), tested LEAN commit, Python package pins, `dotnet` and libpython lookup, `doctor` checks |
-| `cli.py` | commands; `install-lean`, `install-python` (uv's 3.11), `init`, `data install/status`, `config`, `lean status/update` |
+| `cli.py` | commands; `install-lean`, `install-python` (uv's 3.11), `init`, `data install/status` (incl. `--demo`), `config`, `lean status/update` |
 | `projects.py` | templates (Python, C#), algorithm class detection, `.csproj` (references the launcher DLLs; excludes `backtests/**`, `optimizations/**`) |
 | `backtest.py` | `prepare` (py_compile + requirements, or `dotnet build`), `run_once` (code snapshot, per-run config, launcher, manifest), `backtest` |
 | `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `data status` |
@@ -22,8 +22,8 @@ also runs under `lean backtest`.
    `pip install -r requirements.txt` into the 3.11 env; C# — `dotnet build` with
    `-p:LeanBin=<launcher dir>` into `<project>/bin/<config>/`.
 2. `run_once`: copy the project's source files into `<run>/code/` (excluding `backtests/`,
-   `optimizations/`, `bin/`, `obj/`, `__pycache__/`, hidden folders, `.ipynb_checkpoints/`, files
-   > 10 MB); write `<run>/config.json` = LEAN's `Launcher/config.json` (comments stripped) with
+   `optimizations/`, `bin/`, `obj/`, `__pycache__/`, `storage/`, hidden folders,
+   `.ipynb_checkpoints/`, files > 10 MB); write `<run>/config.json` = LEAN's `Launcher/config.json` (comments stripped) with
    `parameters` emptied, plus the workspace's `lean_config` and `--extra-config`; run the
    launcher with `--config`, `--data-folder <workspace>/data/`, `--results-destination-folder`,
    `--parameters`; console to `console.txt`.
@@ -81,7 +81,8 @@ imports `AlgorithmImports`, and starts LEAN's handlers from `./config.json`. kle
    `Config.SetConfigurationFile(<absolute path>)`;
 3. runs `python -m jupyter lab` from the 3.11 env in the project folder with `IPYTHONDIR`
    pointing at that profile, `DOTNET_ROOT` (clr-loader needs it), `PYTHONNET_PYDLL`, a random
-   token, 127.0.0.1 only (`--allow-root` only when running as root).
+   token, 127.0.0.1 only, no news feed or update check (`--LabApp.news_url=None`,
+   `NeverCheckForUpdate`), and `--allow-root` only when running as root.
 
 Why `SetConfigurationFile`: `QuantBook()` calls `Config.Reset()`, which re-reads `config.json`
 from the *current* folder, the project's. LEAN's Docker image keeps a config there; klean

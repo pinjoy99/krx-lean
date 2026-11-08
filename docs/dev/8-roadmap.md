@@ -13,8 +13,10 @@
 | `live …` | not in scope for now |
 | `login`, `cloud …`, `data download`, `encrypt` | not applicable (QuantConnect services) |
 
-KRX-specific additions: `doctor`, `data install/status`, run manifest and code snapshot,
-`compare`; planned `check-models` (run the `CHECK` cases in both languages and compare).
+KRX-specific additions: `doctor`, `data install/status`, synthetic demo data
+(`data install --demo`), run manifest and code snapshot, failure detection from LEAN's run
+status, `compare`; planned `check-models` (run the `CHECK` cases in both languages and compare).
+`research`: C# notebooks (.NET Interactive) later, if wanted.
 
 ## Data
 

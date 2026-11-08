@@ -8,7 +8,7 @@ setup and the runs.
 2. [Keys and data](2-data.md) — API keys, first download, building the LEAN data
 3. [Workspace and first backtest](3-first-backtest.md)
 4. [Writing strategies](4-strategies.md) — the KRX setup every strategy needs, Python and C#
-5. [Optimize, report, compare, GUI](5-tools.md)
+5. [Tools](5-tools.md) — compare, optimize, report, research notebooks, GUI
 6. [Daily update](6-daily-update.md)
 7. [Troubleshooting](7-troubleshooting.md)
 
@@ -21,5 +21,5 @@ Paths used throughout (change them if you like):
 | `~/Lean` | LEAN, built from source |
 | `~/.klean/py311` | Python 3.11 environment LEAN uses for Python strategies |
 | `~/krx-data` | downloaded and built KRX data |
-| `~/krx-workspace` | your workspace: projects and their results |
+| `~/krx-workspace` | your workspace: projects, their results and notebooks |
 | `~/krx-demo` | a separate workspace for the [synthetic demo data](demo.md) (optional) |

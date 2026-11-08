@@ -121,7 +121,7 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
     <span class="pill">Linux &amp; Windows (WSL2)</span>
   </div>
   <div class="btns">
-    <a class="btn primary" href="#start">Start in 30 minutes</a>
+    <a class="btn primary" href="#start">Get started</a>
     <a class="btn secondary" href="https://github.com/pinjoy99/krx-lean">View on GitHub</a>
   </div>
 </div>
@@ -139,7 +139,7 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
       <div class="card"><h3>A professional engine</h3><p>Built on <a href="https://github.com/QuantConnect/Lean">LEAN</a>,
         the open-source engine used by many quant traders, built from source on your machine.</p></div>
       <div class="card"><h3>One easy tool</h3><p><code>klean</code> sets everything up, runs backtests, compares runs,
-        searches parameters, makes reports, and shows results in your browser.</p></div>
+        searches parameters, makes reports, opens research notebooks, and shows results in your browser.</p></div>
     </div>
     <div class="note warn" style="margin-top:18px"><strong>Not investment advice.</strong> Past results don't
       predict future returns, and a backtest is only as good as its assumptions. krx-lean doesn't model slippage
@@ -150,7 +150,7 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
 <section id="start">
   <div class="wrap">
     <h2>Get started</h2>
-    <p class="sub">About 30 minutes, most of it waiting for downloads. You'll copy commands into a terminal; each
+    <p class="sub">About 30–45 minutes, most of it waiting for downloads. You'll copy commands into a terminal; each
       grey box has a <strong>Copy</strong> button. You don't need any API key for these steps: you'll try everything
       on <strong>synthetic demo data</strong> first.</p>
 
@@ -235,6 +235,24 @@ klean backtest Top20</code></pre></div>
 klean gui               <span class="c"># opens the results in your browser</span></code></pre></div>
         <p>Under WSL, install <code>sudo apt install -y wslu</code> so <code>klean gui</code> can open your Windows
           browser, or open the address it prints. Stop it with <kbd>Ctrl</kbd>+<kbd>C</kbd>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">5</div>
+      <div>
+        <h3>Explore the data in a notebook <span class="time">5 min the first time</span></h3>
+        <p>A <em>notebook</em> (Jupyter) lets you look at prices, compute indicators and draw charts step by step,
+          before you write a strategy. The first time, klean installs JupyterLab (a few minutes).</p>
+        <div class="code"><pre><code>klean research Top20</code></pre></div>
+        <p>Your browser opens a notebook with LEAN already loaded. Choose <strong>Run → Run All Cells</strong>: it
+          loads a stock's history, draws its 60-day average and compares it with the KOSPI 200. Change the code and run
+          the cells again. Stop it with <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal.</p>
+        <figure>
+          <img src="assets/research.png" width="1280" height="860" loading="lazy"
+               alt="JupyterLab with the starter research notebook: code that loads a stock's daily history and a 60-day moving average, and the resulting chart">
+          <figcaption><code>klean research</code>: the starter notebook on the demo data.</figcaption>
+        </figure>
       </div>
     </div>
   </div>
@@ -325,7 +343,8 @@ klean backtest Top20</code></pre></div>
   <div class="wrap">
     <h2>Write your own strategy</h2>
     <p class="sub">A strategy is a small Python program. Create an empty project and replace its <code>main.py</code>
-      with this one, which keeps two stocks at about half each and rebalances every month:</p>
+      with this one, which keeps two stocks at about half each and rebalances every month (try ideas in the
+      project's notebook first: <code>klean research MyFirst</code>):</p>
     <div class="code"><pre><code>klean project-create MyFirst --template empty
 nano MyFirst/main.py</code></pre></div>
     <div class="code"><pre><code>from AlgorithmImports import *

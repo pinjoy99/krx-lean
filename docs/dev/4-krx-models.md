@@ -45,7 +45,9 @@ From 2023-01-25, one table for KOSPI/KOSDAQ/KONEX: < 2,000 → 1; < 5,000 → 5;
 
 LEAN subscribes a security benchmark at hourly resolution; with daily index data that benchmark
 is empty (alpha 0, beta 0). `KrxIndex.Benchmark` / `krx_benchmark` read the daily index file and
-return the last close on or before the time asked, as a benchmark function.
+return the last close on or before the time asked, as a benchmark function. If the index file is
+missing, both stop with a message naming the file and how to get it (`krx-lean krx-index`, or
+the demo data).
 
 ## Changing the models
 

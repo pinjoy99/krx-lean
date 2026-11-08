@@ -10,7 +10,8 @@ downloads and the LEAN build.
   times slower, and LEAN reads thousands of small files.
 - Parallel optimizations use memory: if WSL runs out, raise `memory=` in
   `%UserProfile%\.wslconfig` (for example `memory=8GB`) and run `wsl --shutdown`.
-- Optional, so `klean gui` opens your Windows browser: `sudo apt install -y wslu`.
+- Optional, so `klean gui` and `klean research` open your Windows browser:
+  `sudo apt install -y wslu`.
 
 ## System packages
 
@@ -68,7 +69,9 @@ klean install-python --dir ~/.klean/py311   # Python 3.11 + pandas/numpy for LEA
 
 `install-lean` uses the LEAN commit krx-lean was tested with; don't build another one unless you
 want to test it (see [5. Tools](5-tools.md#updating-lean)). `install-python` prints the Python
-library it found (`…/libpython3.11.so`).
+library it found (`…/libpython3.11.so`). Packages needed only by some tools are added to that
+environment the first time you use them: matplotlib for `klean report`, JupyterLab for
+`klean research`.
 
 Next: [2. Keys and data](2-data.md). Waiting for your KRX key? Try everything on
 [synthetic demo data](demo.md) meanwhile.

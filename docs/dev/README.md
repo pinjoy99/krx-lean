@@ -9,6 +9,6 @@ right. Assumes the [users track](../user/) setup (or the manual steps in
 3. [LEAN build](3-lean-build.md) — the pinned commit, building, updating
 4. [KRX models](4-krx-models.md) — fees and taxes, tick sizes, universe, benchmark; changing them; C#/Python parity
 5. [Manual workflow](5-manual-workflow.md) — everything klean does, by hand
-6. [klean internals](6-klean.md)
+6. [klean internals](6-klean.md) — runs, failure detection, demo data, optimize, report, research, GUI
 7. [Testing and releases](7-testing-and-release.md) — tests, verification record, reproducibility, release checklist
 8. [Roadmap](8-roadmap.md)
