@@ -50,6 +50,26 @@ class DemoDataTest(unittest.TestCase):
         self.assertTrue((data / "equity" / "krx" / demo.MARKER).exists())
         self.assertTrue((data / "index" / "krx" / demo.MARKER).exists())
 
+    def test_rebuild_is_reproducible_and_reinstall_copies_nothing(self):
+        daily = self.root / "lean" / "equity" / "krx" / "daily" / "d00010.zip"
+        before, mtime = daily.read_bytes(), daily.stat().st_mtime_ns
+        with self.assertLogs(level="INFO"):
+            build.build(self.root)
+        self.assertEqual(daily.read_bytes(), before)             # same bytes: fixed zip member timestamp
+        self.assertEqual(daily.stat().st_mtime_ns, mtime)        # and the unchanged file wasn't rewritten
+        data = Path(self.tmp.name) / "data2"
+        (data / "market-hours").mkdir(parents=True)
+        (data / "market-hours" / "market-hours-database.json").write_text(
+            '{"entries": {"Index-krx-[*]": {"holidays": []}}}')
+        (data / "symbol-properties").mkdir()
+        (data / "symbol-properties" / "symbol-properties-database.csv").write_text("market,symbol\n")
+        src = self.root / "lean" / "equity" / "krx"
+        first = lean_install.sync_tree(src, data / "equity" / "krx")
+        self.assertGreater(first[0], 0)
+        self.assertEqual(lean_install.sync_tree(src, data / "equity" / "krx"), (0, first[0]))
+        (data / "equity" / "krx" / "daily" / "d00010.zip").write_bytes(b"damaged")
+        self.assertEqual(lean_install.sync_tree(src, data / "equity" / "krx"), (1, first[0] - 1))
+
     def test_deterministic(self):
         other = Path(self.tmp.name) / "again"
         demo.generate(other, holidays={"20180105"}, start="20171201", end="20190731")

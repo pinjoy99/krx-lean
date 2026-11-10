@@ -18,6 +18,8 @@ import os
 import platform
 import re
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 from klean import __version__, projects, results
@@ -25,6 +27,8 @@ from klean.workspace import (REPO_ROOT, KleanError, Workspace, dotnet, git_commi
                              venv_python)
 
 SUMMARY_KEYS = results.MAIN_KEYS
+DETACHED_LOG = "klean-detached.log"   # klean's own output of a `backtest --detach` run
+PROGRESS_SECONDS = 10      # how often a foreground run reports that it's still running
 
 
 def strip_json_comments(text: str) -> str:
@@ -131,7 +135,7 @@ def prepare(ws: Workspace, project: Path, language: str, build_config: str = "Re
 def results_folder(project: Path, output: Path | None, name: str) -> Path:
     if output:
         out = output.expanduser().resolve()
-        if out.exists() and any(out.iterdir()):
+        if out.exists() and any(f.name not in (results.RUNNING, DETACHED_LOG) for f in out.iterdir()):
             raise KleanError(f"{out} already exists and isn't empty")
         return out
     stamp = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -177,13 +181,39 @@ def run_once(ws: Workspace, project: Path, language: str, location: Path, cls: s
         print(f"klean: backtesting {cls} ({language}) -> {results_dir}", flush=True)
     started = dt.datetime.now(dt.timezone.utc)
     timed_out = False
-    with open(results_dir / "console.txt", "w", encoding="utf-8") as log:
-        try:
-            exit_code = subprocess.run(args, cwd=ws.launcher_dir, env={**os.environ, **env}, stdout=log,
-                                       stderr=subprocess.STDOUT, timeout=timeout or None).returncode
-        except subprocess.TimeoutExpired:       # subprocess.run has killed LEAN
-            timed_out, exit_code = True, -9
-            log.write(f"\nklean: stopped after the {timeout:g} s time limit (--timeout)\n")
+    marker = results_dir / results.RUNNING
+    marker.write_text(str(os.getpid()))
+    show_progress = not quiet and sys.stdout.isatty()
+    t0 = time.monotonic()
+    try:
+        with open(results_dir / "console.txt", "w", encoding="utf-8") as log:
+            proc = subprocess.Popen(args, cwd=ws.launcher_dir, env={**os.environ, **env}, stdout=log,
+                                    stderr=subprocess.STDOUT)
+            try:
+                while True:
+                    left = timeout - (time.monotonic() - t0) if timeout else None
+                    if left is not None and left <= 0:
+                        raise subprocess.TimeoutExpired(args, timeout)
+                    try:
+                        exit_code = proc.wait(timeout=min(PROGRESS_SECONDS, left) if left is not None else PROGRESS_SECONDS)
+                        break
+                    except subprocess.TimeoutExpired:
+                        if show_progress:
+                            print(f"\rklean: running, {time.monotonic() - t0:.0f} s ", end="", flush=True)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                timed_out, exit_code = True, -9
+                log.write(f"\nklean: stopped after the {timeout:g} s time limit (--timeout)\n")
+            except BaseException:               # Ctrl+C: don't leave LEAN running
+                proc.kill()
+                proc.wait()
+                raise
+            finally:
+                if show_progress and time.monotonic() - t0 >= PROGRESS_SECONDS:
+                    print()
+    finally:
+        marker.unlink(missing_ok=True)
     finished = dt.datetime.now(dt.timezone.utc)
     error = f"timed out after {timeout:g} s (--timeout)" if timed_out else results.run_error(results_dir)
     models = projects.models_state(project)

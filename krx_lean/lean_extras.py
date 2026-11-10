@@ -30,12 +30,24 @@ INDEX_TICKERS = {"KOSPI": "kospi", "KOSPI200": "kospi200", "KOSDAQ": "kosdaq",
 UNIVERSE_COLUMNS = ["code", "market", "close", "volume", "value", "market_cap", "shares"]
 
 
-def _zip_one(path: Path, name: str, text: str) -> None:
+def _zip_one(path: Path, name: str, text: str) -> bool:
+    """Write a one-member zip, reproducibly: the member has a fixed timestamp, so the same text
+    gives the same bytes, and an unchanged file is left alone (its modification time stays, and
+    `lean-install` skips it). Returns True if the file was written."""
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o644 << 16
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr(info, text)
+    data = buf.getvalue()
+    if path.exists() and path.stat().st_size == len(data) and path.read_bytes() == data:
+        return False
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(name, text)
+    tmp.write_bytes(data)
     os.replace(tmp, path)
+    return True
 
 
 def build_lean_indices(root: Path, lean_root: Path, market: str = "krx") -> int:

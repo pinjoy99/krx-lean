@@ -304,7 +304,9 @@ def cmd_logs(args) -> None:
     print(f"# {run_dir}")
     print("\n".join(lines))
     error = results.run_error(run_dir)
-    if error:
+    if results.is_running(run_dir):
+        print("\n# this run is STILL RUNNING")
+    elif error:
         print(f"\n# this run FAILED: {error.splitlines()[0]}\n# full output: klean logs {args.run} --console")
     elif not lines and not args.console:
         print("# the algorithm logged nothing; LEAN's output: --console")
@@ -386,6 +388,30 @@ def cmd_lean(args) -> int:
     return 0
 
 
+def detach_backtest(ws: Workspace, project: Path, args) -> int:
+    """Start the backtest as a separate process and return at once."""
+    from klean.backtest import DETACHED_LOG, check_project, results_folder
+    project, _ = check_project(ws, project)
+    out = results_folder(project, Path(args.output) if args.output else None, args.backtest_name or "")
+    out.mkdir(parents=True, exist_ok=True)
+    cmd = [sys.executable, "-m", "klean", "backtest", str(project), "--output", str(out),
+           "--build-config", args.build_config, "--timeout", str(args.timeout)]
+    if args.backtest_name:
+        cmd += ["--backtest-name", args.backtest_name]
+    for flag, pairs in (("--parameter", args.parameter), ("--extra-config", args.extra_config)):
+        for k, v in pairs or []:
+            cmd += [flag, k, v]
+    with open(out / DETACHED_LOG, "w", encoding="utf-8") as log:
+        child = subprocess.Popen(cmd, cwd=ws.root, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                 start_new_session=True)
+    (out / results.RUNNING).write_text(str(child.pid))
+    ref = f"{project.name}/{out.name}" if out.parent.name == "backtests" else str(out)
+    print(f"started in the background (pid {child.pid}): {out}\n"
+          f"  klean logs {ref}            # says whether it's still running; the results when done\n"
+          f"  tail -f {out / DETACHED_LOG}")
+    return 0
+
+
 def cmd_backtest(args) -> int:
     project = Path(args.project).expanduser()
     if project.exists():
@@ -393,6 +419,8 @@ def cmd_backtest(args) -> int:
     else:
         ws = Workspace.load(Path.cwd())
         project = ws.root / project
+    if args.detach:
+        return detach_backtest(ws, project, args)
     demo = results.is_demo_data(ws)
     if demo:
         print(f"*** {results.DEMO_BANNER} ***", flush=True)
@@ -584,6 +612,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--backtest-name", help="name for the run (results folder suffix)")
     s.add_argument("--output", help="results folder (default: <project>/backtests/<timestamp>[_<name>])")
     s.add_argument("--build-config", choices=["Release", "Debug"], default="Release", help="C# build configuration")
+    s.add_argument("--detach", action="store_true", help="run in the background and return at once")
     s.add_argument("--timeout", type=float, default=0, metavar="SECONDS",
                    help="stop LEAN if the backtest runs longer (default: no limit)")
     s.set_defaults(func=cmd_backtest)

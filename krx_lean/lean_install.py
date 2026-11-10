@@ -21,6 +21,7 @@ import gzip
 import json
 import logging
 import os
+import filecmp
 import shutil
 import zipfile
 from pathlib import Path
@@ -95,6 +96,25 @@ def package(root: Path, out: Path, market: str = "krx", prefix: str = "data") ->
     return n
 
 
+def sync_tree(src: Path, dst: Path) -> tuple[int, int]:
+    """Copy ``src`` into ``dst``, skipping files that are already identical there (same size and
+    modification time, or same bytes). Adds and replaces, never deletes. Returns (copied, unchanged)."""
+    copied = same = 0
+    for path in sorted(src.rglob("*")):
+        if not path.is_file():
+            continue
+        target = dst / path.relative_to(src)
+        if target.is_file():
+            a, b = path.stat(), target.stat()
+            if a.st_size == b.st_size and (int(a.st_mtime) == int(b.st_mtime) or filecmp.cmp(path, target, shallow=False)):
+                same += 1
+                continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)       # keeps the modification time, for the next comparison
+        copied += 1
+    return copied, same
+
+
 def install(root: Path, lean_data: Path, market: str = "krx", config_only: bool = False) -> dict:
     """Copy the built LEAN data into ``lean_data`` and add the KRX equity market hours and symbol
     properties. With ``config_only`` the data is assumed to be there already (e.g. unzipped from
@@ -112,10 +132,12 @@ def install(root: Path, lean_data: Path, market: str = "krx", config_only: bool 
         if not (dst / "daily").is_dir():
             log.warning("lean-install: %s has no daily data yet (unzip lean.zip there first)", dst)
     else:
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+        copied, same = sync_tree(src, dst)
         index_src = root / "lean" / "index" / market
         if index_src.is_dir():  # LEAN already has Index-<market> hours and symbol properties
-            shutil.copytree(index_src, lean_data / "index" / market, dirs_exist_ok=True)
+            c, s = sync_tree(index_src, lean_data / "index" / market)
+            copied, same = copied + c, same + s
+        log.info("lean-install: %d files copied, %d unchanged", copied, same)
     if (dst / "minute").is_dir():
         # minute files installed before minute data was removed from the project (2026-10-11)
         shutil.rmtree(dst / "minute")

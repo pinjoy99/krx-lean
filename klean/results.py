@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import os
 import json
 import shutil
 import zipfile
@@ -44,6 +45,20 @@ def resolve_run(ws: Workspace, ref: str) -> Path:
         if len(matches) > 1:
             raise KleanError(f"{ref} matches several runs: {', '.join(m.name for m in matches)}")
     raise KleanError(f"no run found for {ref!r} (give a results folder, a project, or PROJECT/RUN)")
+
+
+RUNNING = "klean-running.pid"      # in a run folder while LEAN runs (the pid of the klean process)
+
+
+def is_running(run: Path) -> bool:
+    """True while a backtest is writing into ``run`` (its klean process is alive)."""
+    marker = run / RUNNING
+    try:
+        pid = int(marker.read_text().strip())
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        return False
 
 
 def run_error(run: Path) -> str:
@@ -192,6 +207,8 @@ def log_text(run: Path, console: bool = False) -> str:
     else:
         found = sorted(run.glob("*-log.txt"))
         path = found[0] if found else run / "console.txt"
+    if not path.exists() and (run / "klean-detached.log").exists():
+        path = run / "klean-detached.log"       # a --detach run that is still building, or failed to
     if not path.exists():
         raise KleanError(f"no log in {run}")
     return path.read_text(encoding="utf-8", errors="replace")

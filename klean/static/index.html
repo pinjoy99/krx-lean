@@ -54,8 +54,9 @@ button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid
   color: #fff; cursor: pointer; }
 button.secondary { background: transparent; color: var(--accent); }
 button:disabled { opacity: .5; cursor: default; }
-input[type=text] { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); width: 100%; }
+input[type=text], textarea, select { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); width: 100%; }
 .kv { display: grid; grid-template-columns: 1fr 1fr 28px; gap: 6px; margin-bottom: 6px; }
+.kv4 { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 28px; gap: 6px; margin-bottom: 6px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .chart { position: relative; width: 100%; }
 .chart svg { display: block; width: 100%; }
@@ -219,7 +220,7 @@ async function pageProject(name) {
   setTitle(name);
   const p = await api("/api/project", {name});
   const rows = p.runs.map(r => `<tr><td><input type="checkbox" value="${esc(r.ref)}"></td>
-      <td><a href="${href("run", r.ref)}">${esc(r.name)}</a> ${r.ok ? "" : `<span class="badge no" title="${esc(r.error)}">failed</span>`}${r.demo ? ' <span class="badge demo">demo</span>' : ""}</td>
+      <td><a href="${href("run", r.ref)}">${esc(r.name)}</a> ${r.running ? '<span class="badge run">running</span>' : r.ok ? "" : `<span class="badge no" title="${esc(r.error)}">failed</span>`}${r.demo ? ' <span class="badge demo">demo</span>' : ""}</td>
       <td class="muted">${esc(Object.entries(r.parameters || {}).map(([k, v]) => k + "=" + v).join(", "))}</td>
       ${["Compounding Annual Return", "Drawdown", "Sharpe Ratio", "Total Orders", "End Equity"].map(k => `<td class="num ${k === "Compounding Annual Return" ? signClass(r.stats[k]) : ""}">${esc(statVal(r.stats, k))}</td>`).join("")}
       <td class="num muted">${r.seconds != null ? r.seconds + " s" : ""}</td></tr>`).join("");
@@ -242,8 +243,64 @@ async function pageProject(name) {
       ${p.optimizations.map(o => `<tr><td><a href="${href("optimization", p.name, o.name)}">${esc(o.name)}</a></td><td>${esc(o.direction)} ${esc(o.target)}</td>
         <td class="num">${o.runs}</td><td>${o.best ? esc(Object.entries(o.best.parameters).map(([k, v]) => k + "=" + v).join(", ")) : '<span class="muted">none met the constraints</span>'}</td>
         <td class="num">${o.best ? esc(o.best.target) : ""}</td><td class="num muted">${o.seconds != null ? o.seconds + " s" : ""}</td></tr>`).join("")}</table>
-      <p class="muted">Start one with <code>klean optimize ${esc(p.name)} --parameter NAME MIN MAX STEP</code>.</p></div>` : ""}
+      </div>` : ""}
+    <div class="panel"><h2>Optimize (grid search)</h2>
+      <div class="grid" style="grid-template-columns: 2fr 1fr">
+        <div><div class="muted">Parameters: name, min, max, step <a id="addo">+ add</a></div><div id="oparams"></div></div>
+        <div><div class="muted">Target</div><input type="text" id="otarget" value="Sharpe Ratio">
+          <select id="odir" style="margin-top:6px"><option value="max">maximize</option><option value="min">minimize</option></select></div>
+      </div>
+      <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:8px">
+        <div><div class="muted">Constraints, one per line (e.g. Drawdown &lt; 35)</div><textarea id="ocons" rows="2" style="width:100%"></textarea></div>
+        <div><div class="muted">Name (optional)</div><input type="text" id="oname" placeholder="e.g. holdings">
+          <div class="muted" style="margin-top:6px">Backtests at a time (0 = automatic)</div><input type="text" id="oconc" value="0"></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button id="ogo">Start optimization</button><span id="ostate" class="muted"></span></div>
+      <pre id="oconsole" style="display:none;margin-top:10px"></pre>
+    </div>
+    <div class="panel"><h2>Research notebook</h2>
+      <div class="row"><button class="secondary" id="nb">Start JupyterLab for this project</button><span id="nbstate" class="muted">
+        LEAN's QuantBook on this workspace's data; the first start installs JupyterLab (a few minutes).</span></div></div>
     <div class="panel"><h2>Files</h2><div class="muted">${p.files.map(esc).join(" · ")}</div></div>`;
+  const oRow = () => { const d = document.createElement("div"); d.className = "kv4";
+    d.innerHTML = `<input type="text" placeholder="name"><input type="text" placeholder="min"><input type="text" placeholder="max"><input type="text" placeholder="step"><a title="remove">✕</a>`;
+    d.querySelector("a").onclick = () => d.remove(); document.getElementById("oparams").appendChild(d); };
+  oRow();
+  document.getElementById("addo").onclick = oRow;
+  document.getElementById("ogo").onclick = async () => {
+    const btn = document.getElementById("ogo"), state = document.getElementById("ostate"), con = document.getElementById("oconsole");
+    const parameters = [...document.querySelectorAll("#oparams .kv4")].map(d => { const [name, min, max, step] = [...d.querySelectorAll("input")].map(i => i.value.trim()); return {name, min, max, step}; }).filter(x => x.name);
+    btn.disabled = true; state.textContent = "starting…";
+    try {
+      const job = await api("/api/optimize", {}, {project: p.name, parameters, target: document.getElementById("otarget").value.trim(),
+        direction: document.getElementById("odir").value, name: document.getElementById("oname").value.trim(),
+        constraints: document.getElementById("ocons").value.split("\n").map(x => x.trim()).filter(Boolean),
+        maxConcurrent: parseInt(document.getElementById("oconc").value, 10) || 0});
+      con.style.display = "block";
+      const poll = async () => {
+        if (!document.body.contains(btn)) return;
+        const j = await api("/api/job", {id: job.id});
+        con.textContent = j.console.join("\n") || "(building…)"; con.scrollTop = con.scrollHeight;
+        if (j.status === "running") {
+          state.innerHTML = `<span class="badge run">running</span> ${job.backtests} backtests, ${Math.round(Date.now() / 1000 - j.started)} s`;
+          pollTimer = setTimeout(poll, 1500); return;
+        }
+        btn.disabled = false;
+        state.innerHTML = j.status === "done" ? `<span class="badge ok">done</span> <a href="${href("optimization", p.name, j.ref)}">open the results</a>`
+          : `<span class="badge no">failed</span> <span class="err">${esc(j.error.split("\n")[0])}</span>`;
+      };
+      poll();
+    } catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; btn.disabled = false; }
+  };
+  document.getElementById("nb").onclick = async () => {
+    const btn = document.getElementById("nb"), state = document.getElementById("nbstate");
+    btn.disabled = true; state.innerHTML = '<span class="badge run">starting</span> (the first time this installs JupyterLab)';
+    try {
+      const r = await api("/api/research", {}, {project: p.name});
+      state.innerHTML = `<span class="badge ok">${r.started ? "started" : "already running"}</span> <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open the notebook</a> (give it a few seconds; it stops when klean gui stops)`;
+    } catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+    btn.disabled = false;
+  };
   const kvRow = target => { const d = document.createElement("div"); d.className = "kv";
     d.innerHTML = `<input type="text" placeholder="name"><input type="text" placeholder="value"><a title="remove">✕</a>`;
     d.querySelector("a").onclick = () => d.remove(); document.getElementById(target).appendChild(d); };
@@ -297,7 +354,9 @@ async function pageRun(ref) {
     ${r.error ? `<div class="failbox"><span class="badge no">failed</span> This run did not complete: <pre class="err">${esc(r.error)}</pre>See the Log tab (LEAN console output) for details.</div>` : ""}
     <div class="row" style="margin-bottom:12px"><button class="secondary" id="mkreport">${r.report ? "Remake report" : "Make LEAN report"}</button>
       <a id="openreport" target="_blank" rel="noopener noreferrer" href="/report?${new URLSearchParams({ref: r.ref, token: TOKEN})}" style="${r.report ? "" : "display:none"}">Open report</a>
-      <span id="repstate" class="muted"></span></div>
+      <span id="repstate" class="muted"></span>
+      ${parts[1] === "backtests" && !r.running ? '<span style="margin-left:auto"></span><button class="secondary" id="rename">Rename</button><button class="secondary" id="delete">Delete</button>' : ""}</div>
+    ${r.running ? '<div class="panel"><span class="badge run">running</span> This backtest is still running; reload the page for its results.</div>' : ""}
     <div class="tiles">${tiles}</div>
     <div class="panel"><h2>Equity</h2>${legend([{label: "Strategy"}, {label: "KOSPI 200 (scaled to start equity)", color: COLORS[1]}])}<div class="chart" id="eq"></div></div>
     <div class="panel"><h2>Drawdown</h2><div class="chart" id="dd"></div></div>
@@ -326,6 +385,21 @@ async function pageRun(ref) {
   };
   app.querySelectorAll("#codefiles a").forEach(a => a.onclick = () => showCode(a.dataset.f));
   if (r.code.length) showCode(r.code.find(f => /^(main\.py|Main\.cs)$/.test(f)) || r.code[0]);
+  const renameBtn = document.getElementById("rename");
+  if (renameBtn) {
+    renameBtn.onclick = async () => {
+      const current = parts.at(-1).replace(/^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_?/, "");
+      const name = prompt("Name for this run (the date and time stay in front):", current);
+      if (name === null) return;
+      try { const x = await api("/api/run-rename", {}, {ref: r.ref, name}); location.hash = href("run", x.ref).slice(1); }
+      catch (e) { alert(e.message); }
+    };
+    document.getElementById("delete").onclick = async () => {
+      if (!confirm(`Delete the run ${parts.at(-1)} and all its files? This can't be undone.`)) return;
+      try { await api("/api/run-delete", {}, {ref: r.ref}); location.hash = href("project", project).slice(1); }
+      catch (e) { alert(e.message); }
+    };
+  }
   document.getElementById("mkreport").onclick = async () => {
     const btn = document.getElementById("mkreport"), state = document.getElementById("repstate");
     btn.disabled = true; state.innerHTML = '<span class="badge run">making report</span> (about 40 s; LEAN replays the orders)';

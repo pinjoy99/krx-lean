@@ -166,19 +166,14 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def launch(ws: Workspace, project: Path, port: int = 0, open_browser: bool = True, log=print) -> int:
+def start(ws: Workspace, project: Path, port: int = 0, log=print, output=None) -> tuple[subprocess.Popen, str]:
+    """Start JupyterLab for the project and return (process, URL with its token)."""
     ensure_packages(ws, log)
     env = prepare(ws)
     nb = ensure_notebook(ws, project)
     port = port or free_port()
     token = secrets.token_urlsafe(24)
     url = f"http://127.0.0.1:{port}/lab/tree/{nb.name}?token={token}"
-    if results.is_demo_data(ws):
-        log(f"*** {results.DEMO_BANNER} ***")
-    log(f"klean research: JupyterLab for {project.name}\n  {url}\n(Ctrl+C to stop)")
-    if open_browser:
-        from klean.gui import open_page
-        threading.Timer(3.0, lambda: open_page(url)).start()
     py = str(venv_python(ws.python_venv))
     cmd = [py, "-m", "jupyter", "lab", "--no-browser", "--ip=127.0.0.1", f"--port={port}",
            f"--ServerApp.root_dir={project}", f"--IdentityProvider.token={token}",
@@ -187,9 +182,22 @@ def launch(ws: Workspace, project: Path, port: int = 0, open_browser: bool = Tru
            "--LabApp.news_url=None", "--LabApp.check_for_updates_class=jupyterlab.NeverCheckForUpdate"]
     if hasattr(os, "geteuid") and os.geteuid() == 0:     # containers, some WSL setups
         cmd.append("--allow-root")
+    return subprocess.Popen(cmd, cwd=project, env={**os.environ, **env}, stdout=output, stderr=output), url
+
+
+def launch(ws: Workspace, project: Path, port: int = 0, open_browser: bool = True, log=print) -> int:
+    proc, url = start(ws, project, port, log)
+    if results.is_demo_data(ws):
+        log(f"*** {results.DEMO_BANNER} ***")
+    log(f"klean research: JupyterLab for {project.name}\n  {url}\n(Ctrl+C to stop)")
+    if open_browser:
+        from klean.gui import open_page
+        threading.Timer(3.0, lambda: open_page(url)).start()
     try:
-        return subprocess.run(cmd, cwd=project, env={**os.environ, **env}).returncode
+        return proc.wait()
     except KeyboardInterrupt:
+        proc.terminate()
+        proc.wait()
         return 0
 
 

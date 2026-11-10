@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import platform
+import re
 import secrets
 import shutil
+import signal
 import subprocess
 import threading
 import time
@@ -95,7 +97,11 @@ def run_row(run: Path) -> dict:
         stats = {}
     m = manifest(run)
     error = results.run_error(run)
-    return {"ref": f"{run.parent.parent.name}/{run.name}", "name": run.name, "ok": bool(stats) and not error,
+    running = results.is_running(run)
+    if running:
+        error = ""
+    return {"ref": f"{run.parent.parent.name}/{run.name}", "name": run.name, "running": running,
+            "ok": running or (bool(stats) and not error),
             "error": error.splitlines()[0] if error else "", "demo": bool(m.get("synthetic_demo_data")),
             "stats": {k: stats.get(k, "") for k in ("Compounding Annual Return", "Drawdown", "Sharpe Ratio",
                                                      "Total Orders", "End Equity")},
@@ -185,7 +191,8 @@ def api_run(ws: Workspace, q: dict) -> dict:
             "statistics": results.statistics(run), "runtime": full.get("runtimeStatistics", {}),
             "equity": downsample(equity), "benchmark": downsample(bench), "drawdown": downsample(drawdown),
             "orders": orders, "manifest": manifest(run), "log": log, "report": (run / "report.html").exists(),
-            "error": results.run_error(run), "demo": results.run_is_demo(run),
+            "error": "" if results.is_running(run) else results.run_error(run),
+            "running": results.is_running(run), "demo": results.run_is_demo(run),
             "code": [p.relative_to(code_dir(run)).as_posix() for p in sorted(code_dir(run).rglob("*")) if p.is_file()]
             if code_dir(run).is_dir() else []}
 
@@ -218,12 +225,45 @@ def api_log(ws: Workspace, q: dict) -> dict:
     return {"lines": results.log_text(run, console="console" in q).splitlines()[-int(q.get("tail", ["500"])[0]):]}
 
 
+def stored_run(ws: Workspace, ref: str) -> Path:
+    """A run folder that may be renamed or deleted: directly under a project's backtests/."""
+    run = inside(ws, ws.root / ref)
+    if not run.is_dir() or run.parent.name != "backtests" or run.parent.parent.parent != ws.root:
+        raise KleanError("only runs in a project's backtests/ folder can be renamed or deleted")
+    if results.is_running(run):
+        raise KleanError("this run is still running")
+    return run
+
+
+def api_run_delete(ws: Workspace, body: dict) -> dict:
+    run = stored_run(ws, str(body.get("ref", "")))
+    shutil.rmtree(run)
+    return {"deleted": run.name}
+
+
+def api_run_rename(ws: Workspace, body: dict) -> dict:
+    """Change the name part of a run folder (``<timestamp>[_<name>]``); the timestamp stays."""
+    run = stored_run(ws, str(body.get("ref", "")))
+    stamp = re.match(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}", run.name)
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "-", str(body.get("name", ""))).strip("-")
+    if not stamp:
+        raise KleanError("this run's folder doesn't start with a timestamp; rename it by hand")
+    target = run.with_name(f"{stamp.group(0)}_{safe}" if safe else stamp.group(0))
+    if target == run:
+        return {"ref": run.relative_to(ws.root).as_posix()}
+    if target.exists():
+        raise KleanError(f"{target.name} already exists")
+    run.rename(target)
+    return {"ref": target.relative_to(ws.root).as_posix()}
+
+
 class Jobs:
     """Backtests and reports started from the page, each in a thread (LEAN runs as a separate process)."""
 
     def __init__(self):
         self.lock = threading.Lock()
         self.jobs: dict[str, dict] = {}
+        self.notebooks: dict[str, tuple[subprocess.Popen, str]] = {}
 
     def start(self, ws: Workspace, body: dict) -> dict:
         project = inside(ws, ws.root / str(body.get("project", "")))
@@ -272,16 +312,70 @@ class Jobs:
         threading.Thread(target=work, daemon=True).start()
         return job
 
+    def start_optimize(self, ws: Workspace, body: dict) -> dict:
+        from klean import optimize
+        project = inside(ws, ws.root / str(body.get("project", "")))
+        projects.language_of(project)
+        specs = [(str(p.get("name", "")).strip(), str(p.get("min", "")), str(p.get("max", "")), str(p.get("step", "")))
+                 for p in (body.get("parameters") or []) if str(p.get("name", "")).strip()]
+        constraints = [str(c) for c in (body.get("constraints") or []) if str(c).strip()]
+        options = dict(target=str(body.get("target") or "Sharpe Ratio"), direction=str(body.get("direction") or "max"),
+                       constraints=constraints, max_concurrent=int(body.get("maxConcurrent") or 0),
+                       name=str(body.get("name") or ""))
+        estimate = optimize.optimize(ws, project, specs, estimate=True, **options)     # validates the input
+        if estimate["backtests"] > optimize.MAX_BACKTESTS:
+            raise KleanError(f"{estimate['backtests']} combinations; the limit is {optimize.MAX_BACKTESTS}")
+        lines: list[str] = []
+        job = {"id": secrets.token_hex(4), "kind": "optimize", "project": project.name, "folder": "", "ref": "",
+               "status": "running", "error": "", "started": time.time(), "lines": lines,
+               "backtests": estimate["backtests"]}
+        with self.lock:
+            self.jobs[job["id"]] = job
+
+        def work():
+            try:
+                s = optimize.optimize(ws, project, specs, log=lambda *a: lines.append(" ".join(map(str, a))), **options)
+                job["folder"], job["ref"] = s["folder"], Path(s["folder"]).name
+                job["status"] = "done"
+            except Exception as e:  # noqa: BLE001 - reported to the page
+                job["status"], job["error"] = "failed", str(e)
+            job["finished"] = time.time()
+        threading.Thread(target=work, daemon=True).start()
+        return {k: v for k, v in job.items() if k != "lines"}
+
+    def start_research(self, ws: Workspace, body: dict) -> dict:
+        """JupyterLab for a project (one per project; it stops when the GUI stops)."""
+        from klean import research
+        project = inside(ws, ws.root / str(body.get("project", "")))
+        projects.language_of(project)
+        with self.lock:
+            proc, url = self.notebooks.get(project.name, (None, ""))
+            if proc is not None and proc.poll() is None:
+                return {"url": url, "started": False}
+        log = open(research.research_dir(ws) / "jupyter.log", "w") if research.research_dir(ws).is_dir() else None
+        proc, url = research.start(ws, project, log=lambda *a: None, output=log or subprocess.DEVNULL)
+        with self.lock:
+            self.notebooks[project.name] = (proc, url)
+        return {"url": url, "started": True}
+
+    def stop_all(self) -> None:
+        for proc, _ in self.notebooks.values():
+            if proc.poll() is None:
+                proc.terminate()
+
     def status(self, job_id: str) -> dict:
         job = self.jobs.get(job_id)
         if job is None:
             raise KleanError("unknown job")
+        if job.get("kind") == "optimize":
+            return {**{k: v for k, v in job.items() if k != "lines"}, "console": job["lines"][-40:]}
         console = Path(job["folder"]) / job.get("console_file", "console.txt")
         tail = console.read_text(encoding="utf-8", errors="replace").splitlines()[-40:] if console.exists() else []
         return {**job, "console": tail}
 
     def all(self) -> list[dict]:
-        return sorted(self.jobs.values(), key=lambda j: -j["started"])
+        return sorted(({k: v for k, v in j.items() if k != "lines"} for j in self.jobs.values()),
+                      key=lambda j: -j["started"])
 
 
 # ---------------------------------------------------------------- server
@@ -357,6 +451,14 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                     self._json(jobs.start(Workspace.load(ws.root), body))
                 elif url.path == "/api/report":
                     self._json(jobs.start_report(Workspace.load(ws.root), body))
+                elif url.path == "/api/optimize":
+                    self._json(jobs.start_optimize(Workspace.load(ws.root), body))
+                elif url.path == "/api/research":
+                    self._json(jobs.start_research(Workspace.load(ws.root), body))
+                elif url.path == "/api/run-delete":
+                    self._json(api_run_delete(Workspace.load(ws.root), body))
+                elif url.path == "/api/run-rename":
+                    self._json(api_run_rename(Workspace.load(ws.root), body))
                 else:
                     self._json({"error": "not found"}, 404)
             except (KleanError, ValueError) as e:
@@ -375,14 +477,22 @@ def open_page(url: str) -> None:
 
 def serve(ws: Workspace, port: int = 0, open_browser: bool = True, token: str | None = None) -> None:
     token = token or secrets.token_urlsafe(24)
-    server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(ws, token, Jobs()))
+    jobs = Jobs()
+    server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(ws, token, jobs))
     url = f"http://127.0.0.1:{server.server_address[1]}/?token={token}"
     print(f"klean gui for {ws.root}\n  {url}\n(Ctrl+C to stop)", flush=True)
     if open_browser:
         threading.Timer(0.5, lambda: open_page(url)).start()
+    def stop(*_):                 # `kill` should clean up like Ctrl+C does
+        raise KeyboardInterrupt
+    try:
+        signal.signal(signal.SIGTERM, stop)
+    except ValueError:            # not the main thread (tests)
+        pass
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        jobs.stop_all()          # notebooks started from the page
         server.server_close()

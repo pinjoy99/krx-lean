@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import tempfile
 import threading
@@ -11,7 +12,7 @@ from pathlib import Path
 _HERE = Path(__file__).resolve()
 sys.path[:0] = [str(_HERE.parent), str(_HERE.parents[2])]   # tests/klean (helpers) and the repo root
 
-from klean import gui, projects
+from klean import gui, results, projects
 from klean.workspace import Workspace
 from test_klean_p1 import make_run
 
@@ -115,6 +116,46 @@ class GuiTest(unittest.TestCase):
         self.assertEqual(f["text"], "print(1)")
         self.assertEqual(self.get(f"/api/code-file?ref={ref}&path=..%2Fconsole.txt")[0], 400)
         self.assertEqual(self.get(f"/api/code-file?ref={ref}&path=%2Fetc%2Fpasswd")[0], 400)
+
+    def post(self, path, body):
+        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(),
+                                     headers={"X-Klean-Token": self.token, "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req) as r:
+                return r.status, json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())
+
+    def test_rename_and_delete_runs(self):
+        run = make_run(self.root / "A", "2026-11-01_09-00-00_old", 100.0, {"End Equity": "1"})
+        status, body = self.post("/api/run-rename", {"ref": "A/backtests/2026-11-01_09-00-00_old", "name": "new name!"})
+        self.assertEqual((status, body["ref"]), (200, "A/backtests/2026-11-01_09-00-00_new-name"))
+        self.assertFalse(run.exists())
+        renamed = self.root / "A" / "backtests" / "2026-11-01_09-00-00_new-name"
+        self.assertTrue(renamed.is_dir())
+        # only run folders directly in a project's backtests/ can be touched
+        for ref in ("A", "A/backtests", "data", "../x", "A/backtests/../../data"):
+            self.assertEqual(self.post("/api/run-delete", {"ref": ref})[0], 400, ref)
+            self.assertEqual(self.post("/api/run-rename", {"ref": ref, "name": "x"})[0], 400, ref)
+        self.assertTrue((self.root / "data").is_dir())
+        # a running run is left alone
+        (renamed / results.RUNNING).write_text(str(os.getpid()))
+        self.assertEqual(self.post("/api/run-delete", {"ref": "A/backtests/" + renamed.name})[0], 400)
+        row = [r for r in json.loads(self.get("/api/project?name=A")[1])["runs"] if r["name"] == renamed.name][0]
+        self.assertTrue(row["running"])
+        (renamed / results.RUNNING).write_text("999999999")          # a dead process: not running
+        self.assertEqual(self.post("/api/run-delete", {"ref": "A/backtests/" + renamed.name})[0], 200)
+        self.assertFalse(renamed.exists())
+
+    def test_optimize_request_is_validated(self):
+        status, body = self.post("/api/optimize", {"project": "A", "parameters": []})
+        self.assertEqual(status, 400)
+        self.assertIn("at least one", body["error"])
+        status, body = self.post("/api/optimize", {"project": "A", "parameters": [
+            {"name": "x", "min": "1", "max": "100000", "step": "1"}]})
+        self.assertEqual(status, 400)
+        self.assertIn("limit", body["error"])
+        self.assertEqual(self.post("/api/optimize", {"project": "../outside", "parameters": []})[0], 400)
 
     def test_report_page(self):
         run = self.root / "A" / "backtests" / "2026-10-28_11-00-00"

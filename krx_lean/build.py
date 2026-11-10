@@ -20,11 +20,10 @@ import logging
 import os
 import re
 import shutil
-import zipfile
 from pathlib import Path
 
 from krx_lean import demo, factors
-from krx_lean.lean_extras import build_lean_extras
+from krx_lean.lean_extras import _zip_one, build_lean_extras
 from krx_lean.dividends import build_dividends
 from krx_lean.rights import build_corporate_actions
 
@@ -146,11 +145,7 @@ def write_lean_zip(path: Path, code: str, bars: list[tuple[str, Bar]]) -> None:
     """LEAN equity daily format: ``yyyyMMdd 00:00,open,high,low,close,volume``,
     prices scaled by 10,000 (LEAN's "deci-cents" convention)."""
     lines = [f"{d} 00:00,{o * 10000},{h * 10000},{l * 10000},{c * 10000},{v}" for d, (o, h, l, c, v, _) in bars]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(f"{code.lower()}.csv", "\n".join(lines) + "\n")
-    os.replace(tmp, path)
+    _zip_one(path, f"{code.lower()}.csv", "\n".join(lines) + "\n")   # reproducible; unchanged files are kept
 
 
 # Short file names for the main indices; others become {SERIES}_{name}.
