@@ -70,7 +70,12 @@ klean compare HoldPy HoldCs | tail -1 | grep -qx "IDENTICAL" || fail "buy-hold d
 
 step "a strategy that raises must be reported as failed"
 klean project-create Broken --template empty
-sed -i 's/        self.set_benchmark(krx_benchmark("kospi200"))/        raise ValueError("e2e: deliberate failure")/' Broken/main.py
+"$PY_DIR/bin/python" - <<'EOF'     # (not sed -i: GNU and BSD/macOS sed differ)
+import pathlib
+p = pathlib.Path("Broken/main.py")
+p.write_text(p.read_text().replace('self.set_benchmark(krx_benchmark("kospi200"))',
+                                   'raise ValueError("e2e: deliberate failure")'))
+EOF
 grep -q "deliberate failure" Broken/main.py || fail "couldn't break the template"
 if klean backtest Broken >broken.txt 2>&1; then fail "a failing strategy exited 0"; fi
 grep -q "backtest FAILED" broken.txt || fail "no 'backtest FAILED' message"

@@ -29,6 +29,7 @@ jobs:
           - { os: ubuntu-22.04, python: "3.10" }
           - { os: ubuntu-24.04, python: "3.12" }
           - { os: ubuntu-24.04, python: "3.13" }
+          - { os: macos-14, python: "3.12" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,9 +45,17 @@ jobs:
         run: python -m unittest discover -s tests/klean
 
   e2e:
-    name: end to end on synthetic demo data (LEAN build, C# = Python)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    name: end to end on synthetic demo data (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    # macOS (Apple Silicon) is experimental: its result is reported but doesn't fail the run
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, experimental: false }
+          - { os: macos-14, experimental: true }
     steps:
       - uses: actions/checkout@v4
       - name: Folders outside the checkout
