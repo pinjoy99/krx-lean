@@ -251,6 +251,8 @@ class Jobs:
                 job["status"] = "done"
             except Exception as e:  # noqa: BLE001 - reported to the page
                 job["status"], job["error"] = "failed", str(e)
+                if out.is_dir() and not any(out.iterdir()):     # e.g. the build failed: no run to keep
+                    out.rmdir()
             job["finished"] = time.time()
         threading.Thread(target=work, daemon=True).start()
         return job

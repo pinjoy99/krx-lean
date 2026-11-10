@@ -49,6 +49,11 @@ def resolve_run(ws: Workspace, ref: str) -> Path:
 def run_error(run: Path) -> str:
     """Why a run failed ("" if it completed). LEAN writes a summary even when the algorithm throws
     (e.g. in initialize): its ``state`` then has Status "RuntimeError" and the error text."""
+    manifest = run / "manifest.json"
+    if manifest.exists():       # klean's own verdict, e.g. a run stopped by --timeout
+        m = json.loads(manifest.read_text(encoding="utf-8"))
+        if m.get("ok") is False and m.get("error"):
+            return m["error"]
     summary = summary_file(run, required=False)
     if summary is None:
         return "no *-summary.json (LEAN stopped before writing results)"

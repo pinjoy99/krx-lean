@@ -35,7 +35,7 @@ status, `compare`; planned `check-models` (run the `CHECK` cases in both languag
 
 - macOS (Apple Silicon): check LEAN on .NET 10 arm64, pythonnet with `libpython3.11.dylib`,
   the report; then CI.
-- CI on GitHub Actions: unit tests, LEAN build, backtests on the synthetic demo data
-  (`klean data install --demo`; C# = Python parity).
+- CI: done for Ubuntu (unit suites, LEAN build, end-to-end on the demo data). Next: a scheduled
+  job trying the newest LEAN commit; a release workflow creating tags.
 - KOSDAQ / KONEX (code paths exist; needs KRX service approval and verification); NXT (no
   source yet); minute data (needs a source with the full session).

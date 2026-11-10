@@ -39,6 +39,9 @@ also runs under `lean backtest`.
    notes it. A failed run: `backtest` raises with the error and the console tail (exit 1); the
    manifest has `ok: false` and `error`; `optimize` ranks it as failed; `report` refuses it;
    `logs` and the GUI show the error.
+   `--timeout SECONDS` kills LEAN after that long; the run fails with `timed out after …`
+   (recorded in the manifest, which `run_error` reads first). Run folders are created with
+   `unique_dir` (`…-2`, `-3` if two runs start in the same second).
 5. Demo data (`SYNTHETIC-DEMO-DATA.txt` in `data/equity/krx`): banners in `backtest`,
    `optimize`, `compare`, `data status`, `doctor`; `"synthetic_demo_data": true` in the
    manifest; report title and description; a GUI banner and badges; the `buy-hold` template's

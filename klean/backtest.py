@@ -136,7 +136,20 @@ def results_folder(project: Path, output: Path | None, name: str) -> Path:
         return out
     stamp = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") if name else ""
-    return project / "backtests" / (f"{stamp}_{safe}" if safe else stamp)
+    return unique_dir(project / "backtests" / (f"{stamp}_{safe}" if safe else stamp))
+
+
+def unique_dir(path: Path) -> Path:
+    """Create ``path``; if it exists (two runs started in the same second), ``path-2``, ``-3``, ..."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    for n in range(1, 1000):
+        candidate = path if n == 1 else path.with_name(f"{path.name}-{n}")
+        try:
+            candidate.mkdir()
+            return candidate
+        except FileExistsError:
+            continue
+    raise KleanError(f"can't create a results folder at {path}")
 
 
 def check_project(ws: Workspace, project: Path) -> tuple[Path, str]:
@@ -151,10 +164,11 @@ def check_project(ws: Workspace, project: Path) -> tuple[Path, str]:
 def run_once(ws: Workspace, project: Path, language: str, location: Path, cls: str, env: dict[str, str],
              results_dir: Path, parameters: dict[str, str], lean_config: dict[str, str],
              backtest_name: str = "", build_config: str = "Release", quiet: bool = False,
-             code: str = "code/") -> dict:
+             code: str = "code/", timeout: float = 0) -> dict:
     """One LEAN run of an already prepared project into ``results_dir`` (with code/, config.json,
     console.txt and manifest.json). ``code`` is where the code snapshot is, relative to the run;
-    the default "code/" makes one in the run folder (optimizations share one). Returns {results, exit_code, ok}."""
+    the default "code/" makes one in the run folder (optimizations share one). ``timeout`` (seconds,
+    0 = none) stops LEAN if the run takes longer. Returns {results, exit_code, ok, error}."""
     results_dir.mkdir(parents=True, exist_ok=True)
     skipped = results.snapshot_code(project, results_dir / "code") if code == "code/" else []
     config = write_run_config(ws, results_dir, lean_config)
@@ -162,34 +176,39 @@ def run_once(ws: Workspace, project: Path, language: str, location: Path, cls: s
     if not quiet:
         print(f"klean: backtesting {cls} ({language}) -> {results_dir}", flush=True)
     started = dt.datetime.now(dt.timezone.utc)
+    timed_out = False
     with open(results_dir / "console.txt", "w", encoding="utf-8") as log:
-        proc = subprocess.run(args, cwd=ws.launcher_dir, env={**os.environ, **env},
-                              stdout=log, stderr=subprocess.STDOUT)
+        try:
+            exit_code = subprocess.run(args, cwd=ws.launcher_dir, env={**os.environ, **env}, stdout=log,
+                                       stderr=subprocess.STDOUT, timeout=timeout or None).returncode
+        except subprocess.TimeoutExpired:       # subprocess.run has killed LEAN
+            timed_out, exit_code = True, -9
+            log.write(f"\nklean: stopped after the {timeout:g} s time limit (--timeout)\n")
     finished = dt.datetime.now(dt.timezone.utc)
-    error = results.run_error(results_dir)
+    error = f"timed out after {timeout:g} s (--timeout)" if timed_out else results.run_error(results_dir)
     ok = not error
     write_manifest(ws, project, results_dir, language=language, algorithm=cls, parameters=parameters,
                    lean_config=lean_config, backtest_name=backtest_name, build_config=build_config,
-                   started=started, finished=finished, exit_code=proc.returncode, ok=ok, code=code,
+                   started=started, finished=finished, exit_code=exit_code, ok=ok, code=code,
                    **({"error": error} if error else {}),
                    **({"synthetic_demo_data": True} if results.is_demo_data(ws) else {}),
                    **({"code_skipped_large_files": skipped} if skipped else {}))
     # A run succeeded if LEAN's summary says it completed. Python runs can still abort at exit
     # after writing results (pythonnet's GIL shutdown), so a non-zero exit code alone isn't failure.
-    gil = proc.returncode != 0 and ok and language == "python" and "GIL must always be released" in \
+    gil = exit_code != 0 and ok and language == "python" and "GIL must always be released" in \
         (results_dir / "console.txt").read_text(encoding="utf-8", errors="replace")[-20000:]
-    return {"results": str(results_dir), "exit_code": proc.returncode, "ok": ok, "error": error,
+    return {"results": str(results_dir), "exit_code": exit_code, "ok": ok, "error": error,
             "gil_abort_at_exit": gil}
 
 
 def backtest(ws: Workspace, project: Path, parameters: dict[str, str] | None = None, *,
              extra_config: dict[str, str] | None = None, output: Path | None = None,
-             backtest_name: str = "", build_config: str = "Release") -> dict:
+             backtest_name: str = "", build_config: str = "Release", timeout: float = 0) -> dict:
     project, language = check_project(ws, project)
     location, cls, env = prepare(ws, project, language, build_config)
     results_dir = results_folder(project, output, backtest_name)
     r = run_once(ws, project, language, location, cls, env, results_dir, parameters or {},
-                 {**ws.lean_config, **(extra_config or {})}, backtest_name, build_config)
+                 {**ws.lean_config, **(extra_config or {})}, backtest_name, build_config, timeout=timeout)
     if not r["ok"]:
         raise KleanError(failure_message(results_dir, r["error"], r["exit_code"]))
     stats = results.statistics(results_dir)

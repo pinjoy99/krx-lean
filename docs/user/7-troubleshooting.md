@@ -46,6 +46,9 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `GIL must always be released` stack trace at the end of a Python run | harmless: pythonnet's shutdown, after the results are written (klean says so) |
 | C# compile errors | read them in the output; they name the file and line |
 | WSL: very slow runs | move the workspace out of `/mnt/c` into `~` |
+| a backtest never finishes | a loop in the strategy, or a very long run: stop it with Ctrl+C, or run with `--timeout SECONDS` |
+| `timed out after … s (--timeout)` | the run was stopped by your `--timeout`; raise it or speed the strategy up |
+| `lean.zip: entry … would be written outside …` | the zip isn't a krx-lean data package (`krx-lean lean-package`); nothing was unzipped |
 | WSL: optimization processes killed | raise WSL's memory (`.wslconfig`) or use fewer `--max-concurrent-backtests` |
 
 ## Reports, research and GUI

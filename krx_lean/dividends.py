@@ -26,7 +26,7 @@ from pathlib import Path
 
 import requests
 
-from krx_lean.client import USER_AGENT
+from krx_lean.client import USER_AGENT, redact
 from krx_lean.krx_api import read_day, write_day
 
 log = logging.getLogger(__name__)
@@ -65,13 +65,13 @@ def fetch_page(session: requests.Session, key: str, page: int, attempts: int = 8
             data = resp.json()
         except (requests.ConnectionError, requests.Timeout, ValueError) as e:
             if attempt == attempts - 1:
-                raise DividendApiError(f"page {page}: {type(e).__name__}: {e}") from e
+                raise DividendApiError(f"page {page}: {type(e).__name__}: {redact(e, key)}") from None
             log.warning("dividends page %d: %s, retrying", page, type(e).__name__)
             time.sleep(3 * (attempt + 1))
             continue
         if "response" not in data:  # gateway error, e.g. an unregistered key
             hdr = data.get("OpenAPI_ServiceResponse", {}).get("cmmMsgHeader", {})
-            raise DividendApiError(f"{hdr.get('errMsg')} {hdr.get('returnAuthMsg')}".strip() or str(data)[:200])
+            raise DividendApiError(f"{hdr.get('errMsg')} {hdr.get('returnAuthMsg')}".strip() or redact(str(data)[:200], key))
         header = data["response"]["header"]
         if header.get("resultCode") != "00":
             raise DividendApiError(f"{header.get('resultCode')} {header.get('resultMsg')}")

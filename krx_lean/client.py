@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 
@@ -11,6 +12,18 @@ from urllib3.util.retry import Retry
 
 BASE_URL = "https://aikstockdata.com/data/public"
 USER_AGENT = "krx-lean/0.1 (+https://github.com/pinjoy99/krx-lean)"
+
+
+def redact(text, *secrets: str) -> str:
+    """``text`` without API keys: ``serviceKey=...`` URL parameters (data.go.kr sends the key in
+    the URL, and requests' error messages quote the URL) and any of ``secrets`` given, plain or
+    URL-encoded."""
+    out = re.sub(r"(?i)(serviceKey|AUTH_KEY)=[^&\s'\")]+", r"\1=***", str(text))
+    for secret in secrets:
+        if secret:
+            for form in {secret, requests.utils.quote(secret, safe="")}:
+                out = out.replace(form, "***")
+    return out
 
 
 class NotModified(Exception):

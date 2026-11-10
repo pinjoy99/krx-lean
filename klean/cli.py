@@ -127,6 +127,11 @@ def install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None 
             names = z.namelist()
             # lean-package writes data/equity/krx/...; also accept a zip without the data/ prefix
             target = ws.root if any(n.startswith("data/") for n in names) else ws.data
+            base = target.resolve()
+            for n in names:      # nothing outside the workspace, whatever the zip says
+                dest = (base / n).resolve()
+                if Path(n).is_absolute() or (dest != base and base not in dest.parents):
+                    raise KleanError(f"{zip_path}: entry {n!r} would be written outside {base}; not unzipped")
             z.extractall(target)
         print(f"unzipped {len(names)} files from {zip_path} into {ws.data}")
         lean_install.install(ws.root, ws.data, config_only=True)
@@ -231,7 +236,8 @@ def cmd_optimize(args) -> int:
                           direction=args.target_direction, constraints=args.constraint,
                           max_concurrent=args.max_concurrent_backtests,
                           extra_config=dict(args.extra_config or []), name=args.name or "",
-                          build_config=args.build_config, max_backtests=args.max_backtests, estimate=args.estimate)
+                          build_config=args.build_config, max_backtests=args.max_backtests, estimate=args.estimate,
+                          timeout=args.timeout)
     if args.estimate:
         print(f"{s['backtests']} backtests, {s['concurrent']} at a time")
         return 0
@@ -387,7 +393,7 @@ def cmd_backtest(args) -> int:
         print(f"*** {results.DEMO_BANNER} ***", flush=True)
     result = backtest(ws, project, dict(args.parameter or []), extra_config=dict(args.extra_config or []),
                       output=Path(args.output) if args.output else None, backtest_name=args.backtest_name or "",
-                      build_config=args.build_config)
+                      build_config=args.build_config, timeout=args.timeout)
     print(f"\nresults: {result['results']}")
     for k, v in result["statistics"].items():
         print(f"  {k:28} {v}")
@@ -476,6 +482,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--backtest-name", help="name for the run (results folder suffix)")
     s.add_argument("--output", help="results folder (default: <project>/backtests/<timestamp>[_<name>])")
     s.add_argument("--build-config", choices=["Release", "Debug"], default="Release", help="C# build configuration")
+    s.add_argument("--timeout", type=float, default=0, metavar="SECONDS",
+                   help="stop LEAN if the backtest runs longer (default: no limit)")
     s.set_defaults(func=cmd_backtest)
 
     s = sub.add_parser("optimize", help="grid search over parameters; results in <project>/optimizations/<timestamp>/")
@@ -492,6 +500,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--extra-config", nargs=2, action="append", metavar=("KEY", "VALUE"))
     s.add_argument("--name", help="name for the optimization (folder suffix)")
     s.add_argument("--build-config", choices=["Release", "Debug"], default="Release")
+    s.add_argument("--timeout", type=float, default=0, metavar="SECONDS",
+                   help="stop each backtest that runs longer; it counts as a failed run (default: no limit)")
     s.set_defaults(func=cmd_optimize)
 
     s = sub.add_parser("report", help="LEAN's HTML report for a run (default: the workspace's latest run)")

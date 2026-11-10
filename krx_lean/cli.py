@@ -12,7 +12,7 @@ import requests
 import urllib3
 
 from krx_lean import build, demo, dividends, krx_api, lean_install, rights, scraper, verify, yahoo
-from krx_lean.client import Client
+from krx_lean.client import Client, redact
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -22,7 +22,8 @@ def main(argv: list[str] | None = None) -> int:
         # timeouts and dropped connections (after the client's own retries): everything already
         # downloaded is on disk and is skipped next time
         logging.error("network error, stopping (re-run the same command to resume): %s: %s",
-                      type(e).__name__, e)
+                      type(e).__name__, redact(e, os.environ.get("KRX_API_KEY", "").strip(),
+                                               os.environ.get("DATA_GO_KR_KEY", "").strip()))
         return 1
 
 

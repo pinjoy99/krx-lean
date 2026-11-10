@@ -22,7 +22,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from klean import results
-from klean.backtest import check_project, prepare, run_once
+from klean.backtest import check_project, prepare, run_once, unique_dir
 from klean.workspace import KleanError, Workspace
 
 OPERATORS = {"<": lambda a, b: a < b, "<=": lambda a, b: a <= b, ">": lambda a, b: a > b,
@@ -106,7 +106,8 @@ def best_run(runs: list[dict], direction: str) -> dict | None:
 def optimize(ws: Workspace, project: Path, specs: list[tuple[str, str, str, str]], *, target: str = "Sharpe Ratio",
              direction: str = "max", constraints: list[str] | None = None, max_concurrent: int = 0,
              extra_config: dict[str, str] | None = None, name: str = "", build_config: str = "Release",
-             max_backtests: int = MAX_BACKTESTS, estimate: bool = False, log=print) -> dict:
+             max_backtests: int = MAX_BACKTESTS, estimate: bool = False, timeout: float = 0,
+             log=print) -> dict:
     if not specs:
         raise KleanError("give at least one --parameter NAME MIN MAX STEP")
     if direction not in ("max", "min"):
@@ -122,8 +123,7 @@ def optimize(ws: Workspace, project: Path, specs: list[tuple[str, str, str, str]
     location, cls, env = prepare(ws, project, language, build_config)   # compile once
     stamp = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") if name else ""
-    out = project / "optimizations" / (f"{stamp}_{safe}" if safe else stamp)
-    out.mkdir(parents=True)
+    out = unique_dir(project / "optimizations" / (f"{stamp}_{safe}" if safe else stamp))
     skipped = results.snapshot_code(project, out / "code")    # one code snapshot for every run
     lean_config = {**ws.lean_config, **(extra_config or {})}
     log(f"klean: optimizing {cls} ({language}): {len(combos)} backtests, {workers} at a time -> {out}")
@@ -134,7 +134,7 @@ def optimize(ws: Workspace, project: Path, specs: list[tuple[str, str, str, str]
         run_dir = out / run_folder_name(i, params)
         r = run_once(ws, project, language, location, cls, env, run_dir, params, lean_config,
                      backtest_name=f"{safe or 'opt'}-{i:03d}", build_config=build_config, quiet=True,
-                     code="../code/")
+                     code="../code/", timeout=timeout)
         return {"index": i, "folder": run_dir.name, "parameters": params, "exit_code": r["exit_code"],
                 **evaluate(run_dir, target, parsed)}
 

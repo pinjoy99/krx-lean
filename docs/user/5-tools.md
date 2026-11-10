@@ -16,6 +16,7 @@ klean logs ~/krx-workspace/Top20/backtests/2026-11-02_10-15-00 --console   # LEA
 ```bash
 klean backtest Top20 --parameter holdings 25 --backtest-name h25   # parameters, named run
 klean backtest Top20 --extra-config maximum-data-points-per-chart-series 4000   # any LEAN config key
+klean backtest Top20 --timeout 600                                 # stop it if it runs over 10 minutes
 klean backtest Top20CS --build-config Debug --output ~/runs/debug-1
 ```
 
@@ -48,6 +49,7 @@ klean optimize Top20CS --parameter holdings 5 30 5 --estimate      # only count 
 - `--constraint "STATISTIC OP VALUE"` (repeatable; `< <= > >= == !=`), in the units the
   statistics show: `Drawdown < 25` means 25%. Runs that fail are listed but can't be best.
 - `--max-concurrent-backtests` (default half the CPU cores); `--max-backtests` (default 500).
+- `--timeout SECONDS`: stop any single backtest that runs longer; it's listed as a failed run.
 
 The project is compiled once; every combination is a normal run under
 `Top20CS/optimizations/<date>_<time>[_name]/<NNN>_holdings=25/`, with `optimization.json`

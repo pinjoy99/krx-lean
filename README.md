@@ -1,5 +1,7 @@
 # krx-lean
 
+[![CI](https://github.com/pinjoy99/krx-lean/actions/workflows/ci.yml/badge.svg)](https://github.com/pinjoy99/krx-lean/actions/workflows/ci.yml)
+
 Korean stock market (KRX) data and market models for
 [QuantConnect LEAN](https://github.com/QuantConnect/Lean), the open-source backtesting engine,
 built from source on your own machine. Backtest KOSPI stocks and ETFs in Python or C#, with

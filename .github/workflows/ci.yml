@@ -1,0 +1,89 @@
+name: CI
+
+# Everything here runs without API keys: unit tests use small synthetic files, and the
+# end-to-end job uses the synthetic demo data (krx_lean/demo.py). No real market data.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"   # weekly: catches changes in .NET, uv, pip packages and the runners
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: unit tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, python: "3.10" }
+          - { os: ubuntu-24.04, python: "3.12" }
+          - { os: ubuntu-24.04, python: "3.13" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e . pyflakes
+      - name: Lint
+        run: python -m pyflakes krx_lean klean tests
+      - name: Pipeline tests
+        run: python -m unittest discover -s tests
+      - name: klean tests
+        run: python -m unittest discover -s tests/klean
+
+  e2e:
+    name: end to end on synthetic demo data (LEAN build, C# = Python)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Folders outside the checkout
+        run: |
+          echo "LEAN_DIR=$HOME/Lean" >> "$GITHUB_ENV"
+          echo "E2E_DIR=$HOME/e2e" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Install uv (Python 3.11 for LEAN)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install krx-lean and klean
+        run: python -m pip install -e .
+      - name: LEAN build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Lean
+          # klean/workspace.py holds LEAN_COMMIT: a new commit there means a new build
+          key: lean-${{ runner.os }}-${{ hashFiles('klean/workspace.py') }}
+      - name: End-to-end check
+        run: |
+          mkdir -p "$E2E_DIR"
+          tests/e2e-demo.sh
+      - name: Keep logs if it failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs
+          path: |
+            ~/e2e/*.log
+            ~/e2e/ws-*/*.txt
+            ~/e2e/ws-*/*/backtests/*/console.txt
+            ~/e2e/ws-*/*/backtests/*/manifest.json
+          if-no-files-found: ignore
+          retention-days: 7

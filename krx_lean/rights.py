@@ -27,7 +27,7 @@ from pathlib import Path
 
 import requests
 
-from krx_lean.client import USER_AGENT
+from krx_lean.client import USER_AGENT, redact
 from krx_lean.dividends import DividendApiError as RightsApiError  # same gateway, same errors
 from krx_lean.dividends import recent_snapshot
 from krx_lean.krx_api import KST, read_day, write_day
@@ -61,13 +61,13 @@ def fetch_page(session: requests.Session, key: str, page: int, attempts: int = 1
             data = resp.json()
         except (requests.ConnectionError, requests.Timeout, ValueError) as e:
             if attempt == attempts - 1:
-                raise RightsApiError(f"page {page}: {type(e).__name__}: {e}") from e
+                raise RightsApiError(f"page {page}: {type(e).__name__}: {redact(e, key)}") from None
             log.warning("rights page %d: %s, retrying", page, type(e).__name__)
             time.sleep(4 * (attempt + 1))
             continue
         if "response" not in data:
             hdr = data.get("OpenAPI_ServiceResponse", {}).get("cmmMsgHeader", {})
-            raise RightsApiError(f"{hdr.get('errMsg')} {hdr.get('returnAuthMsg')}".strip() or str(data)[:200])
+            raise RightsApiError(f"{hdr.get('errMsg')} {hdr.get('returnAuthMsg')}".strip() or redact(str(data)[:200], key))
         header = data["response"]["header"]
         if header.get("resultCode") != "00":
             raise RightsApiError(f"{header.get('resultCode')} {header.get('resultMsg')}")

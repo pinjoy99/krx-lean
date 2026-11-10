@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "krx-lean"
-version = "0.0.4"
+version = "0.0.5"
 description = "KRX (KOSPI, ETF) daily data and market models for QuantConnect LEAN built from source, with klean, a local workspace tool"
 readme = "README.md"
 license = {text = "Apache-2.0"}

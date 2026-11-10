@@ -13,7 +13,9 @@
 | aikstockdata.com | static JSON/CSV under `/data/public/` | ~2,800 stocks, close/volume since 2020, OHLCV for 30 days; no ETFs, no delisted | cross-check only |
 
 Keys: `KRX_API_KEY` (header `AUTH_KEY`, per-service approval), `DATA_GO_KR_KEY` (Decoding key),
-from the environment only, whitespace stripped.
+from the environment only, whitespace stripped. data.go.kr takes its key as the URL parameter
+`serviceKey`, and HTTP error messages quote the URL, so every error and log line goes through
+`client.redact` (`serviceKey=***`, and the key values themselves, plain or URL-encoded).
 
 ## Downloads
 

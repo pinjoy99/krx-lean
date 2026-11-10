@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.5 — 2026-11-10
+
+Security and robustness fixes, and continuous integration.
+
+- **API keys no longer appear in error messages.** data.go.kr takes its key in the URL, and
+  connection errors quoted that URL: a failed `dividends` / `rights` download could print the
+  key. Errors and logs are now redacted (`serviceKey=***`). If you shared such a log, reissue
+  the data.go.kr key.
+- `klean data install lean.zip` refuses zip entries that would be written outside the workspace.
+- Run folders are unique even when two runs start in the same second (`…-2`).
+- `klean backtest --timeout SECONDS` and `klean optimize --timeout SECONDS` stop LEAN after that
+  long; the run is reported as failed.
+- **CI** on GitHub Actions: lint and unit tests on Ubuntu 22.04 / 24.04 (Python 3.10, 3.12,
+  3.13), and `tests/e2e-demo.sh`, an end-to-end check on the synthetic demo data (LEAN build,
+  C# = Python parity, failure detection, optimize, report, research notebook).
+- Tests: 37 pipeline + 39 klean.
+
 ## 0.0.4 — 2026-11-08
 
 - `klean research`: JupyterLab no longer shows "news" and "new version" pop-ups or contacts

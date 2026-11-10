@@ -4,11 +4,29 @@
 
 ```bash
 cd ~/krx-lean
-python -m unittest discover -s tests            # pipeline (34, incl. the demo data through build and install)
-python -m unittest discover -s tests/klean      # klean (36; some need dotnet on PATH)
+python -m unittest discover -s tests            # pipeline (37, incl. the demo data through build and install)
+python -m unittest discover -s tests/klean      # klean (39; some need dotnet on PATH)
 ```
 
 They use small synthetic files; no keys, no network, no LEAN build needed.
+
+## End-to-end check and CI
+
+```bash
+tests/e2e-demo.sh                                            # builds LEAN and the Python env in a temp folder
+LEAN_DIR=~/Lean PY_DIR=~/.klean/py311 tests/e2e-demo.sh      # reuses yours (~4 min)
+```
+
+On the synthetic demo data, without keys: demo install and `doctor`; top-market-cap and
+buy-hold in C# and Python with `klean compare` required to print IDENTICAL; a strategy that
+raises must exit 1 with `backtest FAILED`; `--timeout`; a small optimization; a report; the
+research notebook run headless with both charts.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`, every pull request,
+weekly, and on demand: lint and both unit suites on Ubuntu 22.04 / Python 3.10 and Ubuntu 24.04 /
+Python 3.12 and 3.13, and the end-to-end script on Ubuntu 24.04 with .NET 10 (the LEAN build is
+cached per `LEAN_COMMIT`). CI has no secrets and read-only permissions; real-data checks stay
+manual (below).
 
 ## Verification record (on real data)
 
@@ -46,7 +64,7 @@ zip timestamps differ).
 
 ## Release checklist
 
-1. Unit tests pass (both suites).
+1. CI is green on the release commit (unit suites, end-to-end on demo data).
 2. LEAN builds at `LEAN_COMMIT` from scratch (`klean install-lean` into an empty folder).
 3. On real data: parity check ([4. KRX models](4-krx-models.md#parity-check-c--python)) prints
    IDENTICAL; a report and a small optimization complete; `klean research PROJECT --execute`
