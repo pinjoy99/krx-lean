@@ -47,6 +47,19 @@ also runs under `lean backtest`.
    manifest; report title and description; a GUI banner and badges; the `buy-hold` template's
    default stock becomes `D00010`.
 
+## Models copies and `klean update`
+
+Each project has its own copy of the models (copied by `project-create`), so a project stays
+reproducible; the cost is drift after krx-lean is updated. `projects.models_state` compares the
+copy byte for byte with `examples/`: `klean backtest` prints a note and records `krx_models` in
+the manifest, `doctor` and the GUI show an informational row (never a failure: an edited copy is
+legitimate), `klean models update` replaces the copy and keeps the old one as `*.bak`.
+
+`klean update` = `krx_lean.cli.main(["--root", R, "all"])` in-process, then `install_data`.
+`R` is `data_root` in `klean.json`, saved by `klean data install --root`. Keys not in the
+environment are read from `--env-file` (default `~/.config/krx-lean.env`); values are never
+printed. Refused in a demo workspace.
+
 ## Optimize
 
 LEAN's `Optimizer.Launcher` starts each backtest with only results folder, ids, parameters and

@@ -27,7 +27,8 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `network error, stopping (re-run the same command to resume)` | a timeout or dropped connection: run the same command again; days already downloaded are kept |
 | `krx --sample` data can't run any template | expected: KRX's sample endpoint has no KOSPI 200 and only a few rotating stocks; use the [synthetic demo](demo.md) instead |
 | the latest trading day is missing | KRX publishes the next day; rerun later |
-| `klean data status` shows an old `last_date` | run `klean data install --root ~/krx-data` after `krx-lean all` |
+| `klean data status` shows an old `last_date` | run `klean update` (or `klean data install --root ~/krx-data` after `krx-lean all`) |
+| `no data root known for this workspace` | `klean update --root ~/krx-data` once; it's remembered |
 
 ## Backtests
 
@@ -37,6 +38,7 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `no kospi200 index data at …` | the workspace has no KRX index data: `krx-lean --root ~/krx-data krx-index` (needs the KRX key), then `klean data install --root ~/krx-data`; or try the [demo](demo.md) |
 | `doctor`: `KOSPI 200 index (benchmark)` NO | same as above |
 | `… holds SYNTHETIC demo data` / `… already has real KRX data` | demo and real data never share a workspace: use `~/krx-demo` for the demo and `~/krx-workspace` for real data |
+| `note: …/krx_models.py differs from krx-lean's current KRX models` | the project has an older (or edited) copy of the models: `klean models update NAME` ([6. Daily update](6-daily-update.md#after-updating-krx-lean-itself)) |
 | `unexpected equity Market krx` | the strategy has no KRX fee model: keep `krx_initialize` / `KrxFeeModel` |
 | market hours not found for `Equity-krx` | `klean data install …` wasn't run in this workspace |
 | `No module named krx_models` | keep `krx_models.py` next to `main.py` |

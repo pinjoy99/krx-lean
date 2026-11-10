@@ -150,11 +150,31 @@ class KrxPriceVariationModel(SecurityPriceVariationModel):
     GetMinimumPriceVariation = get_minimum_price_variation   # the .NET name LEAN calls
 
 
-def krx_initialize(security, boards: dict, commission_rate: float = 0.00015) -> None:
-    """Security initializer: KRX fees/taxes and tick sizes. Use with
+class KrxSlippageModel:
+    """Slippage of a fixed number of KRX ticks per share: every fill is that much worse than the
+    bar's price (buys higher, sells lower). One tick is roughly half the bid-ask spread of a
+    liquid stock plus a little impact; use more for small or illiquid stocks. The tick comes from
+    the price LEAN has for the security (adjusted prices in Adjusted mode)."""
+
+    def __init__(self, boards: dict, ticks: int = 1):
+        self.boards = boards
+        self.ticks = int(ticks)
+
+    def get_slippage_approximation(self, asset, order) -> float:
+        return self.ticks * tick_size(KrxBoards.of(self.boards, asset.symbol), asset.local_time.date(),
+                                      float(asset.price))
+
+    GetSlippageApproximation = get_slippage_approximation
+
+
+def krx_initialize(security, boards: dict, commission_rate: float = 0.00015, slippage_ticks: int = 0) -> None:
+    """Security initializer: KRX fees/taxes, tick sizes and, with ``slippage_ticks`` > 0, slippage
+    of that many ticks per share. Use with
     ``self.set_security_initializer(lambda s: krx_initialize(s, boards))``."""
     security.set_fee_model(KrxFeeModel(boards, commission_rate))
     security.price_variation_model = KrxPriceVariationModel(boards)
+    if int(slippage_ticks) > 0:
+        security.set_slippage_model(KrxSlippageModel(boards, slippage_ticks))
 
 
 def load_index(ticker: str, data_folder: str = None) -> tuple:

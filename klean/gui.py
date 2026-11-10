@@ -84,14 +84,7 @@ def code_dir(run: Path) -> Path:
 
 
 def project_list(ws: Workspace) -> list[Path]:
-    out = []
-    for p in sorted(ws.root.iterdir()):
-        if p.is_dir() and p.name != "data" and not p.name.startswith("."):
-            try:
-                projects.language_of(p)
-                out.append(p)
-            except KleanError:
-                pass
+    out = projects.list_projects(ws)
     return out
 
 
@@ -123,7 +116,7 @@ def api_workspace(ws: Workspace, _q: dict) -> dict:
         data = {"error": str(e)}
     return {"root": str(ws.root), "version": __version__, "lean_root": ws.lean_root,
             "python_venv": ws.python_venv, "lean_config": ws.lean_config, "projects": rows, "data": data,
-            "doctor": [{"item": i, "ok": ok, "detail": d} for i, ok, d in check(ws)],
+            "doctor": [{"item": i, "ok": ok, "detail": d} for i, ok, d in [*check(ws), projects.models_row(ws)]],
             "templates": list(projects.TEMPLATES)}
 
 

@@ -142,8 +142,8 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
         searches parameters, makes reports, opens research notebooks, and shows results in your browser.</p></div>
     </div>
     <div class="note warn" style="margin-top:18px"><strong>Not investment advice.</strong> Past results don't
-      predict future returns, and a backtest is only as good as its assumptions. krx-lean doesn't model slippage
-      or price limits yet, and it never places real orders.</div>
+      predict future returns, and a backtest is only as good as its assumptions. krx-lean's slippage model is simple
+      and off by default, it doesn't model price limits yet, and it never places real orders.</div>
   </div>
 </section>
 
@@ -332,8 +332,8 @@ cd ~/krx-workspace
 klean data install --root ~/krx-data
 klean project-create Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
-        <p>Keep the demo and real workspaces separate (klean won't mix them). To get new days later, rerun
-          <code>krx-lean --root ~/krx-data all</code> and <code>klean data install --root ~/krx-data</code>.</p>
+        <p>Keep the demo and real workspaces separate (klean won't mix them). To get new days later, run
+          <code>klean update</code> in the workspace.</p>
       </div>
     </div>
   </div>

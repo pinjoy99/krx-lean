@@ -17,6 +17,7 @@ using System.IO;
 using QuantConnect.Data;
 using QuantConnect.Orders;
 using QuantConnect.Orders.Fees;
+using QuantConnect.Orders.Slippage;
 using QuantConnect.Securities;
 
 namespace QuantConnect.Algorithm.CSharp
@@ -185,6 +186,41 @@ namespace QuantConnect.Algorithm.CSharp
         {
             var security = parameters.Security;
             return Tick(KrxBoards.Of(_boards, security.Symbol), security.LocalTime.Date, parameters.ReferencePrice);
+        }
+    }
+
+    /// <summary>
+    /// Slippage of a fixed number of KRX ticks per share: every fill is that much worse than the
+    /// bar's price (buys higher, sells lower). One tick is roughly half the bid-ask spread of a
+    /// liquid stock plus a little impact; use more for small or illiquid stocks. The tick comes
+    /// from the price LEAN has for the security (adjusted prices in Adjusted mode).
+    /// </summary>
+    public class KrxSlippageModel : ISlippageModel
+    {
+        private readonly Dictionary<string, string> _boards;
+        private readonly int _ticks;
+
+        public KrxSlippageModel(Dictionary<string, string> boards, int ticks = 1) { _boards = boards; _ticks = ticks; }
+
+        public decimal GetSlippageApproximation(Security asset, Order order)
+        {
+            return _ticks * KrxPriceVariationModel.Tick(KrxBoards.Of(_boards, asset.Symbol), asset.LocalTime.Date, asset.Price);
+        }
+    }
+
+    /// <summary>
+    /// Security initializer: KRX fees/taxes, tick sizes and, with slippageTicks > 0, slippage of
+    /// that many ticks per share. Use with
+    /// <c>SetSecurityInitializer(s => KrxModels.Initialize(s, boards))</c>.
+    /// </summary>
+    public static class KrxModels
+    {
+        public static void Initialize(Security security, Dictionary<string, string> boards,
+            decimal commissionRate = 0.00015m, int slippageTicks = 0)
+        {
+            security.SetFeeModel(new KrxFeeModel(boards, commissionRate));
+            security.PriceVariationModel = new KrxPriceVariationModel(boards);
+            if (slippageTicks > 0) security.SetSlippageModel(new KrxSlippageModel(boards, slippageTicks));
         }
     }
 

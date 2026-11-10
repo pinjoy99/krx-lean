@@ -30,7 +30,10 @@ class KrxTopMarketCapAlgorithm(QCAlgorithm):
         self.self_check()
 
         self.universe_settings.resolution = Resolution.DAILY
-        self.set_security_initializer(lambda security: krx_initialize(security, self.boards))
+        # parameter "slippage_ticks": KRX ticks lost per share on every fill (default 0 = none)
+        slippage_ticks = int(self.get_parameter("slippage_ticks", "0"))
+        self.set_security_initializer(
+            lambda security: krx_initialize(security, self.boards, slippage_ticks=slippage_ticks))
         self.set_benchmark(krx_benchmark("kospi200"))
 
         self.last_month = -1

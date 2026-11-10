@@ -33,7 +33,8 @@ class {cls}(QCAlgorithm):
         self.set_start_date(2024, 1, 2)
         self.set_cash(100_000_000)
         boards = KrxBoards.load()
-        self.set_security_initializer(lambda security: krx_initialize(security, boards))
+        slippage_ticks = int(self.get_parameter("slippage_ticks", "0"))   # KRX ticks lost per share on every fill
+        self.set_security_initializer(lambda security: krx_initialize(security, boards, slippage_ticks=slippage_ticks))
         self.set_benchmark(krx_benchmark("kospi200"))
         code = self.get_parameter("code", "{code}")
         self.stock = self.add_equity(code, Resolution.DAILY, Market.KRX).symbol
@@ -58,7 +59,8 @@ class {cls}(QCAlgorithm):
         self.set_start_date(2024, 1, 2)
         self.set_cash(100_000_000)
         boards = KrxBoards.load()
-        self.set_security_initializer(lambda security: krx_initialize(security, boards))
+        slippage_ticks = int(self.get_parameter("slippage_ticks", "0"))   # KRX ticks lost per share on every fill
+        self.set_security_initializer(lambda security: krx_initialize(security, boards, slippage_ticks=slippage_ticks))
         self.set_benchmark(krx_benchmark("kospi200"))
 
     def on_data(self, data: Slice):
@@ -79,11 +81,8 @@ namespace QuantConnect.Algorithm.CSharp
             SetStartDate(2024, 1, 2);
             SetCash(100_000_000);
             var boards = KrxBoards.Load();
-            SetSecurityInitializer(security =>
-            {{
-                security.SetFeeModel(new KrxFeeModel(boards));
-                security.PriceVariationModel = new KrxPriceVariationModel(boards);
-            }});
+            var slippageTicks = GetParameter("slippage_ticks", 0);   // KRX ticks lost per share on every fill
+            SetSecurityInitializer(security => KrxModels.Initialize(security, boards, slippageTicks: slippageTicks));
             SetBenchmark(KrxIndex.Benchmark("kospi200"));
         }}
 
@@ -111,11 +110,8 @@ namespace QuantConnect.Algorithm.CSharp
             SetStartDate(2024, 1, 2);
             SetCash(100_000_000);
             var boards = KrxBoards.Load();
-            SetSecurityInitializer(security =>
-            {{
-                security.SetFeeModel(new KrxFeeModel(boards));
-                security.PriceVariationModel = new KrxPriceVariationModel(boards);
-            }});
+            var slippageTicks = GetParameter("slippage_ticks", 0);   // KRX ticks lost per share on every fill
+            SetSecurityInitializer(security => KrxModels.Initialize(security, boards, slippageTicks: slippageTicks));
             SetBenchmark(KrxIndex.Benchmark("kospi200"));
             var code = GetParameter("code", "{code}");
             _stock = AddEquity(code, Resolution.Daily, Market.KRX).Symbol;
@@ -199,6 +195,58 @@ def delete(ws: Workspace, name: str) -> Path:
     language_of(project)  # raises unless it's a project
     shutil.rmtree(project)
     return project
+
+
+def list_projects(ws: Workspace) -> list[Path]:
+    out = []
+    for p in sorted(ws.root.iterdir()):
+        if p.is_dir() and p.name not in ("data", "storage") and not p.name.startswith("."):
+            try:
+                language_of(p)
+                out.append(p)
+            except KleanError:
+                pass
+    return out
+
+
+def models_copy(project: Path) -> tuple[Path, Path]:
+    """(the project's copy of the KRX models, krx-lean's current file)."""
+    if language_of(project) == "python":
+        return project / PY_MODELS.name, PY_MODELS
+    return project / CS_MODELS.name, CS_MODELS
+
+
+def models_state(project: Path) -> str:
+    """"current", "differs" (krx-lean's models changed since the project was created, or the
+    copy was edited) or "missing"."""
+    copy, source = models_copy(project)
+    if not copy.exists():
+        return "missing"
+    return "current" if copy.read_bytes() == source.read_bytes() else "differs"
+
+
+def update_models(project: Path) -> Path | None:
+    """Replace the project's copy with krx-lean's current models; the old copy is kept as
+    ``<name>.bak``. Returns the backup path, or None if the copy was already current."""
+    copy, source = models_copy(project)
+    if models_state(project) == "current":
+        return None
+    backup = None
+    if copy.exists():
+        backup = copy.with_name(copy.name + ".bak")
+        shutil.copy2(copy, backup)
+    shutil.copy(source, copy)
+    return backup
+
+
+def models_row(ws: Workspace) -> tuple[str, bool, str]:
+    """A `klean doctor` line: projects whose copy of the KRX models isn't krx-lean's current one.
+    Informational (old tax/tick rules, or your own edits): it never fails the check."""
+    stale = [p.name for p in list_projects(ws) if models_state(p) == "differs"]
+    if not stale:
+        return ("KRX models in projects", True, "all current")
+    return ("KRX models in projects", True, f"note: {', '.join(stale)} differ from krx-lean's current models "
+            "(`klean models status`, `klean models update NAME`)")
 
 
 def language_of(project: Path) -> str:

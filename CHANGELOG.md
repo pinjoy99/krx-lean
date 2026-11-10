@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.6 — 2026-11-10
+
+- **Slippage model** (`KrxSlippageModel`, C# and Python, identical results): each fill is N KRX
+  ticks per share worse than the bar's price. Off by default (results unchanged); the templates
+  and the example read the parameter `slippage_ticks`
+  (`klean backtest P --parameter slippage_ticks 1`). `krx_initialize(..., slippage_ticks=N)`;
+  new C# helper `KrxModels.Initialize(security, boards, commissionRate, slippageTicks)`.
+- **`klean update`**: the daily routine in one command (keys from `~/.config/krx-lean.env`,
+  `krx-lean all`, install into the workspace). The workspace remembers its data root.
+- **`klean models status | update`**: projects keep their own copy of the KRX models; `klean
+  backtest`, `doctor` and the GUI now say when a copy differs from the current models, and
+  `models update` replaces it (the old copy is kept as `.bak`).
+- The end-to-end check covers slippage (C# = Python) and the models commands. 7 new tests.
+
 ## 0.0.5 — 2026-11-10
 
 Security and robustness fixes, and continuous integration.

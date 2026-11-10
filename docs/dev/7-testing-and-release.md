@@ -5,7 +5,7 @@
 ```bash
 cd ~/krx-lean
 python -m unittest discover -s tests            # pipeline (37, incl. the demo data through build and install)
-python -m unittest discover -s tests/klean      # klean (39; some need dotnet on PATH)
+python -m unittest discover -s tests/klean      # klean (44; some need dotnet on PATH)
 ```
 
 They use small synthetic files; no keys, no network, no LEAN build needed.
@@ -18,7 +18,8 @@ LEAN_DIR=~/Lean PY_DIR=~/.klean/py311 tests/e2e-demo.sh      # reuses yours (~4 
 ```
 
 On the synthetic demo data, without keys: demo install and `doctor`; top-market-cap and
-buy-hold in C# and Python with `klean compare` required to print IDENTICAL; a strategy that
+buy-hold in C# and Python with `klean compare` required to print IDENTICAL, also with one tick
+of slippage (which must lower the end equity); the models check and update; a strategy that
 raises must exit 1 with `backtest FAILED`; `--timeout`; a small optimization; a report; the
 research notebook run headless with both charts.
 

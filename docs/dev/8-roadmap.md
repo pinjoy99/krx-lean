@@ -7,7 +7,7 @@
 | `init`, `create-project`, `delete-project`, `config`, `backtest`, `optimize`, `report`, `logs`, `gui`, `research` | ✅ (`optimize`: grid only; `research`: Python notebooks only) |
 | `build` | `lean status` / `lean update` (no images) |
 | `backtest --detach` | planned |
-| `library add/remove` | planned: one shared copy of the KRX models instead of a copy per project |
+| `library add/remove` | partly: `klean models status/update` keeps per-project copies current; a shared library later |
 | `backtest --debug` | planned (C# attach, debugpy) |
 | `object-store` | later |
 | `live …` | not in scope for now |
@@ -28,7 +28,9 @@ status, `compare`; planned `check-models` (run the `CHECK` cases in both languag
 ## Models
 
 - Verify the pre-2023 KOSDAQ/KONEX and January–October 2010 tick tables against KRX's rules.
-- Slippage; fill model (±30% limits, auctions, VI); T+2 settlement; `KrxBrokerageModel`.
+- Slippage: fixed ticks per share done (`KrxSlippageModel`, off by default); next a
+  volume-share / market-impact model, and whether 1 tick should become the default.
+- Fill model (±30% limits, auctions, VI); T+2 settlement; `KrxBrokerageModel`.
 - Late opens in market hours (first trading day, 수능일).
 
 ## Scope and platforms

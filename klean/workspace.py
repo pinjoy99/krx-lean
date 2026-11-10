@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 # klean's own settings in klean.json; any other `klean config` key is a LEAN config key.
-WORKSPACE_KEYS = ("lean_root", "python_venv", "python_dll")
+WORKSPACE_KEYS = ("lean_root", "python_venv", "python_dll", "data_root")
 
 
 class KleanError(Exception):
@@ -38,6 +38,8 @@ class Workspace:
     lean_root: str
     python_venv: str = ""
     python_dll: str = ""
+    # the krx-lean data root last installed with `klean data install --root` (used by `klean update`)
+    data_root: str = ""
     # LEAN config keys applied to every backtest of this workspace (like the LEAN CLI's lean.json)
     lean_config: dict = field(default_factory=dict)
 

@@ -39,11 +39,9 @@ namespace QuantConnect.Algorithm.CSharp
             SelfCheck();
 
             UniverseSettings.Resolution = Resolution.Daily;
-            SetSecurityInitializer(security =>
-            {
-                security.SetFeeModel(new KrxFeeModel(_boards));
-                security.PriceVariationModel = new KrxPriceVariationModel(_boards);
-            });
+            // parameter "slippage_ticks": KRX ticks lost per share on every fill (default 0 = none)
+            var slippageTicks = GetParameter("slippage_ticks", 0);
+            SetSecurityInitializer(security => KrxModels.Initialize(security, _boards, slippageTicks: slippageTicks));
 
             // LEAN would subscribe an index benchmark hourly; KRX index data is daily, so use a function.
             SetBenchmark(KrxIndex.Benchmark("kospi200"));

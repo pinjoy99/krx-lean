@@ -143,6 +143,8 @@ URL yourself. Stop it with Ctrl+C. It doesn't edit code: use your editor.
 ```bash
 klean project-delete Old           # asks you to type the name
 klean data status
+klean update                       # new KRX days into the workspace (6. Daily update)
+klean models status                # are the projects' KRX models current?
 klean lean status                  # LEAN commit in use and build state
 klean doctor
 ```

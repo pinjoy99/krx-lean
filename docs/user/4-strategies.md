@@ -33,7 +33,8 @@ class MyStrategy(QCAlgorithm):
         self.add_equity("005930", Resolution.DAILY, Market.KRX)
 ```
 
-`krx_initialize(security, boards, commission_rate=0.00015)`: set your broker's commission.
+`krx_initialize(security, boards, commission_rate=0.00015, slippage_ticks=0)`: set your broker's
+commission, and slippage (below).
 
 ### C#
 
@@ -41,11 +42,8 @@ class MyStrategy(QCAlgorithm):
 SetTimeZone("Asia/Seoul");
 SetAccountCurrency("KRW");
 var boards = KrxBoards.Load();
-SetSecurityInitializer(s =>
-{
-    s.SetFeeModel(new KrxFeeModel(boards));             // commission 0.015% default (2nd argument)
-    s.PriceVariationModel = new KrxPriceVariationModel(boards);
-});
+SetSecurityInitializer(s => KrxModels.Initialize(s, boards));   // KRX fees, taxes, tick sizes
+// options: KrxModels.Initialize(s, boards, commissionRate: 0.00015m, slippageTicks: 1)
 SetBenchmark(KrxIndex.Benchmark("kospi200"));
 AddEquity("005930", Resolution.Daily, Market.KRX);
 ```
@@ -89,10 +87,34 @@ example in both languages.
 - **Common vs preferred:** codes ending in `0` are common shares (KRX convention);
   `securities.csv` has `share_class` if you ran `krx-info`.
 
+## Slippage
+
+By default every order fills exactly at the daily bar's price, which is better than you'd get in
+the market. `slippage_ticks` makes each fill worse by that many KRX ticks per share (buys
+higher, sells lower):
+
+```python
+self.set_security_initializer(lambda s: krx_initialize(s, boards, slippage_ticks=1))
+```
+
+The templates read it as a parameter, so you can see what it costs without editing code:
+
+```bash
+klean backtest Top20 --parameter slippage_ticks 1 --backtest-name slip1
+klean compare Top20 Top20/<the run without slippage>
+```
+
+One tick is about half the bid-ask spread of a liquid stock plus a little impact: a reasonable
+minimum for large caps. Use more for small or thinly traded stocks, and distrust any strategy
+whose profit disappears at 1–2 ticks. The default stays 0 so that results are comparable with
+earlier runs; it is a fixed cost per share and doesn't grow with your order's size (no market
+impact model).
+
 ## Not modelled (yet)
 
-Slippage and market impact; ±30% daily price limits and the opening/closing auctions; T+2 cash
-settlement (sale proceeds are usable at once); short-selling rules. LEAN's "Estimated Strategy
+Market impact (slippage that grows with order size); ±30% daily price limits and the
+opening/closing auctions; T+2 cash settlement (sale proceeds are usable at once); short-selling
+rules. LEAN's "Estimated Strategy
 Capacity" shows ₩0 / "-" for KRX backtests; ignore it. Keep these in mind for small caps and
 high turnover.
 

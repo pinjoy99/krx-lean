@@ -186,10 +186,11 @@ def run_once(ws: Workspace, project: Path, language: str, location: Path, cls: s
             log.write(f"\nklean: stopped after the {timeout:g} s time limit (--timeout)\n")
     finished = dt.datetime.now(dt.timezone.utc)
     error = f"timed out after {timeout:g} s (--timeout)" if timed_out else results.run_error(results_dir)
+    models = projects.models_state(project)
     ok = not error
     write_manifest(ws, project, results_dir, language=language, algorithm=cls, parameters=parameters,
                    lean_config=lean_config, backtest_name=backtest_name, build_config=build_config,
-                   started=started, finished=finished, exit_code=exit_code, ok=ok, code=code,
+                   started=started, finished=finished, exit_code=exit_code, ok=ok, code=code, krx_models=models,
                    **({"error": error} if error else {}),
                    **({"synthetic_demo_data": True} if results.is_demo_data(ws) else {}),
                    **({"code_skipped_large_files": skipped} if skipped else {}))

@@ -15,6 +15,8 @@
     klean compare RUN RUN [...] [--all]                 statistics and equity curves side by side
     klean config list | get KEY | set KEY VALUE | unset KEY
     klean lean status | update [--commit C]             the LEAN build used by the workspace
+    klean update [--root DATA_ROOT]                     download new days, rebuild, install into the workspace
+    klean models status | update NAME... | update --all the projects' copies of the KRX models
     klean doctor                                        check the setup
     klean gui [--port N] [--no-browser]                 local web page: projects, runs, charts, compare
 """
@@ -23,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -137,6 +140,8 @@ def install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None 
         lean_install.install(ws.root, ws.data, config_only=True)
     else:
         lean_install.install(root, ws.data)
+        ws.data_root = str(root.resolve())       # `klean update` uses it
+        ws.save()
 
 
 def cmd_data_install(args) -> None:
@@ -391,6 +396,10 @@ def cmd_backtest(args) -> int:
     demo = results.is_demo_data(ws)
     if demo:
         print(f"*** {results.DEMO_BANNER} ***", flush=True)
+    if project.is_dir() and projects.models_state(project) == "differs":
+        copy, _ = projects.models_copy(project)
+        print(f"note: {project.name}/{copy.name} differs from krx-lean's current KRX models (older tax/tick "
+              f"rules, or your own edits). `klean models update {project.name}` replaces it.", flush=True)
     result = backtest(ws, project, dict(args.parameter or []), extra_config=dict(args.extra_config or []),
                       output=Path(args.output) if args.output else None, backtest_name=args.backtest_name or "",
                       build_config=args.build_config, timeout=args.timeout)
@@ -411,12 +420,86 @@ def cmd_gui(args) -> int:
     return 0
 
 
+def load_env_file(path: Path) -> list[str]:
+    """Set KEY=VALUE lines of ``path`` as environment variables unless they are already set.
+    Returns the names set (never the values)."""
+    names = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.removeprefix("export ").partition("=")
+        key, value = key.strip(), value.strip().strip("'\"")
+        if key and value and not os.environ.get(key):
+            os.environ[key] = value
+            names.append(key)
+    return names
+
+
+def cmd_update(args) -> int:
+    """The daily routine in one command: `krx-lean --root R all`, then `klean data install --root R`."""
+    ws = Workspace.load(Path.cwd())
+    if results.is_demo_data(ws):
+        raise KleanError(f"{ws.root} holds SYNTHETIC demo data: nothing to update (real data goes in its own workspace)")
+    root = Path(args.root).expanduser() if args.root else Path(ws.data_root) if ws.data_root else None
+    if root is None:
+        raise KleanError("no data root known for this workspace: `klean update --root ~/krx-data` "
+                         "(remembered afterwards)")
+    env_file = Path(args.env_file).expanduser()
+    if env_file.is_file():
+        names = load_env_file(env_file)
+        if names:
+            print(f"klean: {', '.join(names)} from {env_file}")
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from krx_lean import cli as pipeline
+    print(f"klean: krx-lean --root {root} all", flush=True)
+    try:
+        code = pipeline.main(["--root", str(root), "all"])
+    except SystemExit as e:        # e.g. "KRX_API_KEY is not set"
+        raise KleanError(f"{e} (export it, or put KRX_API_KEY=... in {env_file})") from None
+    if not (root / "lean" / "equity" / "krx").is_dir():
+        raise KleanError(f"nothing built in {root} (see the messages above)")
+    install_data(ws, root=root)
+    st = results.data_status(ws)
+    print(f"klean: workspace data now {st.get('first_date', '?')} → {st.get('last_date', '?')}, "
+          f"{st['securities']} securities" + ("" if code == 0 else
+          "  (the download stopped early: run `klean update` again to continue)"))
+    return code
+
+
+def cmd_models(args) -> int:
+    ws = Workspace.load(Path.cwd())
+    if args.models_cmd == "status":
+        rows = [[p.name, projects.language_of(p), projects.models_copy(p)[0].name, projects.models_state(p)]
+                for p in projects.list_projects(ws)]
+        print(results.format_table(["project", "language", "file", "KRX models"], rows) if rows else "no projects")
+        if any(r[3] == "differs" for r in rows):
+            print("\n'differs': krx-lean's models changed after the project was created (tax rates, tick sizes, "
+                  "fixes), or you edited the copy.\n`klean models update NAME` replaces it and keeps yours as *.bak.")
+        return 0
+    names = [p.name for p in projects.list_projects(ws)] if args.all else args.names
+    if not names:
+        raise KleanError("give project names, or --all")
+    for name in names:
+        project = ws.root / name
+        projects.language_of(project)
+        before = projects.models_state(project)
+        backup = projects.update_models(project)
+        copy = projects.models_copy(project)[0]
+        print(f"{name}: {copy.name} " + ("already current" if before == "current" else
+              "updated" + (f" (previous copy kept as {backup.name})" if backup else "")))
+    return 0
+
+
 def cmd_doctor(args) -> int:
     try:
         ws = Workspace.load(Path.cwd())
     except KleanError:
         ws = None
     rows = check(ws)
+    if ws is not None:
+        rows.append(projects.models_row(ws))
     for item, ok, detail in rows:
         print(f"  {'OK ' if ok else 'NO '} {item:32} {detail}")
     return 0 if all(ok for item, ok, _ in rows if not item.startswith("Python env")) else 1
@@ -556,6 +639,21 @@ def main(argv: list[str] | None = None) -> int:
     u = lsub.add_parser("update", help="check out another LEAN commit and rebuild")
     u.add_argument("--commit", default=LEAN_COMMIT, help="default: the commit krx-lean was tested with")
     u.set_defaults(func=cmd_lean)
+
+    s = sub.add_parser("update", help="download new KRX days, rebuild, and install into this workspace")
+    s.add_argument("--root", help="krx-lean data root (default: the one last installed here)")
+    s.add_argument("--env-file", default="~/.config/krx-lean.env",
+                   help="file with KRX_API_KEY=... / DATA_GO_KR_KEY=... lines, used for keys not already "
+                        "in the environment (default: ~/.config/krx-lean.env)")
+    s.set_defaults(func=cmd_update)
+
+    s = sub.add_parser("models", help="the projects' copies of the KRX models (krx_models.py / KrxModels.cs)")
+    msub = s.add_subparsers(dest="models_cmd", required=True)
+    msub.add_parser("status", help="which projects have krx-lean's current models").set_defaults(func=cmd_models)
+    m = msub.add_parser("update", help="replace a project's copy with the current models (old copy kept as .bak)")
+    m.add_argument("names", nargs="*")
+    m.add_argument("--all", action="store_true")
+    m.set_defaults(func=cmd_models)
 
     s = sub.add_parser("doctor", help="check dotnet, the LEAN build, data and the Python env")
     s.set_defaults(func=cmd_doctor)

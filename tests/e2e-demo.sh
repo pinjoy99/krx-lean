@@ -38,6 +38,29 @@ grep -qx "IDENTICAL" compare.txt || fail "the C# and Python results differ"
 grep -q '"synthetic_demo_data": true' Cs/backtests/*/manifest.json || fail "manifest lacks the demo flag"
 ls Py/backtests/*/code/main.py >/dev/null || fail "no code snapshot"
 
+step "slippage: costs money, and stays identical in both languages"
+klean backtest Cs --parameter slippage_ticks 1 --backtest-name slip
+klean backtest Py --parameter slippage_ticks 1 --backtest-name slip
+SLIP_CS=$(basename "$(ls -d Cs/backtests/*_slip)"); SLIP_PY=$(basename "$(ls -d Py/backtests/*_slip)")
+klean compare "Py/$SLIP_PY" "Cs/$SLIP_CS" | tail -1 | grep -qx "IDENTICAL" || fail "slippage differs between C# and Python"
+"$PY_DIR/bin/python" - <<'EOF' || fail "one tick of slippage didn't lower the end equity"
+import glob, json
+def equity(pattern):
+    runs = sorted(glob.glob(pattern))
+    return float(json.load(open(runs[0]))["statistics"]["End Equity"])
+plain = equity("Cs/backtests/*[0-9]/*-summary.json")
+slipped = equity("Cs/backtests/*_slip/*-summary.json")
+assert slipped < plain, (plain, slipped)
+print(f"end equity {plain:,.0f} -> {slipped:,.0f} with 1 tick of slippage")
+EOF
+
+step "models check and update"
+klean models status | grep -q "current" || fail "models status"
+echo "# edited" >> Py/krx_models.py
+klean doctor | grep -q "note: Py differ" || fail "doctor doesn't note the edited models"
+klean models update Py | grep -q "updated" || fail "models update"
+[ -f Py/krx_models.py.bak ] || fail "no backup of the edited models"
+
 step "buy-hold template, both languages"
 klean project-create HoldPy
 klean project-create HoldCs --language csharp

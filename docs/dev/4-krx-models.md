@@ -9,6 +9,8 @@ project; a strategy uses them as shown in [user 4. Writing strategies](../user/4
 | `KrxBoards` | `KrxBoards` | code → market (KOSPI / KOSDAQ / KONEX / ETF), from `equity/krx/securities.csv` |
 | `KrxFeeModel` | `KrxFeeModel` (via `krx_initialize`) | commission + sell-side tax |
 | `KrxPriceVariationModel` | `KrxPriceVariationModel` (via `krx_initialize`) | tick sizes |
+| `KrxSlippageModel` | `KrxSlippageModel` | slippage of N ticks per share (off by default) |
+| `KrxModels.Initialize` | `krx_initialize` | security initializer setting the three models above |
 | `KrxUniverseData` | `KrxUniverseData` | the daily universe files |
 | `KrxIndex.Benchmark` | `krx_benchmark` | KOSPI / KOSPI 200 as a benchmark function |
 
@@ -41,6 +43,16 @@ From 2023-01-25, one table for KOSPI/KOSDAQ/KONEX: < 2,000 → 1; < 5,000 → 5;
 1,000. ETFs: 5 won. **Not verified from a primary source:** KOSDAQ/KONEX before 2023 (same up to
 50,000, then 100), and January–October 2010 (the post-October table is used).
 
+## Slippage
+
+`KrxSlippageModel(boards, ticks)` returns `ticks × tick size` (the tick table above, at the
+security's current price) as LEAN's per-share slippage: buys fill that much higher, sells lower.
+Integer ticks keep C# and Python identical (checked: top-market-cap with 1 tick, IDENTICAL; on
+the demo data it lowers CAGR from 7.90% to 7.75%). It is set only when `slippage_ticks` /
+`slippageTicks` > 0, so default results are unchanged. In Adjusted mode the price (and so the
+tick band) is the adjusted one, as for tick rounding. Not a market-impact model: the cost per
+share doesn't depend on order size or volume.
+
 ## Benchmark
 
 LEAN subscribes a security benchmark at hourly resolution; with daily index data that benchmark
@@ -55,7 +67,7 @@ The two files must stay equivalent. Change both, then run the parity check below
 
 | Change | Where |
 |---|---|
-| commission rate | argument only, no code change |
+| commission rate, slippage ticks | arguments only, no code change |
 | a new tax rate | `KospiTax` / `KosdaqTax` / `KonexTax` in `KrxModels.cs` and `_KOSPI_TAX` / … in `krx_models.py`; add the source to this page |
 | a new tick table | `KrxPriceVariationModel.Tick` and `tick_size()` |
 | a new universe column | `lean_extras.build_universe`, then both `KrxUniverseData` readers |
@@ -85,7 +97,7 @@ C# ~20 s, Python ~2.5 min. Reports of the two runs are identical too (text and a
 
 ## Not modelled
 
-Slippage and market impact; ±30% price limits, auctions and VI (fill model); T+2 cash
+Market impact (size-dependent slippage); ±30% price limits, auctions and VI (fill model); T+2 cash
 settlement; a `KrxBrokerageModel` (order types, short-selling rules); late opens (first trading
 day of the year, 수능일). LEAN's "Estimated Strategy Capacity" is ₩0 for KRX backtests (not
 investigated).
