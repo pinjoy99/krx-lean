@@ -59,6 +59,15 @@ class ModelsTest(unittest.TestCase):
         self.assertIn("class KrxSlippageModel : ISlippageModel", projects.CS_MODELS.read_text())
 
 
+    def test_slippage_note(self):
+        self.assertIn("slippage: off", cli.slippage_note(self.py, {}))
+        self.assertIn("--parameter slippage_ticks 1", cli.slippage_note(self.cs, {"slippage_ticks": "0"}))
+        self.assertEqual(cli.slippage_note(self.py, {"slippage_ticks": "2"}),
+                         "slippage: 2 KRX ticks per share on every fill")
+        (self.py / "main.py").write_text("class A: pass\n")          # a strategy without the parameter
+        self.assertEqual(cli.slippage_note(self.py, {}), "")
+
+
 class UpdateTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

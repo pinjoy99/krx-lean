@@ -406,12 +406,31 @@ def cmd_backtest(args) -> int:
     print(f"\nresults: {result['results']}")
     for k, v in result["statistics"].items():
         print(f"  {k:28} {v}")
+    note = slippage_note(project, dict(args.parameter or []))
+    if note:
+        print(note)
     if result.get("gil_abort_at_exit"):
         print("(LEAN's Python bridge printed a 'GIL must always be released' error while shutting down, after "
               "the results were written: the run is complete.)")
     if demo:
         print(f"*** {results.DEMO_BANNER} ***")
     return 0
+
+
+def slippage_note(project: Path, parameters: dict[str, str]) -> str:
+    """One line saying whether the run used slippage, for strategies that read the
+    ``slippage_ticks`` parameter (the templates and the example do)."""
+    main = next((f for f in (project / "main.py", project / "Main.cs") if f.exists()), None)
+    if main is None or "slippage_ticks" not in main.read_text(encoding="utf-8", errors="replace"):
+        return ""
+    try:
+        ticks = int(parameters.get("slippage_ticks", "0"))
+    except ValueError:
+        return ""
+    if ticks > 0:
+        return f"slippage: {ticks} KRX tick{'s' if ticks > 1 else ''} per share on every fill"
+    return (f"slippage: off (orders fill at the bar's price). Switch it on with "
+            f"`klean backtest {project.name} --parameter slippage_ticks 1`")
 
 
 def cmd_gui(args) -> int:

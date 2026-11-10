@@ -5,7 +5,7 @@
 Korean stock market (KRX) data and market models for
 [QuantConnect LEAN](https://github.com/QuantConnect/Lean), the open-source backtesting engine,
 built from source on your own machine. Backtest KOSPI stocks and ETFs in Python or C#, with
-KRX fees, taxes and tick sizes, the KOSPI 200 benchmark, daily universes including delisted
+KRX fees, taxes and tick sizes, optional slippage, the KOSPI 200 benchmark, daily universes including delisted
 stocks, and prices adjusted for splits, rights issues and dividends; explore the data in Jupyter
 notebooks with LEAN's QuantBook.
 

@@ -142,8 +142,8 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
         searches parameters, makes reports, opens research notebooks, and shows results in your browser.</p></div>
     </div>
     <div class="note warn" style="margin-top:18px"><strong>Not investment advice.</strong> Past results don't
-      predict future returns, and a backtest is only as good as its assumptions. krx-lean's slippage model is simple
-      and off by default, it doesn't model price limits yet, and it never places real orders.</div>
+      predict future returns, and a backtest is only as good as its assumptions. Slippage is off by default (you can
+      switch it on, see below), price limits aren't modelled yet, and krx-lean never places real orders.</div>
   </div>
 </section>
 
@@ -274,6 +274,7 @@ klean gui               <span class="c"># opens the results in your browser</spa
       <tr><td>Sharpe Ratio</td><td>Return per unit of risk (ups and downs). Higher is better; above 1 is rare over long periods.</td></tr>
       <tr><td>Benchmark (KOSPI 200)</td><td>What simply holding the market would have done. A strategy worth the effort should beat it after fees.</td></tr>
       <tr><td>Total Fees</td><td>Commission and the securities transaction tax you'd have paid. Frequent trading costs a lot.</td></tr>
+      <tr><td>Slippage</td><td>The gap between the price a backtest assumes and what the market really gives you. It is <strong>off by default</strong>; switch it on with <code>klean backtest Top20 --parameter slippage_ticks 1</code> to see a more cautious result.</td></tr>
       <tr><td>Alpha / Beta</td><td>Beta: how much the strategy moves with the market (1 = same). Alpha: return not explained by the market.</td></tr>
     </table>
     <figure>
@@ -387,6 +388,7 @@ class MyFirstStrategy(QCAlgorithm):
     <table>
       <tr><th style="width:42%">Command</th><th>What it does</th></tr>
       <tr><td><code>klean backtest P --parameter holdings 30</code></td><td>Run with a different setting (the strategy reads it with <code>get_parameter</code>).</td></tr>
+      <tr><td><code>klean backtest P --parameter slippage_ticks 1</code></td><td>Switch slippage on (it's off by default): every trade gets a slightly worse price, as in a real market.</td></tr>
       <tr><td><code>klean compare A B</code></td><td>Put two runs side by side.</td></tr>
       <tr><td><code>klean optimize P --parameter holdings 10 30 10</code></td><td>Try several settings and rank them (beware of overfitting).</td></tr>
       <tr><td><code>klean research P</code></td><td>Explore the data in a Jupyter notebook (history, indicators, charts) before writing a strategy.</td></tr>

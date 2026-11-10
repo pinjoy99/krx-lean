@@ -89,15 +89,17 @@ example in both languages.
 
 ## Slippage
 
-By default every order fills exactly at the daily bar's price, which is better than you'd get in
-the market. `slippage_ticks` makes each fill worse by that many KRX ticks per share (buys
-higher, sells lower):
+**Slippage is off by default**, and you can switch it on per run or per strategy. Without it
+every order fills exactly at the daily bar's price, which is better than you'd get in the
+market. `slippage_ticks` makes each fill worse by that many KRX ticks per share (buys higher,
+sells lower). In code:
 
 ```python
 self.set_security_initializer(lambda s: krx_initialize(s, boards, slippage_ticks=1))
 ```
 
-The templates read it as a parameter, so you can see what it costs without editing code:
+The templates already read it as a parameter, so you can switch it on from the command line,
+without editing code, and see what it costs:
 
 ```bash
 klean backtest Top20 --parameter slippage_ticks 1 --backtest-name slip1
@@ -106,8 +108,10 @@ klean compare Top20 Top20/<the run without slippage>
 
 One tick is about half the bid-ask spread of a liquid stock plus a little impact: a reasonable
 minimum for large caps. Use more for small or thinly traded stocks, and distrust any strategy
-whose profit disappears at 1–2 ticks. The default stays 0 so that results are comparable with
-earlier runs; it is a fixed cost per share and doesn't grow with your order's size (no market
+whose profit disappears at 1–2 ticks. To have it on for every run of a strategy, change the
+default in its code (`"0"` → `"1"` in the `slippage_ticks` line, or pass `slippage_ticks=1`).
+The default stays off so that results are comparable with earlier runs. It is a fixed cost per
+share and doesn't grow with your order's size (no market
 impact model).
 
 ## Not modelled (yet)

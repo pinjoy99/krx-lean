@@ -60,6 +60,17 @@ data). At the very end LEAN's Python bridge often prints an `Unhandled exception
 GIL must always be released …` stack trace while shutting down, after the results are written;
 klean recognises it and prints a one-line note. It doesn't affect the results.
 
+**Slippage is off by default:** orders fill exactly at the daily bar's price, which is a little
+better than a real market gives you. `klean backtest` says so after the statistics. To switch it
+on, add `--parameter slippage_ticks 1` (each fill one KRX tick worse; more ticks for small
+stocks):
+
+```bash
+klean backtest Top20 --parameter slippage_ticks 1 --backtest-name slip1
+```
+
+Details: [4. Writing strategies](4-strategies.md#slippage).
+
 ## Look at the results
 
 ```bash

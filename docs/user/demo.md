@@ -17,6 +17,7 @@ klean project-create Hold                           # buy and hold (the demo sto
 klean project-create Top20 --template top-market-cap
 klean backtest Hold
 klean backtest Top20
+klean backtest Top20 --parameter slippage_ticks 1   # the same with slippage switched on (off by default)
 klean report Top20
 klean gui
 klean research Top20                                # a Jupyter notebook on the demo data

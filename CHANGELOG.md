@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.7 — 2026-11-10
+
+- Slippage stays off by default, and that is now visible: `klean backtest` prints
+  `slippage: off … Switch it on with --parameter slippage_ticks 1` (or the ticks used) for
+  strategies that read the parameter; the first-backtest guide, the strategies page, the README
+  and the beginner page say how to switch it on.
+
 ## 0.0.6 — 2026-11-10
 
 - **Slippage model** (`KrxSlippageModel`, C# and Python, identical results): each fill is N KRX

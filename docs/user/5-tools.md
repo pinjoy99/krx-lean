@@ -17,6 +17,7 @@ klean logs ~/krx-workspace/Top20/backtests/2026-11-02_10-15-00 --console   # LEA
 klean backtest Top20 --parameter holdings 25 --backtest-name h25   # parameters, named run
 klean backtest Top20 --extra-config maximum-data-points-per-chart-series 4000   # any LEAN config key
 klean backtest Top20 --timeout 600                                 # stop it if it runs over 10 minutes
+klean backtest Top20 --parameter slippage_ticks 1                  # switch slippage on (off by default)
 klean backtest Top20CS --build-config Debug --output ~/runs/debug-1
 ```
 
