@@ -25,6 +25,9 @@ class KrxTopMarketCapAlgorithm(QCAlgorithm):
         self.set_cash(1_000_000_000)
 
         self.holdings = int(self.get_parameter("holdings", str(self.HOLDINGS)))
+        # parameter "market": KOSPI (default), KOSDAQ, or ALL (both); the benchmark follows it
+        self.market = self.get_parameter("market", "KOSPI").upper()
+        self.boards_wanted = (KOSPI, KOSDAQ) if self.market == "ALL" else (self.market,)
         self.boards = KrxBoards.load()
         self.log(f"Loaded {len(self.boards)} code->market entries")
         self.self_check()
@@ -34,7 +37,7 @@ class KrxTopMarketCapAlgorithm(QCAlgorithm):
         slippage_ticks = int(self.get_parameter("slippage_ticks", "0"))
         self.set_security_initializer(
             lambda security: krx_initialize(security, self.boards, slippage_ticks=slippage_ticks))
-        self.set_benchmark(krx_benchmark("kospi200"))
+        self.set_benchmark(krx_benchmark("kosdaq" if self.market == "KOSDAQ" else "kospi200"))
 
         self.last_month = -1
         self.targets = []
@@ -47,7 +50,7 @@ class KrxTopMarketCapAlgorithm(QCAlgorithm):
             return Universe.UNCHANGED
         self.last_month = self.time.month
         rows = [d for d in data
-                if d["board"] == KOSPI and d.symbol.value.endswith("0") and d["market_cap"] > 0]
+                if d["board"] in self.boards_wanted and d.symbol.value.endswith("0") and d["market_cap"] > 0]
         rows.sort(key=lambda d: d["market_cap"], reverse=True)
         self.targets = [d.symbol for d in rows[:self.holdings]]
         self.rebalance = True

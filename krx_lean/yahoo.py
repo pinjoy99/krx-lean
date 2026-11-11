@@ -29,8 +29,8 @@ from typing import Callable, Iterable
 log = logging.getLogger(__name__)
 
 KST = dt.timezone(dt.timedelta(hours=9))
-# KRX markets in the project's current scope. KOSPI stocks and ETFs both trade as .KS on Yahoo.
-SUFFIX = {"KOSPI": ".KS", "ETF": ".KS"}
+# KRX markets in the project's scope: KOSPI stocks and ETFs are .KS on Yahoo, KOSDAQ stocks .KQ.
+SUFFIX = {"KOSPI": ".KS", "ETF": ".KS", "KOSDAQ": ".KQ"}
 
 Bar = tuple  # (datetime KST, open, high, low, close, volume)
 

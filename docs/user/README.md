@@ -1,6 +1,6 @@
 # Users track
 
-Write and test KOSPI/ETF strategies in Python or C# on your own machine, with `klean` doing the
+Write and test KOSPI, KOSDAQ and ETF strategies in Python or C# on your own machine, with `klean` doing the
 setup and the runs.
 
 1. [Install](1-install.md) — tools, .NET, LEAN, Python 3.11 (Linux, WSL2)

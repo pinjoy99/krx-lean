@@ -77,8 +77,9 @@ class YahooTest(unittest.TestCase):
 
     def test_out_of_scope_market(self):
         with self.assertRaises(yahoo.YahooError):
-            yahoo.symbol_for("035720", "KOSDAQ")
+            yahoo.symbol_for("123450", "KONEX")
         self.assertEqual(yahoo.symbol_for("069500", "ETF"), "069500.KS")
+        self.assertEqual(yahoo.symbol_for("035720", "KOSDAQ"), "035720.KQ")
 
     def test_top_codes(self):
         d = self.root / "raw" / "krx" / "KOSPI" / "2026"

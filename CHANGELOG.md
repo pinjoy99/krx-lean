@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.9 — 2026-11-11
+
+- **KOSDAQ** is in scope. `krx-lean all` / `klean update` also download KOSDAQ prices and the
+  KOSDAQ index family when the KRX key has those services (코스닥 일별매매정보, KOSDAQ 시리즈
+  일별시세정보; 코스닥 종목기본정보 for `krx-info`), and skip them with a warning when it doesn't.
+  Yahoo cross-checks use `.KQ`. Benchmarks `kosdaq`, `kosdaq150`.
+- A security's market is the endpoint its data came from (`KOSPI` / `KOSDAQ` / `ETF`), not KRX's
+  `MKT_NM`, which also carries segment names such as "KOSDAQ GLOBAL".
+- `top-market-cap` example and template: parameter `market` = `KOSPI` (default), `KOSDAQ` or `ALL`.
+- Demo data: 6 KOSDAQ-like stocks and synthetic KOSDAQ / KOSDAQ 150 indices (the KOSPI and ETF
+  demo series are unchanged). `krx-index --sample`.
+- Checked: KRX's sample data in the real formats (KOSDAQ index levels match the published ones);
+  the end-to-end check runs a KOSDAQ strategy with slippage, identical in C# and Python.
+  **Not yet checked:** a full real KOSDAQ download against `verify`; the pre-2023 KOSDAQ tick
+  table against a primary source.
+
 ## 0.0.8 — 2026-11-11
 
 - **Faster daily update:** builds are reproducible byte for byte (fixed zip timestamps, unchanged

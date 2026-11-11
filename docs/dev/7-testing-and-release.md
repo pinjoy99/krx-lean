@@ -4,7 +4,7 @@
 
 ```bash
 cd ~/krx-lean
-python -m unittest discover -s tests            # pipeline (38, incl. the demo data through build and install)
+python -m unittest discover -s tests            # pipeline (43, incl. the demo data through build and install)
 python -m unittest discover -s tests/klean      # klean (47; some need dotnet on PATH)
 ```
 
@@ -19,7 +19,7 @@ LEAN_DIR=~/Lean PY_DIR=~/.klean/py311 tests/e2e-demo.sh      # reuses yours (~4 
 
 On the synthetic demo data, without keys: demo install and `doctor`; top-market-cap and
 buy-hold in C# and Python with `klean compare` required to print IDENTICAL, also with one tick
-of slippage (which must lower the end equity); the models check and update; a strategy that
+of slippage (which must lower the end equity); a KOSDAQ strategy (its own tax and tick tables); the models check and update; a strategy that
 raises must exit 1 with `backtest FAILED`; `--timeout`; a small optimization; a report; the
 research notebook run headless with both charts.
 

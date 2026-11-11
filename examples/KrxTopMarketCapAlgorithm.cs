@@ -19,6 +19,9 @@ namespace QuantConnect.Algorithm.CSharp
     /// </summary>
     public class KrxTopMarketCapAlgorithm : QCAlgorithm
     {
+        private string _market = "KOSPI";
+        private bool InMarket(string board) => _market == "ALL"
+            ? board == KrxBoards.Kospi || board == KrxBoards.Kosdaq : board == _market;
         private int _holdings = 20;   // parameter "holdings" (klean backtest/optimize --parameter holdings N)
         private Dictionary<string, string> _boards;
         private int _lastSelectionMonth = -1;
@@ -34,6 +37,8 @@ namespace QuantConnect.Algorithm.CSharp
             SetCash(1_000_000_000);
 
             _holdings = GetParameter("holdings", 20);
+            // parameter "market": KOSPI (default), KOSDAQ, or ALL (both); the benchmark follows it
+            _market = GetParameter("market", "KOSPI").ToUpperInvariant();
             _boards = KrxBoards.Load();
             Log($"Loaded {_boards.Count} code->market entries");
             SelfCheck();
@@ -44,14 +49,14 @@ namespace QuantConnect.Algorithm.CSharp
             SetSecurityInitializer(security => KrxModels.Initialize(security, _boards, slippageTicks: slippageTicks));
 
             // LEAN would subscribe an index benchmark hourly; KRX index data is daily, so use a function.
-            SetBenchmark(KrxIndex.Benchmark("kospi200"));
+            SetBenchmark(KrxIndex.Benchmark(_market == "KOSDAQ" ? "kosdaq" : "kospi200"));
 
             AddUniverse<KrxUniverseData>("krx-top-market-cap", Resolution.Daily, Market.KRX, data =>
             {
                 if (Time.Month == _lastSelectionMonth) return Universe.Unchanged;
                 _lastSelectionMonth = Time.Month;
                 _targets = data.OfType<KrxUniverseData>()
-                    .Where(d => d.Board == KrxBoards.Kospi && d.Symbol.Value.EndsWith("0") && d.MarketCap > 0)
+                    .Where(d => InMarket(d.Board) && d.Symbol.Value.EndsWith("0") && d.MarketCap > 0)
                     .OrderByDescending(d => d.MarketCap)
                     .Take(_holdings)
                     .Select(d => d.Symbol)

@@ -5,7 +5,7 @@ The only source of daily bars is the KRX Open API (raw/krx, full OHLCV since 201
 (``verify`` command, krx_lean/verify.py). There is no minute data (removed 2026-10-11 until a
 better source is available).
 
-Scope: KOSPI stocks and ETFs. KOSDAQ, KONEX and NXT are out of scope for now; KRX files for
+Scope: KOSPI and KOSDAQ stocks and ETFs. KONEX and NXT are out of scope for now; KRX files for
 other markets found under raw/krx are still built, with a warning.
 
 Prices are raw KRW, NOT split-adjusted; LEAN applies the factor files.
@@ -74,10 +74,12 @@ def stage_krx(root: Path, stage: Path) -> tuple[dict[str, list[str]], list[str]]
                     base = bar[3] - int(float(raw_change)) if raw_change not in ("", "-") else ""
                     lines.setdefault(code, []).append(f"{date},{bar[0]},{bar[1]},{bar[2]},{bar[3]},{bar[4]},{base}\n")
                     calendar.add(date)
-                    m = meta.setdefault(code, [r["ISU_NM"], r.get("MKT_NM") or market, date, date])
+                    # the market is the endpoint the row came from (the folder), not MKT_NM, which
+                    # also carries segment names such as "KOSDAQ GLOBAL"
+                    m = meta.setdefault(code, [r["ISU_NM"], market, date, date])
                     m[2] = min(m[2], date)
                     if date >= m[3]:
-                        m[0], m[1], m[3] = r["ISU_NM"], r.get("MKT_NM") or market, date
+                        m[0], m[1], m[3] = r["ISU_NM"], market, date
         for code, ls in lines.items():
             with open(stage / f"{code}.csv", "a", encoding="utf-8") as f:
                 f.writelines(ls)
@@ -190,7 +192,7 @@ def build_indices(root: Path) -> int:
     return len(series_rows)
 
 
-IN_SCOPE_MARKETS = ("KOSPI", "ETF")
+IN_SCOPE_MARKETS = ("KOSPI", "ETF", "KOSDAQ")
 
 
 def prune(directory: Path, pattern: str, keep: set[str]) -> int:

@@ -22,6 +22,7 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `KRX_API_KEY is not set` | load the key file: `set -a; . ~/.config/krx-lean.env; set +a` |
 | `401 Unauthorized Key` | the key is wrong (typo, extra characters) |
 | `401 Unauthorized API Call` | that KRX service isn't approved yet |
+| `KOSDAQ price skipped: this service isn't approved for your KRX key` | not an error: KOSPI and ETFs are complete. For KOSDAQ, approve 코스닥 일별매매정보 and KOSDAQ 시리즈 일별시세정보, then run the update again |
 | `DATA_GO_KR_KEY not set: no dividends` | add the data.go.kr key; prices are otherwise not dividend-adjusted |
 | data.go.kr errors on a new key | wait an hour; use the *Decoding* key |
 | `network error, stopping (re-run the same command to resume)` | a timeout or dropped connection: run the same command again; days already downloaded are kept |

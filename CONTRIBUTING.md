@@ -51,7 +51,7 @@ More background: [docs/dev/](docs/dev/), especially
 
 ## Scope
 
-krx-lean covers KOSPI stocks and ETFs with daily data, for backtesting and research on your own
+krx-lean covers KOSPI and KOSDAQ stocks and ETFs with daily data, for backtesting and research on your own
 machine. Live trading, other markets and intraday data are outside the current scope; open an
 issue to discuss before starting on them.
 

@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="krx-lean", description="KRX data for QuantConnect LEAN: KOSPI stocks and ETFs from the KRX Open API "
+    p = argparse.ArgumentParser(prog="krx-lean", description="KRX data for QuantConnect LEAN: KOSPI and KOSDAQ stocks and ETFs from the KRX Open API "
                                 "(daily) and data.go.kr, with aikstockdata.com and Yahoo Finance as cross-checks")
     p.add_argument("--root", type=Path, default=Path("data"), help="output directory (default: data)")
     p.add_argument("--interval", type=float, default=0.1, help="min seconds between requests (default: 0.1)")
@@ -56,13 +56,15 @@ def _main(argv: list[str] | None = None) -> int:
     x = sub.add_parser("krx-index", help="download daily index levels from the KRX Open API (needs KRX_API_KEY)")
     x.add_argument("--start", help="first date YYYYMMDD (default: 20100104)")
     x.add_argument("--end", help="last date YYYYMMDD (default: today KST)")
-    x.add_argument("--series", default="KOSPI",
+    x.add_argument("--series", default=",".join(krx_api.INDEX_IN_SCOPE),
                    help=f"comma-separated, default %(default)s (in scope); also {', '.join(krx_api.INDEX_ENDPOINTS)}")
     x.add_argument("--force", action="store_true", help="re-download dates already on disk")
+    x.add_argument("--sample", action="store_true",
+                   help="use KRX's public sample endpoint (10 indices per call, no key needed) to test the pipeline")
 
     i = sub.add_parser("krx-info", help="save a KRX security-master snapshot (ISIN, listing date, share class, par value)")
     i.add_argument("--date", help="YYYYMMDD (default: most recent date with data)")
-    i.add_argument("--markets", default="KOSPI",
+    i.add_argument("--markets", default="KOSPI,KOSDAQ",
                    help=f"comma-separated, default %(default)s (in scope); also {', '.join(krx_api.INFO_ENDPOINTS)}")
 
     dv = sub.add_parser("dividends", help="download dividend history from data.go.kr (needs DATA_GO_KR_KEY)")
@@ -100,7 +102,7 @@ def _main(argv: list[str] | None = None) -> int:
     dm.add_argument("--start", default=demo.START)
     dm.add_argument("--end", default=demo.END)
 
-    a = sub.add_parser("all", help="krx (KOSPI, ETF) + krx-index (KOSPI) + dividends (if DATA_GO_KR_KEY is set) + build; needs KRX_API_KEY")
+    a = sub.add_parser("all", help="krx (KOSPI, ETF, and KOSDAQ if approved) + krx-index + dividends (if DATA_GO_KR_KEY is set) + build; needs KRX_API_KEY")
     a.add_argument("--no-lean", action="store_true")
     a.add_argument("--market", default="krx")
 
@@ -134,7 +136,7 @@ def _main(argv: list[str] | None = None) -> int:
         unknown = set(series) - set(krx_api.INDEX_ENDPOINTS)
         if unknown:
             p.error(f"unknown series: {', '.join(sorted(unknown))}")
-        kc = krx_api.client_from_env(min_interval=max(args.interval, 0.2))
+        kc = krx_api.client_from_env(sample=args.sample, min_interval=max(args.interval, 0.2))
         try:
             krx_api.scrape_krx(kc, root, start=args.start, end=args.end, markets=series,
                                force=args.force, dataset="index")
@@ -194,12 +196,20 @@ def _main(argv: list[str] | None = None) -> int:
         build.build(root)
     elif args.cmd == "all":
         failed = False
-        try:
-            krx_api.scrape_krx(krx_api.client_from_env(), root, markets=list(krx_api.IN_SCOPE))
-            krx_api.scrape_krx(krx_api.client_from_env(), root, markets=["KOSPI"], dataset="index")
-        except krx_api.KrxApiError as e:
-            logging.error("KRX API error, stopping (re-run to resume): %s", e)
-            failed = True
+        jobs = [(m, "price") for m in krx_api.IN_SCOPE if m not in krx_api.OPTIONAL] + [("KOSPI", "index")] + \
+               [(m, d) for m in krx_api.OPTIONAL for d in ("price", "index")]
+        for market, dataset in jobs:
+            try:
+                krx_api.scrape_krx(krx_api.client_from_env(), root, markets=[market], dataset=dataset)
+            except krx_api.KrxApiError as e:
+                if market in krx_api.OPTIONAL and e.not_approved:
+                    # e.g. a key without the KOSDAQ services: everything else still works
+                    logging.warning("%s %s skipped: this service isn't approved for your KRX key (%s). "
+                                    "Approve it on openapi.krx.co.kr to include %s.", market, dataset, e, market)
+                    continue
+                logging.error("KRX API error, stopping (re-run to resume): %s", e)
+                failed = True
+                break
         if os.environ.get("DATA_GO_KR_KEY", "").strip():    # dividends -> price factors
             try:
                 dividends.scrape_dividends(dividends.key_from_env(), root, 1)

@@ -39,5 +39,6 @@ status, `compare`; planned `check-models` (run the `CHECK` cases in both languag
   called supported. Intel Macs untested.
 - CI: done for Ubuntu (unit suites, LEAN build, end-to-end on the demo data). Next: a scheduled
   job trying the newest LEAN commit; a release workflow creating tags.
-- KOSDAQ / KONEX (code paths exist; needs KRX service approval and verification); NXT (no
+- KOSDAQ: in scope since 0.0.9; to do: `verify` on a full real download, and the pre-2023 tick
+  table from a primary source. KONEX (code paths exist; needs approval and verification); NXT (no
   source yet); minute data (needs a source with the full session).

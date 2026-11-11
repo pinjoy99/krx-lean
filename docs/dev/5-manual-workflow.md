@@ -10,15 +10,16 @@ debugging, for scripting, and for seeing exactly what runs. Paths as in the user
 cd ~/krx-lean && python3 -m venv .venv && . .venv/bin/activate && pip install -e '.[crosscheck]'
 set -a; . ~/.config/krx-lean.env; set +a
 R=--root=$HOME/krx-data              # --root goes before the command name
-krx-lean $R krx                      # KOSPI + ETF from 2010-01-04 (resumable)
-krx-lean $R krx-index                # KOSPI index family
+krx-lean $R krx                      # KOSPI, ETF, KOSDAQ from 2010-01-04 (resumable; --markets KOSPI,ETF without KOSDAQ)
+krx-lean $R krx-index                # KOSPI and KOSDAQ index families (--series KOSPI without KOSDAQ)
 krx-lean $R krx-info                 # security master (optional)
 krx-lean $R dividends                # 8 calls
 krx-lean $R rights                   # ~126 calls, 15–25 min (optional)
 krx-lean $R build                    # ohlcv/, lean/, securities.csv, factor files, universe (~2 min)
 ```
 
-`krx-lean all` = `krx` + `krx-index` + `dividends` (if `DATA_GO_KR_KEY` is set) + `build`.
+`krx-lean all` = `krx` + `krx-index` + `dividends` (if `DATA_GO_KR_KEY` is set) + `build`,
+skipping KOSDAQ with a warning if the key lacks its services.
 
 ## Data into LEAN
 

@@ -89,7 +89,7 @@ def build_universe(root: Path, lean_root: Path, market: str = "krx") -> int:
                     close = _num(r.get("TDD_CLSPRC", ""))
                     if not close or close == "0":
                         continue
-                    rows.append([r["ISU_CD"], r.get("MKT_NM") or board, close, _num(r.get("ACC_TRDVOL", "")),
+                    rows.append([r["ISU_CD"], board, close, _num(r.get("ACC_TRDVOL", "")),
                                  _num(r.get("ACC_TRDVAL", "")), _num(r.get("MKTCAP", "")), _num(r.get("LIST_SHRS", ""))])
         if not rows:
             continue  # non-trading day

@@ -55,4 +55,5 @@ docs/user/, docs/dev/
   parity run (identical to the won).
 - **Local only.** No cloud services, no Docker, no QuantConnect account; LEAN's own programs
   (`Launcher`, `Report`, the research `start.py`) do the work.
-- **Scope:** KOSPI and ETF, daily. KOSDAQ/KONEX code paths exist but aren't downloaded or verified.
+- **Scope:** KOSPI, ETF and KOSDAQ (optional: it needs its own KRX approvals), daily. KONEX code
+  paths exist but aren't downloaded or verified.

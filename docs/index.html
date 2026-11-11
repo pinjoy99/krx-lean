@@ -112,7 +112,7 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
 <main>
 <div class="hero wrap">
   <h1>Backtest Korean stocks<br>on your own computer</h1>
-  <p class="lead">krx-lean lets you test investment ideas on KOSPI stocks and ETFs: write a strategy in
+  <p class="lead">krx-lean lets you test investment ideas on KOSPI and KOSDAQ stocks and ETFs: write a strategy in
     Python or C#, run it over years of history, and see how it would have done, including Korean fees and taxes.</p>
   <div class="pills">
     <span class="pill">Free and open source</span>
@@ -301,7 +301,8 @@ klean gui               <span class="c"># opens the results in your browser</spa
         <h3>Get the keys</h3>
         <p><strong>KRX Open API</strong> (required, prices): sign up at
           <a href="https://openapi.krx.co.kr/">openapi.krx.co.kr</a>, request a key, and apply for the services
-          유가증권 일별매매정보, ETF 일별매매정보 and KOSPI 시리즈 일별시세정보.
+          유가증권 일별매매정보, ETF 일별매매정보 and KOSPI 시리즈 일별시세정보 (for KOSDAQ also 코스닥 일별매매정보
+          and KOSDAQ 시리즈 일별시세정보).
           <strong>data.go.kr</strong> (recommended, dividends): apply for 금융위원회_주식배당정보 at
           <a href="https://www.data.go.kr/data/15043284/openapi.do">data.go.kr</a>.
           <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/2-data.md">Step-by-step instructions</a>.</p>
@@ -410,7 +411,7 @@ class MyFirstStrategy(QCAlgorithm):
     <details><summary>Can it trade with real money?</summary>
       <p>Not yet. It only tests strategies on history. Nothing connects to a broker.</p></details>
     <details><summary>Which markets and data are covered?</summary>
-      <p>KOSPI stocks and ETFs, daily prices from 2010. KOSDAQ, KONEX and intraday (minute) data aren't covered yet.</p></details>
+      <p>KOSPI stocks, ETFs and KOSDAQ stocks (KOSDAQ needs three more service approvals on your KRX key), daily prices from 2010. KONEX and intraday (minute) data aren't covered yet.</p></details>
     <details><summary>Python or C#?</summary>
       <p>Either: they give identical results. Python is easier to start with; C# runs several times faster, which helps
         with long tests and optimizations.</p></details>

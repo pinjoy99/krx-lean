@@ -17,6 +17,13 @@ benchmark. While you wait, you can try everything on [synthetic demo data](demo.
    | 증권상품 | ETF 일별매매정보 | ETF daily prices |
    | 지수 | KOSPI 시리즈 일별시세정보 | KOSPI, KOSPI 200 and the rest of the family |
    | 주식 | 유가증권 종목기본정보 | ISIN, listing date, share class (optional) |
+   | 주식 | 코스닥 일별매매정보 | KOSDAQ daily prices (only if you want KOSDAQ) |
+   | 지수 | KOSDAQ 시리즈 일별시세정보 | KOSDAQ, KOSDAQ 150 and the rest of the family (with KOSDAQ) |
+   | 주식 | 코스닥 종목기본정보 | KOSDAQ ISIN, listing date, share class (optional) |
+
+   KOSDAQ is optional: without its services everything works for KOSPI and ETFs, and
+   `krx-lean all` says `KOSDAQ … skipped`. Approve them later and run `klean update` again to
+   add KOSDAQ.
 
 4. Approval usually takes up to a day (**마이페이지 → 이용현황**).
    `401 Unauthorized Key` = the key is wrong; `401 Unauthorized API Call` = that service isn't
@@ -62,9 +69,10 @@ Never put keys in code, notebooks or commits. If a key is exposed, reissue it on
 krx-lean --root ~/krx-data all
 ```
 
-This downloads KOSPI and ETF daily prices and the KOSPI index family from 2010-01-04, the
-dividend table (if `DATA_GO_KR_KEY` is set), and builds everything LEAN needs under
-`~/krx-data/lean/`. The first run makes about 13,000 calls and takes **1.5–2 hours**; later runs
+This downloads KOSPI and ETF daily prices and the KOSPI index family from 2010-01-04, the same
+for KOSDAQ if your key has its services, the dividend table (if `DATA_GO_KR_KEY` is set), and
+builds everything LEAN needs under `~/krx-data/lean/`. The first run makes about 13,000 calls
+and takes **1.5–2 hours** (about 22,000 calls and 3 hours with KOSDAQ); later runs
 fetch only new days. It's resumable: if it stops (a quota, or `network error, stopping (re-run
 the same command to resume)`), run the same command again.
 
@@ -93,7 +101,7 @@ The data folder (`~/krx-data`):
 | `raw/` | the downloads, exactly as received (everything else is rebuilt from it) |
 | `lean/` | LEAN's format: `equity/krx/{daily, factor_files, map_files, universe}`, `index/krx/daily` |
 | `ohlcv/`, `index/` | plain CSVs per security / index, for your own research |
-| `securities.csv` | code → market (KOSPI / ETF), listing span |
+| `securities.csv` | code → market (KOSPI / KOSDAQ / ETF), listing span |
 | `dividends.csv`, `factor_events.csv` | dividends used, and every price adjustment (audit trail) |
 
 Next: [3. Workspace and first backtest](3-first-backtest.md).

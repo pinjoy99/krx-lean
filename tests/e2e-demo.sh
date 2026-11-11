@@ -61,6 +61,13 @@ klean doctor | grep -q "note: Py differ" || fail "doctor doesn't note the edited
 klean models update Py | grep -q "updated" || fail "models update"
 [ -f Py/krx_models.py.bak ] || fail "no backup of the edited models"
 
+step "KOSDAQ: its own taxes and tick sizes, identical in both languages"
+klean backtest Cs --parameter market KOSDAQ --parameter holdings 3 --parameter slippage_ticks 1 --backtest-name kosdaq
+klean backtest Py --parameter market KOSDAQ --parameter holdings 3 --parameter slippage_ticks 1 --backtest-name kosdaq
+KQ_CS=$(basename "$(ls -d Cs/backtests/*_kosdaq)"); KQ_PY=$(basename "$(ls -d Py/backtests/*_kosdaq)")
+klean compare "Py/$KQ_PY" "Cs/$KQ_CS" | tail -1 | grep -qx "IDENTICAL" || fail "KOSDAQ run differs between C# and Python"
+grep -q '"Total Orders": "[1-9]' "Cs/backtests/$KQ_CS"/*-summary.json || fail "the KOSDAQ run placed no orders"
+
 step "buy-hold template, both languages"
 klean project-create HoldPy
 klean project-create HoldCs --language csharp

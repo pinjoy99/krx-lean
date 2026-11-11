@@ -40,7 +40,8 @@ argument). Fees and taxes are truncated to whole won.
 From 2023-01-25, one table for KOSPI/KOSDAQ/KONEX: < 2,000 → 1; < 5,000 → 5; < 20,000 → 10;
 < 50,000 → 50; < 200,000 → 100; < 500,000 → 500; else 1,000. Before (from October 2010), KOSPI:
 < 1,000 → 1; < 5,000 → 5; < 10,000 → 10; < 50,000 → 50; < 100,000 → 100; < 500,000 → 500; else
-1,000. ETFs: 5 won. **Not verified from a primary source:** KOSDAQ/KONEX before 2023 (same up to
+1,000. ETFs: 5 won. KOSDAQ is in scope since 0.0.9, so the next gap matters more than before.
+**Not verified from a primary source:** KOSDAQ/KONEX before 2023 (same up to
 50,000, then 100), and January–October 2010 (the post-October table is used).
 
 ## Slippage

@@ -37,9 +37,12 @@ ENDPOINTS = {
     "KONEX": "sto/knx_bydd_trd",
     "ETF": "etp/etf_bydd_trd",
 }
-# Markets in the project's current scope. KOSDAQ, KONEX (and the NXT alternative exchange,
-# which this API doesn't cover) are out of scope for now; their endpoints are kept for later.
-IN_SCOPE = ("KOSPI", "ETF")
+# Markets in the project's scope. KONEX (and the NXT alternative exchange, which this API doesn't
+# cover) are out of scope; the KONEX endpoints are kept for later. KOSDAQ needs its own service
+# approvals on openapi.krx.co.kr, so `all` treats it as optional (see OPTIONAL).
+IN_SCOPE = ("KOSPI", "ETF", "KOSDAQ")
+OPTIONAL = ("KOSDAQ",)
+INDEX_IN_SCOPE = ("KOSPI", "KOSDAQ")
 # Security master data (ISIN, listing date, share class, par value, ...) per market.
 INFO_ENDPOINTS = {
     "KOSPI": "sto/stk_isu_base_info",
@@ -62,7 +65,12 @@ RECENT_DAYS = 7
 
 
 class KrxApiError(Exception):
-    pass
+    """An error answer from the KRX Open API. ``not_approved``: the key is fine but this service
+    hasn't been approved for it (401 Unauthorized API Call)."""
+
+    def __init__(self, message: str, not_approved: bool = False):
+        super().__init__(message)
+        self.not_approved = not_approved
 
 
 class KrxClient(Client):
@@ -86,7 +94,8 @@ class KrxClient(Client):
                 log.warning("%s %s: non-JSON response, retrying", market, date)
                 time.sleep(2 ** (attempt + 1))
         if "OutBlock_1" not in data:
-            raise KrxApiError(f"{market} {date}: {data.get('respCode')} {data.get('respMsg')}")
+            raise KrxApiError(f"{market} {date}: {data.get('respCode')} {data.get('respMsg')}",
+                              not_approved="Unauthorized API Call" in str(data.get("respMsg")))
         return data["OutBlock_1"]
 
 

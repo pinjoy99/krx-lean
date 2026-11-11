@@ -4,8 +4,8 @@
 
 | Source | Endpoint | Coverage | Role |
 |---|---|---|---|
-| KRX Open API — daily trading | `https://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd` (KOSPI), `etp/etf_bydd_trd` (ETF); also `ksq_…`, `knx_…` (KOSDAQ, KONEX; out of scope) | every listed security, one market per call, per date, from 2010-01-04; includes delisted securities | **only source of daily bars** |
-| KRX Open API — indices | `idx/kospi_dd_trd` (also `krx_dd_trd`, `kosdaq_dd_trd`) | every index of the family per date, from 2010-01-04 | KOSPI, KOSPI 200 for benchmarks |
+| KRX Open API — daily trading | `https://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd` (KOSPI), `etp/etf_bydd_trd` (ETF), `sto/ksq_bydd_trd` (KOSDAQ); also `knx_…` (KONEX; out of scope) | every listed security, one market per call, per date, from 2010-01-04; includes delisted securities | **only source of daily bars** |
+| KRX Open API — indices | `idx/kospi_dd_trd`, `idx/kosdaq_dd_trd` (also `krx_dd_trd`) | every index of the family per date, from 2010-01-04 | KOSPI, KOSPI 200, KOSDAQ, KOSDAQ 150 for benchmarks |
 | KRX Open API — security master | `sto/stk_isu_base_info` | ISIN, listing date, share class, par value | optional fields in `securities.csv` |
 | data.go.kr 금융위원회_주식배당정보 (15043284) | `apis.data.go.kr/1160100/GetStocDiviInfoService_V2/getDiviInfo_V2` | ~72k dividend records since 1985, one table, no date filter | price factors |
 | data.go.kr 금융위원회_주식권리일정정보 (15059609) | `apis.data.go.kr/1160100/GetStocRighScheService_V2/getRighExerReasSche_V2` | ~1.26M rows, corporate-action dates since 2010; date filters ignored | `corporate_actions.csv` (research only) |
@@ -51,6 +51,15 @@ from the environment only, whitespace stripped. data.go.kr takes its key as the 
 | `factor_events.csv` | every adjustment and dividend used (audit trail) |
 | `ohlcv/`, `index/`, `dividends.csv`, `corporate_actions.csv` | CSVs for research |
 
+- **Market of a security** = the endpoint (folder) its rows came from: `KOSPI`, `KOSDAQ` or
+  `ETF`. KRX's `MKT_NM` field isn't used, because it also carries segment names such as
+  "KOSDAQ GLOBAL", which the tax and tick models wouldn't recognise.
+- **KOSDAQ is optional** (`krx_api.OPTIONAL`): `all` downloads KOSPI, ETF and the KOSPI indices
+  first, then KOSDAQ prices and indices; a `401 Unauthorized API Call` there (key without the
+  KOSDAQ services) is a warning, not a failure. Status: built and checked on KRX's sample data
+  (real formats; index levels match the published ones) and on the synthetic demo data (C# =
+  Python); a full real download still has to be cross-checked with `verify` (aikstockdata covers
+  KOSDAQ; Yahoo uses `.KQ`).
 - **Reproducible files:** every zip has one member with a fixed timestamp (1980-01-01), so the
   same content gives the same bytes; a file whose bytes wouldn't change is not rewritten (its
   modification time stays). `lean-install` (`sync_tree`) then copies only files that differ.

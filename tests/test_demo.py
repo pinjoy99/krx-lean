@@ -70,6 +70,17 @@ class DemoDataTest(unittest.TestCase):
         (data / "equity" / "krx" / "daily" / "d00010.zip").write_bytes(b"damaged")
         self.assertEqual(lean_install.sync_tree(src, data / "equity" / "krx"), (1, first[0] - 1))
 
+    def test_kosdaq(self):
+        names = (self.root / "securities.csv").read_text(encoding="utf-8")
+        self.assertIn("Q00010,SYNTHETIC DEMO KOSDAQ 01,KOSDAQ", names)
+        with zipfile.ZipFile(self.root / "lean" / "index" / "krx" / "daily" / "kosdaq.zip") as z:
+            self.assertTrue(z.read(z.namelist()[0]).decode().startswith("20171201"))
+        self.assertTrue((self.root / "lean" / "index" / "krx" / "daily" / "kosdaq150.zip").exists())
+        with zipfile.ZipFile(self.root / "lean" / "equity" / "krx" / "universe" / "20180102.zip") as z:
+            rows = z.read(z.namelist()[0]).decode().splitlines()
+        self.assertTrue(any(r.startswith("Q00010,KOSDAQ,") for r in rows))
+        self.assertTrue(any(r.startswith("D00010,KOSPI,") for r in rows))
+
     def test_deterministic(self):
         other = Path(self.tmp.name).resolve() / "again"
         demo.generate(other, holidays={"20180105"}, start="20171201", end="20190731")

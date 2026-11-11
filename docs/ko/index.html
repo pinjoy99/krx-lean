@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>krx-lean · 내 컴퓨터에서 하는 한국 주식 백테스트</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232459c9'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-<meta name="description" content="krx-lean 초보자 안내: 오픈소스 LEAN 엔진으로 KOSPI 주식과 ETF 전략을 Python 또는 C#으로, 내 컴퓨터에서 무료로 백테스트합니다.">
+<meta name="description" content="krx-lean 초보자 안내: 오픈소스 LEAN 엔진으로 KOSPI·KOSDAQ 주식과 ETF 전략을 Python 또는 C#으로, 내 컴퓨터에서 무료로 백테스트합니다.">
 <style>
 :root {
   --bg: #fbfbfa; --panel: #ffffff; --ink: #1d232b; --muted: #5d6773; --line: #e3e6ea;
@@ -112,7 +112,7 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
 <main>
 <div class="hero wrap">
   <h1>내 컴퓨터에서 하는<br>한국 주식 백테스트</h1>
-  <p class="lead">krx-lean은 KOSPI 주식과 ETF에 대한 투자 아이디어를 검증하는 도구입니다. Python이나 C#으로 전략을
+  <p class="lead">krx-lean은 KOSPI·KOSDAQ 주식과 ETF에 대한 투자 아이디어를 검증하는 도구입니다. Python이나 C#으로 전략을
     작성해 여러 해의 과거 데이터로 실행하면, 한국의 수수료와 세금까지 반영한 성과를 확인할 수 있습니다.</p>
   <div class="pills">
     <span class="pill">무료 오픈소스</span>
@@ -300,7 +300,7 @@ klean gui               <span class="c"># 브라우저에서 결과 보기</span
         <h3>인증키 받기</h3>
         <p><strong>KRX Open API</strong>(필수, 시세): <a href="https://openapi.krx.co.kr/">openapi.krx.co.kr</a>에
           가입해 인증키를 신청하고, 유가증권 일별매매정보, ETF 일별매매정보, KOSPI 시리즈 일별시세정보 서비스의
-          이용을 신청합니다.
+          이용을 신청합니다(KOSDAQ도 쓰려면 코스닥 일별매매정보, KOSDAQ 시리즈 일별시세정보도 신청).
           <strong>공공데이터포털</strong>(권장, 배당): <a href="https://www.data.go.kr/data/15043284/openapi.do">data.go.kr</a>에서
           금융위원회_주식배당정보 활용을 신청합니다.
           <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/2-data.md">단계별 안내(영문)</a>.</p>
@@ -409,7 +409,7 @@ class MyFirstStrategy(QCAlgorithm):
     <details><summary>실제 돈으로 매매할 수 있나요?</summary>
       <p>아직은 아닙니다. 과거 데이터로 전략을 검증하기만 합니다. 증권사와는 전혀 연결되지 않습니다.</p></details>
     <details><summary>어떤 시장과 데이터를 다루나요?</summary>
-      <p>KOSPI 주식과 ETF의 2010년 이후 일별 시세입니다. KOSDAQ, KONEX, 장중(분 단위) 데이터는 아직 다루지 않습니다.</p></details>
+      <p>KOSPI 주식, ETF, KOSDAQ 주식(KOSDAQ은 KRX 인증키에 서비스 세 가지를 추가로 승인받아야 합니다)의 2010년 이후 일별 시세입니다. KONEX와 장중(분 단위) 데이터는 아직 다루지 않습니다.</p></details>
     <details><summary>Python과 C# 중 무엇을 쓰나요?</summary>
       <p>어느 쪽이든 결과는 같습니다. Python이 시작하기 쉽고, C#은 몇 배 빨라서 긴 기간의 테스트나 최적화에 유리합니다.</p></details>
     <details><summary>백테스트가 "backtest FAILED"라고 나옵니다.</summary>

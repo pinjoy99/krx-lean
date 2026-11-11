@@ -71,10 +71,12 @@ example in both languages.
 ## KRX rules the models apply
 
 - **Codes and market:** always `Market.KRX` and 6-character codes (`"005930"`; letters occur,
-  e.g. `"0052D0"`).
+  e.g. `"0052D0"`). KOSPI stocks, KOSDAQ stocks and ETFs are all added the same way; the models
+  look up each code's market (`boards`) for its tax and tick size. In universes, `d["board"]` is
+  `KOSPI`, `KOSDAQ` or `ETF`.
 - **Fees:** commission (default 0.015% per side) plus the sell-side tax by settlement date
   (T+2): KOSPI 0.30% before June 2019, then 0.25%, 0.23% (2021), 0.20% (2023), 0.18% (2024), 0.15%
-  (2025), 0.20% (2026); ETFs exempt. Fees are truncated to whole won. Without the fee model
+  (2025), 0.20% (2026); KOSDAQ the same totals; ETFs exempt. Fees are truncated to whole won. Without the fee model
   LEAN stops with `unexpected equity Market krx` at the first order.
 - **Tick sizes** for limit and stop prices, by price band (the 2023 table and the earlier one);
   ETFs 5 won. LEAN rounds your prices to them.
@@ -82,10 +84,27 @@ example in both languages.
   dividends by default. Use `DataNormalizationMode.RAW` to trade at exchange prices (tick
   rounding is exact only then).
 - **Benchmark:** use `krx_benchmark("kospi200")` / `KrxIndex.Benchmark("kospi200")` (or
-  `"kospi"`), not an index symbol: an index symbol gives an empty benchmark (alpha and beta 0).
+  `"kospi"`; with KOSDAQ data `"kosdaq"`, `"kosdaq150"`), not an index symbol: an index symbol gives an empty benchmark (alpha and beta 0).
 - **Delistings:** LEAN closes positions on a security's last trading day.
 - **Common vs preferred:** codes ending in `0` are common shares (KRX convention);
   `securities.csv` has `share_class` if you ran `krx-info`.
+
+## KOSDAQ
+
+KOSDAQ is included when your KRX key has the KOSDAQ services ([2. Keys and data](2-data.md));
+`klean data status` then lists KOSDAQ among the markets. The `top-market-cap` template takes a
+`market` parameter: `KOSPI` (default), `KOSDAQ`, or `ALL` (both), and uses the KOSDAQ index as
+benchmark for `KOSDAQ`:
+
+```bash
+klean backtest Top20 --parameter market KOSDAQ --parameter slippage_ticks 2
+```
+
+KOSDAQ support is new. Its data goes through the same rules as KOSPI, and the models give
+identical results in C# and Python, but two things deserve care: small KOSDAQ stocks are far
+less liquid (use slippage, and distrust results that depend on tiny stocks), and the KOSDAQ tick
+table before 2023 isn't verified from a primary source (it only affects limit and stop prices
+and slippage before 2023-01-25).
 
 ## Slippage
 

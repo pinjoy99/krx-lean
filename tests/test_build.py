@@ -51,5 +51,17 @@ class BuildTest(unittest.TestCase):
         self.assertIn("005930,x,KOSPI,20261002,20261006", (self.root / "securities.csv").read_text())
 
 
+class MarketLabelTest(unittest.TestCase):
+    def test_market_is_the_download_folder_not_the_segment_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            write_day(root / "raw" / "krx" / "KOSDAQ" / "2026" / "20261006.csv.gz",
+                      [krx_row("20261006", "035720", "100", "110", "90", "105", "10", market="KOSDAQ GLOBAL")])
+            build.build(root)
+            self.assertIn("035720,x,KOSDAQ,20261006,20261006", (root / "securities.csv").read_text())
+            with zipfile.ZipFile(root / "lean" / "equity" / "krx" / "universe" / "20261006.zip") as z:
+                self.assertIn("035720,KOSDAQ,105,", z.read(z.namelist()[0]).decode())
+
+
 if __name__ == "__main__":
     unittest.main()

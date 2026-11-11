@@ -4,7 +4,7 @@
 
 한국 주식시장(KRX) 데이터와 시장 모델을 오픈소스 백테스트 엔진
 [QuantConnect LEAN](https://github.com/QuantConnect/Lean)에서 쓸 수 있게 해 주는 도구입니다. LEAN을 내 컴퓨터에서
-소스로 빌드해, KOSPI 주식과 ETF 전략을 Python이나 C#으로 백테스트합니다. KRX 수수료와 증권거래세, 호가가격단위,
+소스로 빌드해, KOSPI·KOSDAQ 주식과 ETF 전략을 Python이나 C#으로 백테스트합니다. KRX 수수료와 증권거래세, 호가가격단위,
 선택 가능한 슬리피지, KOSPI 200 벤치마크, 상장폐지 종목을 포함한 일별 유니버스, 액면분할·유무상증자·배당을 반영한
 수정주가를 지원하며, Jupyter 노트북(LEAN QuantBook)으로 데이터를 살펴볼 수 있습니다.
 
@@ -16,7 +16,8 @@
 
 ## 범위
 
-- **대상:** KOSPI 주식과 ETF, 일별 데이터(2010년 이후). KOSDAQ, KONEX, NXT, 분 단위 데이터, 실거래는 다루지 않습니다.
+- **대상:** KOSPI 주식, ETF, 그리고 KOSDAQ 주식(신규, KRX에서 코스닥 서비스 이용 승인 필요)의 일별 데이터(2010년 이후).
+  KONEX, NXT, 분 단위 데이터, 실거래는 다루지 않습니다.
 - **플랫폼:** Linux(Ubuntu 24.04 / 22.04에서 테스트)와 WSL2를 통한 Windows. Apple Silicon macOS는 자동 종단 간 검사를 통과했습니다(실험적: 사람이 직접 따라 해 보지는
   않았습니다. [설치 안내](docs/user/1-install.md#macos) 참조).
 

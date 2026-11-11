@@ -33,8 +33,8 @@ When your key arrives, follow [2. Keys and data](2-data.md) and create `~/krx-wo
 | | |
 |---|---|
 | Dates | 2011-01-03 → 2026-09-30, on LEAN's KRX trading calendar |
-| Securities | 29 KOSPI-like stocks `D00010` … `D00280` (one preferred share `D00015`), 3 ETFs `E00010` … `E00030`; all named "SYNTHETIC DEMO …" |
-| Indices | synthetic KOSPI and KOSPI 200 (`kospi`, `kospi200`), so benchmarks work |
+| Securities | 29 KOSPI-like stocks `D00010` … `D00280` (one preferred share `D00015`), 6 KOSDAQ-like stocks `Q00010` … `Q00060`, 3 ETFs `E00010` … `E00030`; all named "SYNTHETIC DEMO …" |
+| Indices | synthetic KOSPI, KOSPI 200, KOSDAQ and KOSDAQ 150 (`kospi`, `kospi200`, `kosdaq`, `kosdaq150`), so benchmarks work |
 | Events | a 5:1 split (D00020, 2018-05-04), a delisting (D00030, 2019-06-28), a new listing (D00040, 2015-06-01), yearly cash dividends |
 | Prices | random walks: a market factor trending about 4% a year with ~17% volatility, plus noise per stock; prices on the KRX tick grid; the same every time |
 
@@ -45,7 +45,7 @@ work as they will with real data.
 
 ## How you can tell
 
-- Codes start with `D` or `E` (no real KRX code does); names say "SYNTHETIC DEMO".
+- Codes start with `D`, `Q` or `E` (no real KRX code does); names say "SYNTHETIC DEMO".
 - Every data folder has a `SYNTHETIC-DEMO-DATA.txt` file.
 - `klean doctor` and `klean data status` say "SYNTHETIC DEMO DATA".
 - `klean backtest`, `optimize` and `compare` print a `*** SYNTHETIC DEMO DATA … ***` banner;
