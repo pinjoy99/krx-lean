@@ -40,7 +40,7 @@ class DemoDataTest(unittest.TestCase):
             self.assertTrue(z.read(z.namelist()[0]).decode().startswith("20171201"))
 
     def test_install_carries_the_marker(self):
-        data = Path(self.tmp.name) / "data"
+        data = Path(self.tmp.name).resolve() / "data"
         (data / "market-hours").mkdir(parents=True)
         (data / "market-hours" / "market-hours-database.json").write_text(
             '{"entries": {"Index-krx-[*]": {"holidays": []}}}')
@@ -57,7 +57,7 @@ class DemoDataTest(unittest.TestCase):
             build.build(self.root)
         self.assertEqual(daily.read_bytes(), before)             # same bytes: fixed zip member timestamp
         self.assertEqual(daily.stat().st_mtime_ns, mtime)        # and the unchanged file wasn't rewritten
-        data = Path(self.tmp.name) / "data2"
+        data = Path(self.tmp.name).resolve() / "data2"
         (data / "market-hours").mkdir(parents=True)
         (data / "market-hours" / "market-hours-database.json").write_text(
             '{"entries": {"Index-krx-[*]": {"holidays": []}}}')
@@ -71,7 +71,7 @@ class DemoDataTest(unittest.TestCase):
         self.assertEqual(lean_install.sync_tree(src, data / "equity" / "krx"), (1, first[0] - 1))
 
     def test_deterministic(self):
-        other = Path(self.tmp.name) / "again"
+        other = Path(self.tmp.name).resolve() / "again"
         demo.generate(other, holidays={"20180105"}, start="20171201", end="20190731")
         a = sorted((self.root / "raw" / "krx" / "KOSPI").rglob("*.csv.gz"))[100].read_bytes()
         b = sorted((other / "raw" / "krx" / "KOSPI").rglob("*.csv.gz"))[100]

@@ -41,7 +41,7 @@ def make_run(project: Path, name: str, equity_end: float, stats: dict, algo: str
 class KleanP1Test(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        base = Path(self.tmp.name)
+        base = Path(self.tmp.name).resolve()
         self.lean = base / "Lean"
         (self.lean / "Data" / "market-hours").mkdir(parents=True)
         (self.lean / "Data" / "symbol-properties").mkdir(parents=True)
@@ -118,7 +118,7 @@ class KleanP1Test(unittest.TestCase):
         self.assertEqual(Workspace.load(self.root).lean_config, {})
         self.assertEqual(self.klean("config", "get", "nope")[0], 1)
         self.assertEqual(self.klean("config", "unset", "lean_root")[0], 1)
-        self.assertEqual(self.klean("config", "set", "lean_root", str(self.root))[0], 1)   # not a LEAN clone
+        self.assertEqual(self.klean("config", "set", "lean_root", self.tmp.name)[0], 1)   # not a LEAN clone
 
     # ------------------------------------------------------------ projects
 

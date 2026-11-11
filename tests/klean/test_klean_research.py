@@ -17,7 +17,7 @@ class ResearchTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        root = Path(self.tmp.name)
+        root = Path(self.tmp.name).resolve()
         lean = root / "Lean"
         self.bin = lean / "Launcher" / "bin" / "Release"
         self.bin.mkdir(parents=True)
@@ -60,7 +60,7 @@ class ResearchTest(unittest.TestCase):
         self.assertIn("Config.SetConfigurationFile(" + repr(str(folder / "config.json")), startup)
         self.assertTrue((folder / "lib" / "krx_models.py").exists())
         self.assertEqual(env["IPYTHONDIR"], str(folder / "ipython"))
-        self.assertEqual(env["DOTNET_ROOT"], str(Path(self.tmp.name) / "dotnet"))
+        self.assertEqual(env["DOTNET_ROOT"], str(Path(self.tmp.name).resolve() / "dotnet"))
         self.assertEqual(env["PYTHONNET_PYDLL"], self.ws.python_dll)
         self.assertNotIn("SYNTHETIC", startup)
 

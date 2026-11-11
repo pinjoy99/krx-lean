@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.8 — 2026-11-11
+
+- **Faster daily update:** builds are reproducible byte for byte (fixed zip timestamps, unchanged
+  files not rewritten) and data installs copy only files that changed.
+- **`klean backtest --detach`** runs in the background; foreground runs show elapsed time; a
+  running run is shown as "running" by `klean logs` and the GUI; Ctrl+C stops LEAN too.
+- **GUI:** start an optimization from the project page, start JupyterLab for a project, rename
+  and delete runs.
+- **macOS (Apple Silicon), experimental:** the end-to-end check passes in CI (LEAN build,
+  C# = Python, report, notebook); install steps in docs/user/1-install.md. Not hand-tested.
+- **Project files:** CONTRIBUTING.md, SECURITY.md, issue and pull-request templates.
+- **Korean:** beginner page (docs/ko/, linked from the English page) and README.ko.md.
+- CI also runs on macOS; tests no longer assume unresolved temp paths or a case-sensitive file
+  system.
+
 ## 0.0.7 — 2026-11-10
 
 - Slippage stays off by default, and that is now visible: `klean backtest` prints

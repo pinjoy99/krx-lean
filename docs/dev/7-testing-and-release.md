@@ -4,8 +4,8 @@
 
 ```bash
 cd ~/krx-lean
-python -m unittest discover -s tests            # pipeline (37, incl. the demo data through build and install)
-python -m unittest discover -s tests/klean      # klean (44; some need dotnet on PATH)
+python -m unittest discover -s tests            # pipeline (38, incl. the demo data through build and install)
+python -m unittest discover -s tests/klean      # klean (47; some need dotnet on PATH)
 ```
 
 They use small synthetic files; no keys, no network, no LEAN build needed.
@@ -24,9 +24,9 @@ raises must exit 1 with `backtest FAILED`; `--timeout`; a small optimization; a 
 research notebook run headless with both charts.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`, every pull request,
-weekly, and on demand: lint and both unit suites on Ubuntu 22.04 / Python 3.10 and Ubuntu 24.04 /
-Python 3.12 and 3.13, and the end-to-end script on Ubuntu 24.04 with .NET 10 (the LEAN build is
-cached per `LEAN_COMMIT`). CI has no secrets and read-only permissions; real-data checks stay
+weekly, and on demand: lint and both unit suites on Ubuntu 22.04 / Python 3.10, Ubuntu 24.04 /
+Python 3.12 and 3.13 and macOS / Python 3.12, and the end-to-end script on Ubuntu 24.04 and on
+macOS (Apple Silicon) with .NET 10 (the LEAN build is cached per `LEAN_COMMIT` and system). CI has no secrets and read-only permissions; real-data checks stay
 manual (below).
 
 ## Verification record (on real data)
@@ -60,8 +60,7 @@ manual (below).
 Every klean run records what produced it (`manifest.json`, `code/`, `config.json`). For results
 you keep, also record the data state: the newest date in `raw/krx/KOSPI/`, the dividend
 snapshot (`raw/dividends/<basDt>.csv.gz`), and `reports/verify_summary.csv` of that build. The
-same raw files and the same krx-lean commit give the same LEAN data (file contents identical;
-zip timestamps differ).
+same raw files and the same krx-lean commit give the same LEAN data, byte for byte.
 
 ## Release checklist
 

@@ -23,7 +23,8 @@ cd ~/krx-workspace && klean data install --root ~/krx-data
 klean data status                 # last_date should be the latest trading day
 ```
 
-Installing data adds and replaces files; it never deletes your projects or results.
+Installing data adds and replaces files; it never deletes your projects or results. Only files
+that changed are copied (`… files copied, … unchanged`), so the daily update is quick.
 Recent days that KRX hasn't published yet are retried on the next run. Rerun `rights` and
 `krx-info` weekly if you use them.
 

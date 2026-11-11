@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem
+    url: https://github.com/pinjoy99/krx-lean/security/advisories/new
+    about: Report vulnerabilities privately, not as a public issue.
+  - name: Beginner's guide
+    url: https://pinjoy99.github.io/krx-lean/
+    about: From a fresh computer to your first backtest.

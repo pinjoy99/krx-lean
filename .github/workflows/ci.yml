@@ -48,14 +48,14 @@ jobs:
     name: end to end on synthetic demo data (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    # macOS (Apple Silicon) is experimental: its result is reported but doesn't fail the run
+    # set experimental: true for a system whose result should be reported without failing the run
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - { os: ubuntu-24.04, experimental: false }
-          - { os: macos-latest, experimental: true }
+          - { os: macos-latest, experimental: false }
     steps:
       - uses: actions/checkout@v4
       - name: Folders outside the checkout

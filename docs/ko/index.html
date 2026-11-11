@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>krx-lean · 내 컴퓨터에서 하는 한국 주식 백테스트</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232459c9'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="description" content="krx-lean 초보자 안내: 오픈소스 LEAN 엔진으로 KOSPI 주식과 ETF 전략을 Python 또는 C#으로, 내 컴퓨터에서 무료로 백테스트합니다.">
+<style>
+:root {
+  --bg: #fbfbfa; --panel: #ffffff; --ink: #1d232b; --muted: #5d6773; --line: #e3e6ea;
+  --accent: #2459c9; --accent-soft: #eaf0fc; --code-bg: #f3f4f6; --warn: #9a5b00; --warn-soft: #fdf3e2;
+  --good: #1a7f4b; --radius: 10px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b; --panel: #1b1f24; --ink: #e6e9ed; --muted: #a0a9b4; --line: #2c323a;
+    --accent: #7aa2ff; --accent-soft: #1e2a42; --code-bg: #20252c; --warn: #f0b350; --warn-soft: #2e2618;
+    --good: #4cc38a;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; }
+a { color: var(--accent); }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+header.top { border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header.top .wrap { display: flex; align-items: center; gap: 18px; height: 54px; overflow-x: auto; white-space: nowrap; }
+header.top .brand { font-weight: 700; margin-right: auto; text-decoration: none; color: var(--ink); }
+header.top nav a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 14px; }
+header.top nav a:hover { color: var(--accent); }
+.hero { padding-top: 56px; padding-bottom: 36px; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -0.02em; }
+.hero p.lead { font-size: 19px; color: var(--muted); max-width: 680px; margin: 0 0 22px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
+.pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-block; padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid var(--accent); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.secondary { color: var(--accent); background: transparent; }
+section { padding: 34px 0; border-top: 1px solid var(--line); }
+section, .hero { scroll-margin-top: 60px; }
+h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+h3 { font-size: 18px; margin: 26px 0 6px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.step { display: grid; grid-template-columns: 44px 1fr; gap: 14px; margin-top: 26px; }
+.step .num { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700;
+  display: grid; place-items: center; margin-top: 2px; }
+.step > div { min-width: 0; }
+.step h3 { margin: 4px 0 6px; }
+.step p { margin: 6px 0; }
+.code { position: relative; margin: 10px 0 14px; }
+pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
+  overflow-x: auto; font: 13.5px/1.55 var(--mono); }
+code { font-family: var(--mono); font-size: 0.92em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+pre .c { color: var(--muted); }
+.copy { position: absolute; top: 8px; right: 8px; font: 600 12px system-ui, sans-serif; padding: 4px 9px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
+.copy:hover { color: var(--accent); border-color: var(--accent); }
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 15px; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); }
+.time { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 9px; margin-left: 6px; vertical-align: 2px; }
+figure { margin: 16px 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius); display: block; background: #fff; }
+figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+td code { overflow-wrap: anywhere; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 2px; color: var(--muted); }
+.tabs { display: flex; gap: 6px; margin: 10px 0 0; flex-wrap: wrap; }
+.tabs button { font: 600 14px system-ui, sans-serif; padding: 7px 14px; border-radius: 8px 8px 0 0; border: 1px solid var(--line);
+  border-bottom: none; background: var(--code-bg); color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--panel); color: var(--accent); }
+.tabpanel { border: 1px solid var(--line); border-radius: 0 8px 8px 8px; background: var(--panel); padding: 6px 16px 10px; }
+.tabpanel[hidden] { display: none; }
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+@media (max-width: 560px) {
+  .step { grid-template-columns: 1fr; gap: 4px; }
+  header.top nav a { margin-left: 8px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">krx-lean</a>
+    <nav>
+      <a href="#what">소개</a>
+      <a href="#start">시작하기</a>
+      <a href="#results">결과 읽기</a>
+      <a href="#real-data">실제 데이터</a>
+      <a href="#strategy">내 전략</a>
+      <a href="#faq">FAQ</a>
+      <a href="../" lang="en">English</a>
+      <a href="https://github.com/pinjoy99/krx-lean">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="hero wrap">
+  <h1>내 컴퓨터에서 하는<br>한국 주식 백테스트</h1>
+  <p class="lead">krx-lean은 KOSPI 주식과 ETF에 대한 투자 아이디어를 검증하는 도구입니다. Python이나 C#으로 전략을
+    작성해 여러 해의 과거 데이터로 실행하면, 한국의 수수료와 세금까지 반영한 성과를 확인할 수 있습니다.</p>
+  <div class="pills">
+    <span class="pill">무료 오픈소스</span>
+    <span class="pill">내 컴퓨터에서 실행</span>
+    <span class="pill">계정 불필요</span>
+    <span class="pill">Python 또는 C#</span>
+    <span class="pill">Linux · Windows(WSL2)</span>
+  </div>
+  <div class="btns">
+    <a class="btn primary" href="#start">시작하기</a>
+    <a class="btn secondary" href="https://github.com/pinjoy99/krx-lean">GitHub에서 보기</a>
+  </div>
+</div>
+
+<section id="what">
+  <div class="wrap">
+    <h2>무엇을 할 수 있나요</h2>
+    <p class="sub"><em>백테스트</em>는 과거를 다시 재생하는 것입니다. 전략이 매일 무엇을 사고팔지 결정하고, 그 결과
+      얼마를 벌었거나 잃었을지를 보여 줍니다. krx-lean은 한국 시장에서 이를 하는 데 필요한 것을 모두 제공합니다.</p>
+    <div class="grid">
+      <div class="card"><h3>한국 시장 데이터</h3><p>2010년 이후 모든 KOSPI 종목과 ETF의 일별 시세(상장폐지 종목 포함)를
+        본인의 무료 인증키로 거래소 공식 API에서 내려받습니다.</p></div>
+      <div class="card"><h3>한국 시장 규칙</h3><p>수수료, 시기별 증권거래세, KRX 호가가격단위, 액면분할과 배당 조정,
+        그리고 비교 기준이 되는 KOSPI 200.</p></div>
+      <div class="card"><h3>전문가용 엔진</h3><p>많은 퀀트 투자자가 쓰는 오픈소스 엔진
+        <a href="https://github.com/QuantConnect/Lean">LEAN</a>을 내 컴퓨터에서 소스로 빌드해 사용합니다.</p></div>
+      <div class="card"><h3>쉬운 도구 하나</h3><p><code>klean</code> 명령 하나로 설치, 백테스트, 결과 비교, 파라미터 탐색,
+        리포트, 리서치 노트북, 브라우저 화면까지 처리합니다.</p></div>
+    </div>
+    <div class="note warn" style="margin-top:18px"><strong>투자 조언이 아닙니다.</strong> 과거 성과가 미래 수익을
+      보장하지 않으며, 백테스트는 가정한 만큼만 정확합니다. 슬리피지는 기본적으로 꺼져 있고(켤 수 있습니다, 아래 참조),
+      가격제한폭은 아직 반영하지 않으며, krx-lean은 실제 주문을 내지 않습니다.</div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <h2>시작하기</h2>
+    <p class="sub">30~45분쯤 걸리며 대부분은 내려받기를 기다리는 시간입니다. 명령을 터미널에 복사해 붙여넣으면 됩니다.
+      회색 상자마다 <strong>Copy</strong> 버튼이 있습니다. 이 단계에는 API 인증키가 필요 없습니다. 먼저
+      <strong>가상(합성) 데모 데이터</strong>로 모든 기능을 써 봅니다.</p>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div>
+        <h3>Linux 터미널 열기 <span class="time">5~10분</span></h3>
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" aria-controls="tab-win" id="b-win">Windows</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-linux" id="b-linux">Linux</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-mac" id="b-mac">Mac</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="tab-win" aria-labelledby="b-win">
+          <p>krx-lean은 Linux에서 실행됩니다. Windows 10/11은 <strong>WSL2</strong>로 Windows 안에서 Linux를 실행할 수
+            있습니다. <em>PowerShell을 관리자 권한으로</em> 열고(시작 버튼 우클릭 → 터미널(관리자)) 다음을 실행하세요.</p>
+          <div class="code"><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
+          <p>안내에 따라 다시 시작한 뒤 시작 메뉴에서 <strong>Ubuntu</strong>를 열어 사용자 이름과 암호를 정합니다. 이
+            창이 아래 모든 단계에서 쓰는 터미널입니다. 파일은 Ubuntu의 홈 폴더(<code>~</code>)에 두세요.
+            <code>/mnt/c</code> 아래는 훨씬 느립니다.</p>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="tab-linux" aria-labelledby="b-linux" hidden>
+          <p>터미널을 엽니다. <strong>Ubuntu 24.04와 22.04</strong>에서 테스트했습니다. 다른 배포판도 같은 순서로
+            동작할 것입니다(2단계의 패키지를 해당 배포판 방식으로 설치하세요).</p>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="tab-mac" aria-labelledby="b-mac" hidden>
+          <p>Apple Silicon macOS는 <strong>실험적</strong>입니다. 자동 검사는 통과하지만 사람이 직접 따라 해 보지는
+            않았습니다. 2단계 대신
+            <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/1-install.md#macos">macOS 설치 순서(영문)</a>를
+            따른 뒤 3단계부터 이어 가세요. 검증된 환경이 필요하면 Linux나 WSL2가 있는 Windows PC를 이용하세요.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <h3>도구 설치 <span class="time">10~25분</span></h3>
+        <p>시스템 패키지, .NET 10 SDK(LEAN은 C#으로 작성됨), 그리고 LEAN용 Python 3.11을 제공하는 <em>uv</em>를
+          설치합니다. 첫 명령에서 암호를 묻습니다.</p>
+        <div class="code"><pre><code>sudo apt update
+sudo apt install -y git curl unzip python3 python3-venv libicu-dev
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
+curl -LsSf https://astral.sh/uv/install.sh | sh
+echo 'export DOTNET_ROOT="$HOME/.dotnet"' &gt;&gt; ~/.bashrc
+echo 'export PATH="$HOME/.dotnet:$HOME/.krx-lean/venv/bin:$PATH"' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre></div>
+        <p>이어서 krx-lean, LEAN, LEAN용 Python 3.11을 설치합니다.</p>
+        <div class="code"><pre><code>git clone https://github.com/pinjoy99/krx-lean.git ~/krx-lean
+python3 -m venv ~/.krx-lean/venv
+~/.krx-lean/venv/bin/pip install -e ~/krx-lean
+klean install-lean --dir ~/Lean              <span class="c"># LEAN 내려받기와 빌드 (2~10분)</span>
+klean install-python --dir ~/.klean/py311    <span class="c"># LEAN용 Python 3.11 + pandas</span></code></pre></div>
+        <p>확인: <code>klean --version</code>이 버전 번호를 출력합니다. LEAN 빌드 중 나오는 경고(warning)는 정상입니다.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">3</div>
+      <div>
+        <h3>데모 워크스페이스 만들기 <span class="time">1분</span></h3>
+        <p><em>워크스페이스</em>는 전략과 그 결과를 담는 폴더입니다. 여기에는 <strong>가상 데모 데이터</strong>를
+          넣습니다. 실제 주식시장처럼 움직이도록 만들어 낸 가짜 종목과 지수라서, 인증키가 나오기 전에도 모든 기능을
+          익힐 수 있습니다.</p>
+        <div class="code"><pre><code>klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
+cd ~/krx-demo
+klean data install --demo
+klean doctor                   <span class="c"># 모든 줄이 OK여야 합니다</span></code></pre></div>
+        <div class="note warn">데모 데이터는 <strong>실제 데이터가 아닙니다</strong>. 종목(코드 <code>D00010</code>…)은
+          존재하지 않는 회사이며, klean은 모든 결과에 "SYNTHETIC DEMO DATA"라고 표시합니다. 도구를 배우기 위한
+          것이지 전략을 평가하기 위한 것이 아닙니다.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">4</div>
+      <div>
+        <h3>첫 백테스트 실행 <span class="time">2분</span></h3>
+        <p>준비된 예제(시가총액 상위 20종목을 같은 비중으로 사서 매달 리밸런싱)로 프로젝트를 만들어 2011~2026년
+          구간으로 실행합니다.</p>
+        <div class="code"><pre><code>klean project-create Top20 --template top-market-cap
+klean backtest Top20</code></pre></div>
+        <p>1~2분 뒤 연평균 수익률(CAGR), 최대 낙폭(drawdown), 최종 자산 같은 통계가 나옵니다. 이어서 자세히 살펴봅니다.</p>
+        <div class="code"><pre><code>klean report Top20      <span class="c"># 상세 HTML 리포트</span>
+klean gui               <span class="c"># 브라우저에서 결과 보기</span></code></pre></div>
+        <p>WSL에서는 <code>sudo apt install -y wslu</code>를 설치하면 <code>klean gui</code>가 Windows 브라우저를 엽니다.
+          또는 출력된 주소를 직접 여세요. 종료는 <kbd>Ctrl</kbd>+<kbd>C</kbd>입니다.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">5</div>
+      <div>
+        <h3>노트북으로 데이터 살펴보기 <span class="time">처음에는 5분</span></h3>
+        <p><em>노트북</em>(Jupyter)에서는 전략을 쓰기 전에 시세를 보고, 지표를 계산하고, 차트를 그려 가며 한 단계씩
+          살펴볼 수 있습니다. 처음 실행할 때 klean이 JupyterLab을 설치합니다(몇 분).</p>
+        <div class="code"><pre><code>klean research Top20</code></pre></div>
+        <p>브라우저에 LEAN이 이미 로드된 노트북이 열립니다. <strong>Run → Run All Cells</strong>를 선택하면 한 종목의
+          시세를 불러와 60일 이동평균을 그리고 KOSPI 200과 비교합니다. 코드를 바꿔 다시 실행해 보세요. 종료는
+          터미널에서 <kbd>Ctrl</kbd>+<kbd>C</kbd>입니다.</p>
+        <figure>
+          <img src="../assets/research.png" width="1280" height="860" loading="lazy"
+               alt="시작용 리서치 노트북이 열린 JupyterLab: 한 종목의 일별 시세와 60일 이동평균을 불러오는 코드와 그 차트">
+          <figcaption><code>klean research</code>: 데모 데이터로 실행한 시작용 노트북.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2>결과 읽기</h2>
+    <p class="sub">숫자의 의미입니다. (그림은 데모 데이터로 만든 것이라 수치는 가상의 값입니다.)</p>
+    <figure>
+      <img src="../assets/gui-run.png" width="1280" height="860" loading="lazy"
+           alt="klean의 브라우저 화면: 요약 수치, KOSPI 200과 비교한 전략의 자산 곡선, 낙폭 차트">
+      <figcaption><code>klean gui</code>: 실행 결과 수치, KOSPI 200(점선)과 비교한 자산 추이, 낙폭.</figcaption>
+    </figure>
+    <table>
+      <tr><th style="width:30%">항목</th><th>의미</th></tr>
+      <tr><td>Compounding Annual Return (CAGR, 연평균 수익률)</td><td>해마다 평균적으로 불어난 비율. 8%면 약 9년에 원금이 두 배가 됩니다.</td></tr>
+      <tr><td>Drawdown (최대 낙폭)</td><td>고점에서 가장 크게 떨어진 폭. 50%면 최악의 순간에 절반을 잃었다는 뜻입니다. 그 기간을 버틸 수 있을지 생각해 보세요.</td></tr>
+      <tr><td>Sharpe Ratio (샤프 비율)</td><td>위험(변동) 한 단위당 수익. 높을수록 좋으며, 장기간 1을 넘기는 드뭅니다.</td></tr>
+      <tr><td>Benchmark (KOSPI 200)</td><td>시장을 그냥 보유했을 때의 성과. 애써 만든 전략이라면 수수료를 내고도 이보다 나아야 합니다.</td></tr>
+      <tr><td>Total Fees (총 비용)</td><td>냈을 수수료와 증권거래세. 자주 매매하면 비용이 큽니다.</td></tr>
+      <tr><td>Slippage (슬리피지)</td><td>백테스트가 가정한 가격과 실제 시장에서 체결되는 가격의 차이. <strong>기본은 꺼짐</strong>입니다. <code>klean backtest Top20 --parameter slippage_ticks 1</code>로 켜면 더 보수적인 결과를 볼 수 있습니다.</td></tr>
+      <tr><td>Alpha / Beta</td><td>베타: 전략이 시장과 함께 움직이는 정도(1이면 같음). 알파: 시장으로 설명되지 않는 수익.</td></tr>
+    </table>
+    <figure>
+      <img src="../assets/report.png" width="1000" height="960" loading="lazy"
+           alt="LEAN 전략 리포트의 한 쪽: 주요 통계, 월별 수익률 히트맵, 벤치마크 대비 누적 수익률, 연도별 수익률, 거래별 수익률, 자산 배분">
+      <figcaption><code>klean report</code>: 월별·연도별 수익률, 벤치마크 비교 등을 담은 LEAN 리포트.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="real-data">
+  <div class="wrap">
+    <h2>실제 데이터 사용하기</h2>
+    <p class="sub">익숙해졌다면 실제 KOSPI 데이터를 받으세요. 무료지만 본인 인증키가 필요하고 승인에 하루쯤 걸릴 수
+      있으니 미리 신청해 두세요.</p>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div>
+        <h3>인증키 받기</h3>
+        <p><strong>KRX Open API</strong>(필수, 시세): <a href="https://openapi.krx.co.kr/">openapi.krx.co.kr</a>에
+          가입해 인증키를 신청하고, 유가증권 일별매매정보, ETF 일별매매정보, KOSPI 시리즈 일별시세정보 서비스의
+          이용을 신청합니다.
+          <strong>공공데이터포털</strong>(권장, 배당): <a href="https://www.data.go.kr/data/15043284/openapi.do">data.go.kr</a>에서
+          금융위원회_주식배당정보 활용을 신청합니다.
+          <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/2-data.md">단계별 안내(영문)</a>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <h3>안전하게 보관하기</h3>
+        <p>본인만 읽을 수 있는 파일에 넣습니다(코드에는 절대 넣지 마세요).</p>
+        <div class="code"><pre><code>mkdir -p ~/.config &amp;&amp; touch ~/.config/krx-lean.env &amp;&amp; chmod 600 ~/.config/krx-lean.env
+nano ~/.config/krx-lean.env</code></pre></div>
+        <div class="code"><pre><code>KRX_API_KEY=your-krx-key
+DATA_GO_KR_KEY=your-data-go-kr-key</code></pre></div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <div>
+        <h3>데이터 내려받기와 빌드 <span class="time">처음 한 번, 1.5~2시간</span></h3>
+        <div class="code"><pre><code>set -a; . ~/.config/krx-lean.env; set +a
+krx-lean --root ~/krx-data all</code></pre></div>
+        <p>2010년 이후 모든 거래일을 내려받습니다. 중간에 멈추면 같은 명령을 다시 실행하세요. 멈춘 곳부터 이어집니다.
+          이후 업데이트는 1분 정도면 됩니다.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">4</div>
+      <div>
+        <h3>실제 데이터용 워크스페이스</h3>
+        <div class="code"><pre><code>klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
+cd ~/krx-workspace
+klean data install --root ~/krx-data
+klean project-create Top20 --template top-market-cap
+klean backtest Top20</code></pre></div>
+        <p>데모와 실제 데이터의 워크스페이스는 따로 두세요(klean이 섞이지 않게 막습니다). 나중에 새 거래일을
+          받으려면 워크스페이스에서 <code>klean update</code>를 실행합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="strategy">
+  <div class="wrap">
+    <h2>나만의 전략 만들기</h2>
+    <p class="sub">전략은 작은 Python 프로그램입니다. 빈 프로젝트를 만들고 <code>main.py</code>를 아래 내용으로
+      바꾸세요. 두 종목을 절반씩 보유하며 매달 리밸런싱하는 전략입니다(아이디어는 먼저 프로젝트 노트북에서 시험해
+      보세요: <code>klean research MyFirst</code>).</p>
+    <div class="code"><pre><code>klean project-create MyFirst --template empty
+nano MyFirst/main.py</code></pre></div>
+    <div class="code"><pre><code>from AlgorithmImports import *
+from krx_models import KrxBoards, krx_benchmark, krx_initialize
+
+
+class MyFirstStrategy(QCAlgorithm):
+    """Hold two stocks, half each, and rebalance at the start of every month."""
+
+    def initialize(self):
+        self.set_start_date(2015, 1, 1)
+        self.set_end_date(2025, 12, 31)
+        self.set_cash(100_000_000)                       <span class="c"># 1억 원</span>
+        self.set_time_zone("Asia/Seoul")
+        self.set_account_currency("KRW")
+        boards = KrxBoards.load()
+        self.set_security_initializer(lambda s: krx_initialize(s, boards))   <span class="c"># KRX 수수료, 세금, 호가단위</span>
+        self.set_benchmark(krx_benchmark("kospi200"))    <span class="c"># KOSPI 200과 비교</span>
+
+        codes = ["D00010", "D00050"]                     <span class="c"># 데모 종목. 실제 데이터 예: ["005930", "000660"]</span>
+        self.stocks = [self.add_equity(c, Resolution.DAILY, Market.KRX).symbol for c in codes]
+        self.last_month = 0
+
+    def on_data(self, data: Slice):
+        if self.time.month == self.last_month:           <span class="c"># 한 달에 한 번</span>
+            return
+        if not all(data.contains_key(s) for s in self.stocks):
+            return
+        self.last_month = self.time.month
+        for s in self.stocks:
+            self.set_holdings(s, 0.49)                   <span class="c"># 약 절반씩, 수수료용 현금 조금</span></code></pre></div>
+    <div class="code"><pre><code>klean backtest MyFirst</code></pre></div>
+    <p><code>set_time_zone</code>부터 <code>set_benchmark</code>까지의 줄은 모든 전략에 그대로 두세요. 한국 시장 규칙을
+      적용하는 부분입니다. 실제 데이터에서는 <code>005930</code>(삼성전자), <code>000660</code>(SK하이닉스) 같은 실제
+      종목코드를 쓰세요. 더 알아보려면
+      <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/4-strategies.md">전략 작성 안내(영문)</a>와
+      LEAN의 <a href="https://www.quantconnect.com/docs/v2/writing-algorithms">알고리즘 문서</a>를 보세요.</p>
+
+    <h3>다음에 써 볼 명령</h3>
+    <table>
+      <tr><th style="width:42%">명령</th><th>하는 일</th></tr>
+      <tr><td><code>klean backtest P --parameter holdings 30</code></td><td>설정값을 바꿔 실행합니다(전략에서 <code>get_parameter</code>로 읽습니다).</td></tr>
+      <tr><td><code>klean backtest P --parameter slippage_ticks 1</code></td><td>슬리피지를 켭니다(기본은 꺼짐). 실제 시장처럼 모든 체결가가 조금 불리해집니다.</td></tr>
+      <tr><td><code>klean compare A B</code></td><td>두 실행 결과를 나란히 비교합니다.</td></tr>
+      <tr><td><code>klean optimize P --parameter holdings 10 30 10</code></td><td>여러 설정값을 시험해 순위를 매깁니다(과최적화에 주의).</td></tr>
+      <tr><td><code>klean research P</code></td><td>전략을 쓰기 전에 Jupyter 노트북에서 데이터를 살펴봅니다(시세, 지표, 차트).</td></tr>
+      <tr><td><code>klean logs P</code></td><td>전략이 남긴 로그나 실행이 실패한 이유를 보여 줍니다.</td></tr>
+      <tr><td><code>klean doctor</code></td><td>문제가 있을 때 설치 상태를 점검합니다.</td></tr>
+    </table>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>자주 묻는 질문</h2>
+    <details><summary>비용이 드나요?</summary>
+      <p>아니요. krx-lean, LEAN, 데이터 API 모두 무료입니다. QuantConnect 계정이나 구독도 필요 없습니다.</p></details>
+    <details><summary>실제 돈으로 매매할 수 있나요?</summary>
+      <p>아직은 아닙니다. 과거 데이터로 전략을 검증하기만 합니다. 증권사와는 전혀 연결되지 않습니다.</p></details>
+    <details><summary>어떤 시장과 데이터를 다루나요?</summary>
+      <p>KOSPI 주식과 ETF의 2010년 이후 일별 시세입니다. KOSDAQ, KONEX, 장중(분 단위) 데이터는 아직 다루지 않습니다.</p></details>
+    <details><summary>Python과 C# 중 무엇을 쓰나요?</summary>
+      <p>어느 쪽이든 결과는 같습니다. Python이 시작하기 쉽고, C#은 몇 배 빨라서 긴 기간의 테스트나 최적화에 유리합니다.</p></details>
+    <details><summary>백테스트가 "backtest FAILED"라고 나옵니다.</summary>
+      <p>klean이 바로 아래에 전략에서 난 오류를 줄 번호와 함께 보여 줍니다. 그 줄을 고쳐 다시 실행하세요.
+        <code>klean logs PROJECT --console</code>은 LEAN의 전체 출력을 보여 주며,
+        <a href="https://github.com/pinjoy99/krx-lean/blob/main/docs/user/7-troubleshooting.md">문제 해결 안내(영문)</a>에
+        자주 나오는 메시지가 정리되어 있습니다.</p></details>
+    <details><summary>데이터는 어디에 저장되나요?</summary>
+      <p>내 컴퓨터에만 저장됩니다. 내려받은 데이터는 <code>~/krx-data</code>에, 전략과 결과는 워크스페이스에 있습니다.
+        내려받은 데이터는 각 제공처의 이용약관을 따르므로 공유하거나 공개하지 마세요.</p></details>
+    <details><summary>QuantConnect나 한국거래소와 관련이 있나요?</summary>
+      <p>아니요. krx-lean은 LEAN(Apache-2.0)을 수정 없이 사용하는 독립적인 오픈소스 프로젝트입니다.</p></details>
+  </div>
+</section>
+
+<section id="more">
+  <div class="wrap">
+    <h2>더 알아보기</h2>
+    <div class="grid">
+      <div class="card"><h3><a href="https://github.com/pinjoy99/krx-lean/tree/main/docs/user">사용자 안내서(영문)</a></h3>
+        <p>모든 단계의 자세한 설명: 설치, 데이터, 전략, 도구, 매일 업데이트, 문제 해결.</p></div>
+      <div class="card"><h3><a href="https://github.com/pinjoy99/krx-lean/tree/main/docs/dev">개발자 안내서(영문)</a></h3>
+        <p>데이터를 만들고 검증하는 방법, KRX 모델, LEAN 내부, 기여 방법.</p></div>
+      <div class="card"><h3><a href="https://github.com/pinjoy99/krx-lean/issues">질문과 버그</a></h3>
+        <p>GitHub에 이슈를 남겨 주세요(한국어도 괜찮습니다).</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    krx-lean은 Apache-2.0 라이선스의 오픈소스입니다. QuantConnect 및 한국거래소(KRX)와 관련이 없습니다. 화면 그림은
+    가상 데모 데이터로 만든 것입니다. 이 페이지의 어떤 내용도 투자 조언이 아닙니다.
+  </div>
+</footer>
+
+<script>
+// Copy buttons on code blocks
+document.querySelectorAll(".code").forEach(box => {
+  const btn = document.createElement("button");
+  btn.className = "copy"; btn.type = "button"; btn.textContent = "Copy";
+  btn.addEventListener("click", async () => {
+    const text = box.querySelector("pre").innerText.replace(/\s+$/, "") + "\n";
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
+    catch (e) { btn.textContent = "Select and copy"; }
+    setTimeout(() => btn.textContent = "Copy", 1600);
+  });
+  box.appendChild(btn);
+});
+// Windows / Linux / Mac tabs
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+tabs.forEach(tab => tab.addEventListener("click", () => {
+  tabs.forEach(t => {
+    const on = t === tab;
+    t.setAttribute("aria-selected", on);
+    document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+  });
+}));
+if (/Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent)) tabs[1].click();
+else if (/Mac/.test(navigator.platform || navigator.userAgent)) tabs[2].click();
+</script>
+</body>
+</html>

@@ -17,7 +17,7 @@ def ev(rcd, rcd_nm, kind, kind_nm, start, bas="20100101", crno="1101110012560", 
 class RightsTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
 
     def tearDown(self):
         self.tmp.cleanup()

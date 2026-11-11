@@ -18,8 +18,14 @@ klean backtest Top20 --parameter holdings 25 --backtest-name h25   # parameters,
 klean backtest Top20 --extra-config maximum-data-points-per-chart-series 4000   # any LEAN config key
 klean backtest Top20 --timeout 600                                 # stop it if it runs over 10 minutes
 klean backtest Top20 --parameter slippage_ticks 1                  # switch slippage on (off by default)
+klean backtest Top20 --detach                                      # run in the background, return at once
 klean backtest Top20CS --build-config Debug --output ~/runs/debug-1
 ```
+
+A run on a terminal shows the elapsed time while LEAN works; Ctrl+C stops it. With `--detach`
+klean prints the run folder and returns; `klean logs Top20` says `STILL RUNNING` until it's done
+(klean's own output is in `klean-detached.log` in the run folder), and the GUI shows the run as
+"running".
 
 LEAN config keys you want for every run go in the workspace: `klean config set KEY VALUE`
 (`klean config list` shows them).
@@ -130,14 +136,17 @@ klean gui --port 8765 --no-browser
 | Page | Shows |
 |---|---|
 | Workspace | projects with their last run, data status, setup check, settings |
-| Project | runs (tick two or more → Compare), optimizations, and a form to start a backtest |
-| Run | figures, equity vs KOSPI 200, drawdown, statistics, orders, log, **code**, run record; *Make LEAN report* / *Open report* |
+| Project | runs (tick two or more → Compare), optimizations; forms to start a backtest and an optimization (grid search); a button that starts JupyterLab for the project |
+| Run | figures, equity vs KOSPI 200, drawdown, statistics, orders, log, **code**, run record; *Make LEAN report* / *Open report*; *Rename* and *Delete* |
 | Optimization | target by parameter, ranked runs, Compare |
 | Compare | equity curves overlaid, statistics side by side |
 
 It listens on 127.0.0.1 only and needs the token in the printed URL; keep that URL to yourself.
 Under WSL2 the page opens in your Windows browser (with `wslu` installed), or open the printed
-URL yourself. Stop it with Ctrl+C. It doesn't edit code: use your editor.
+URL yourself. Stop it with Ctrl+C (notebooks started from the page stop with it). *Delete*
+removes a run's folder for good, after asking; only runs in a project's `backtests/` folder can
+be renamed or deleted, and never one that is still running. It doesn't edit code: use your
+editor.
 
 ## Other commands
 

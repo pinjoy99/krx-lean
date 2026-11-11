@@ -34,6 +34,15 @@ with `--enable-shared`, ships `lib/libpython3.11.so`) and records the library pa
 (`find_python_dll` in `klean/workspace.py`). Any CPython 3.11 with a shared library works
 (Debian 12: `libpython3.11`; Ubuntu: deadsnakes PPA).
 
+## macOS
+
+CI runs the end-to-end script on `macos-latest` (Apple Silicon): LEAN builds with .NET 10 on
+arm64, uv's CPython 3.11 provides `libpython3.11.dylib` (found by `find_python_dll`), and
+backtests, the report and the research notebook pass with C# = Python identical. Two things
+differ from Linux and matter for tests: temp folders sit behind a symlink (`/var` →
+`/private/var`), so compare resolved paths; and the file system ignores case, so `Data/` and
+`data/` are the same folder. Not hand-tested; Intel Macs untested.
+
 ## Updating LEAN
 
 1. Build the new commit (`klean lean update --commit C`, which also rebuilds `Report` if it was

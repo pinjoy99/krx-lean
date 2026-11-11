@@ -17,7 +17,7 @@ from klean.workspace import KleanError, Workspace
 class SafetyTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         self.ws = Workspace(root=self.root / "ws", lean_root=str(self.root / "Lean"))
         self.ws.data.mkdir(parents=True)
 

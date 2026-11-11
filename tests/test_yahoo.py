@@ -35,7 +35,7 @@ def no_sleep(_):
 class YahooTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         self.today = dt.date(2026, 10, 12)  # Monday
         self.start = dt.date(2026, 10, 1)
 

@@ -51,6 +51,9 @@ from the environment only, whitespace stripped. data.go.kr takes its key as the 
 | `factor_events.csv` | every adjustment and dividend used (audit trail) |
 | `ohlcv/`, `index/`, `dividends.csv`, `corporate_actions.csv` | CSVs for research |
 
+- **Reproducible files:** every zip has one member with a fixed timestamp (1980-01-01), so the
+  same content gives the same bytes; a file whose bytes wouldn't change is not rewritten (its
+  modification time stays). `lean-install` (`sync_tree`) then copies only files that differ.
 - **No-trade days:** KRX reports open/high/low 0 → replaced by the close; rows without a close
   are dropped.
 - **Split factor** = product of KRX's own ratios. KRX reports the change `CMPPREVDD_PRC`

@@ -11,7 +11,7 @@ from krx_lean.krx_api import write_day
 class LeanInstallTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        base = Path(self.tmp.name)
+        base = Path(self.tmp.name).resolve()
         self.root, self.lean = base / "data", base / "Lean" / "Data"
         (self.root / "lean" / "equity" / "krx" / "daily").mkdir(parents=True)
         (self.root / "lean" / "equity" / "krx" / "daily" / "005930.zip").write_bytes(b"zip")

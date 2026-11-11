@@ -42,6 +42,11 @@ also runs under `lean backtest`.
    `--timeout SECONDS` kills LEAN after that long; the run fails with `timed out after …`
    (recorded in the manifest, which `run_error` reads first). Run folders are created with
    `unique_dir` (`…-2`, `-3` if two runs start in the same second).
+   While LEAN runs, the run folder holds `klean-running.pid` (`results.is_running` checks the
+   process is alive): `logs` and the GUI say "running" instead of "failed". `backtest --detach`
+   creates the folder, starts `python -m klean backtest … --output <folder>` as its own session
+   with output to `klean-detached.log`, and returns. Foreground runs poll the process every
+   10 s (elapsed time on a terminal, the `--timeout` deadline, and killing LEAN on Ctrl+C).
 5. Demo data (`SYNTHETIC-DEMO-DATA.txt` in `data/equity/krx`): banners in `backtest`,
    `optimize`, `compare`, `data status`, `doctor`; `"synthetic_demo_data": true` in the
    manifest; report title and description; a GUI banner and badges; the `buy-hold` template's
@@ -109,6 +114,15 @@ project settings in one) is never read as an engine config.
 Harmless log lines in `log.txt`: `QuantBook failed to determine Notebook kernel language` (only
 outside Jupyter) and `SecurityIdentifier.TryParseProperties … '<label>'` (LEAN's pandas helper
 trying chart labels as symbols).
+
+## GUI actions
+
+POST endpoints (all need the token header): `/api/backtest`, `/api/report`, `/api/optimize`
+(validated with `optimize(estimate=True)` first; progress lines kept in the job),
+`/api/research` (one JupyterLab per project through `research.start`; terminated when the GUI
+stops, also on SIGTERM), `/api/run-rename` and `/api/run-delete` (`stored_run`: only a folder
+directly under `<project>/backtests/`, inside the workspace, and not running; rename keeps the
+timestamp prefix).
 
 ## GUI security
 

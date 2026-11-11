@@ -1,0 +1,11 @@
+name: Question or idea
+description: How do I..., or a suggestion
+labels: [question]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question or idea
+      description: What are you trying to do? The users guide is at docs/user/.
+    validations:
+      required: true

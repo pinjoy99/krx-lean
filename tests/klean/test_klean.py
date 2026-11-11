@@ -17,7 +17,7 @@ from klean.workspace import KleanError, Workspace
 class KleanTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        base = Path(self.tmp.name)
+        base = Path(self.tmp.name).resolve()
         # a minimal LEAN clone: Data/ config files + an (empty) launcher build folder
         self.lean = base / "Lean"
         (self.lean / "Data" / "market-hours").mkdir(parents=True)

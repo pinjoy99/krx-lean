@@ -28,7 +28,7 @@ open(cfg["report-destination"], "w").write("<html><head></head><body>" + json.du
 class ReportTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        root = Path(self.tmp.name)
+        root = Path(self.tmp.name).resolve()
         out = root / "Lean" / "Report" / "bin" / "Release"
         (out / "css").mkdir(parents=True)
         for f in ("QuantConnect.Report.dll", "template.html", "ReportCharts.py", "css/report.css"):
@@ -72,14 +72,14 @@ class ReportTest(unittest.TestCase):
         rep.report(self.ws, self.run, overwrite=True, strategy_description="", log=lambda *a: None)
         self.assertIn('"strategy-description": ""', page.read_text())
         with self.assertRaises(KleanError):
-            rep.report(self.ws, self.run, destination=Path(self.tmp.name) / "r.pdf", log=lambda *a: None)
+            rep.report(self.ws, self.run, destination=Path(self.tmp.name).resolve() / "r.pdf", log=lambda *a: None)
 
     def test_failure_and_pdf_tools(self):
         with mock.patch.object(rep, "dotnet", lambda: "false"):
             with self.assertRaises(KleanError) as e:
                 rep.report(self.ws, self.run, log=lambda *a: None)
             self.assertIn("LEAN's Report failed", str(e.exception))
-        page = Path(self.tmp.name) / "p.html"
+        page = Path(self.tmp.name).resolve() / "p.html"
         page.write_text("<html><head></head></html>")
         with mock.patch.object(rep.shutil, "which", lambda name: None):
             with self.assertRaises(KleanError):

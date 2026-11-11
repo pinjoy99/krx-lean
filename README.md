@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/pinjoy99/krx-lean/actions/workflows/ci.yml/badge.svg)](https://github.com/pinjoy99/krx-lean/actions/workflows/ci.yml)
 
+**English** · [한국어](README.ko.md)
+
 Korean stock market (KRX) data and market models for
 [QuantConnect LEAN](https://github.com/QuantConnect/Lean), the open-source backtesting engine,
 built from source on your own machine. Backtest KOSPI stocks and ETFs in Python or C#, with
@@ -23,9 +25,10 @@ data.go.kr  ──┴─▶ krx-lean (download → build) ──▶ LEAN (built 
 data, live trading.
 
 **Platforms:** Linux (Ubuntu 24.04 / 22.04 tested) and Windows through WSL2. Other glibc Linux
-distributions should work. macOS is not tested yet.
+distributions should work. macOS on Apple Silicon passes the automated end-to-end check
+(experimental: not yet tried by hand; see the [install page](docs/user/1-install.md#macos)).
 
-**New here?** The [beginner's guide](https://pinjoy99.github.io/krx-lean/) walks you from a
+**New here?** The [beginner's guide](https://pinjoy99.github.io/krx-lean/) ([한국어](https://pinjoy99.github.io/krx-lean/ko/)) walks you from a
 fresh computer to your first backtest and notebook in under an hour.
 
 ## Pick a track
@@ -69,4 +72,4 @@ subject to the terms of each source (KRX Open API terms; data.go.kr 공공누리
 cross-check sources Yahoo Finance and aikstockdata.com are for personal, non-commercial use).
 Don't redistribute it.
 
-[Changelog](CHANGELOG.md)
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)

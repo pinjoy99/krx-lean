@@ -1,7 +1,7 @@
 # 1. Install
 
 Tested on Ubuntu 24.04 and 22.04, natively and under WSL2. About 20–40 minutes, mostly
-downloads and the LEAN build.
+downloads and the LEAN build. On a Mac, read [macOS](#macos) first.
 
 ## WSL2 only: before you start
 
@@ -72,6 +72,30 @@ want to test it (see [5. Tools](5-tools.md#updating-lean)). `install-python` pri
 library it found (`…/libpython3.11.so`). Packages needed only by some tools are added to that
 environment the first time you use them: matplotlib for `klean report`, JupyterLab for
 `klean research`.
+
+## macOS
+
+**Experimental.** On Apple Silicon Macs the automated end-to-end check passes on every change
+(LEAN build, backtests in C# and Python with identical results, report, research notebook), but
+nobody has followed these steps by hand yet; Intel Macs are untested. Please report what you
+find. The differences from the Linux steps above:
+
+```bash
+xcode-select --install                                   # git (skip if already installed)
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
+curl -LsSf https://astral.sh/uv/install.sh | sh
+echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> ~/.zshrc
+echo 'export PATH="$HOME/.dotnet:$HOME/.krx-lean/venv/bin:$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+git clone https://github.com/pinjoy99/krx-lean.git ~/krx-lean
+uv venv --python 3.12 ~/.krx-lean/venv                   # macOS's own python3 is too old
+uv pip install --python ~/.krx-lean/venv/bin/python -e ~/krx-lean
+klean install-lean --dir ~/Lean
+klean install-python --dir ~/.klean/py311
+```
+
+No `apt` packages are needed, the shell profile is `~/.zshrc`, and `klean gui` /
+`klean research` open your default browser. Everything after this page is the same.
 
 Next: [2. Keys and data](2-data.md). Waiting for your KRX key? Try everything on
 [synthetic demo data](demo.md) meanwhile.

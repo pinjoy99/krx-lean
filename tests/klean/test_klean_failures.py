@@ -28,7 +28,7 @@ class FailedRunTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.proj = Path(self.tmp.name) / "P"
+        self.proj = Path(self.tmp.name).resolve() / "P"
 
     def tearDown(self):
         self.tmp.cleanup()

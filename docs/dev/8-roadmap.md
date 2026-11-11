@@ -6,7 +6,7 @@
 |---|---|
 | `init`, `create-project`, `delete-project`, `config`, `backtest`, `optimize`, `report`, `logs`, `gui`, `research` | ✅ (`optimize`: grid only; `research`: Python notebooks only) |
 | `build` | `lean status` / `lean update` (no images) |
-| `backtest --detach` | planned |
+| `backtest --detach` | ✅ |
 | `library add/remove` | partly: `klean models status/update` keeps per-project copies current; a shared library later |
 | `backtest --debug` | planned (C# attach, debugpy) |
 | `object-store` | later |
@@ -35,8 +35,8 @@ status, `compare`; planned `check-models` (run the `CHECK` cases in both languag
 
 ## Scope and platforms
 
-- macOS (Apple Silicon): check LEAN on .NET 10 arm64, pythonnet with `libpython3.11.dylib`,
-  the report; then CI.
+- macOS (Apple Silicon): passes CI end to end; needs a walkthrough by a person before it's
+  called supported. Intel Macs untested.
 - CI: done for Ubuntu (unit suites, LEAN build, end-to-end on the demo data). Next: a scheduled
   job trying the newest LEAN commit; a release workflow creating tags.
 - KOSDAQ / KONEX (code paths exist; needs KRX service approval and verification); NXT (no

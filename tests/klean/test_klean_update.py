@@ -24,7 +24,7 @@ def quiet(func, *args):
 class ModelsTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.ws = Workspace(root=Path(self.tmp.name) / "ws", lean_root=str(Path(self.tmp.name) / "Lean"))
+        self.ws = Workspace(root=Path(self.tmp.name).resolve() / "ws", lean_root=str(Path(self.tmp.name).resolve() / "Lean"))
         self.ws.data.mkdir(parents=True)
         self.py = projects.create(self.ws, "P", "python", "empty")
         self.cs = projects.create(self.ws, "C", "csharp", "empty")
@@ -71,7 +71,7 @@ class ModelsTest(unittest.TestCase):
 class UpdateTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        root = Path(self.tmp.name)
+        root = Path(self.tmp.name).resolve()
         self.data_root = root / "krx-data"            # a built data root that isn't marked as demo data
         demo.generate(self.data_root, start="20240102", end="20240131")
         (self.data_root / demo.MARKER).unlink()
@@ -92,7 +92,7 @@ class UpdateTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def args(self, **kw):
-        return type("Args", (), {"root": None, "env_file": str(Path(self.tmp.name) / "none.env"), **kw})()
+        return type("Args", (), {"root": None, "env_file": str(Path(self.tmp.name).resolve() / "none.env"), **kw})()
 
     def test_update_remembers_the_root_and_installs(self):
         with self.assertRaises(KleanError):                    # no root known yet
@@ -120,7 +120,7 @@ class UpdateTest(unittest.TestCase):
             cli.cmd_update(self.args(root=str(self.data_root)))
 
     def test_env_file(self):
-        env = Path(self.tmp.name) / "keys.env"
+        env = Path(self.tmp.name).resolve() / "keys.env"
         env.write_text("# keys\nKLEAN_TEST_A=abc\nexport KLEAN_TEST_B='quoted value'\nKLEAN_TEST_C=\nnot a line\n")
         with mock.patch.dict(os.environ, {"KLEAN_TEST_A": "already set"}):
             names = cli.load_env_file(env)

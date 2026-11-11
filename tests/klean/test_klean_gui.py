@@ -20,7 +20,7 @@ from test_klean_p1 import make_run
 class GuiTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        base = Path(self.tmp.name)
+        base = Path(self.tmp.name).resolve()
         lean = base / "Lean"
         (lean / "Launcher" / "bin" / "Release").mkdir(parents=True)
         (lean / "Data" / "market-hours").mkdir(parents=True)

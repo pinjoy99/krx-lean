@@ -15,7 +15,7 @@ def krx_row(d, code, o, h, l, c, v, change="0", market="KOSPI"):
 class BuildTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         raw = self.root / "raw" / "krx" / "KOSPI" / "2026"
         write_day(raw / "20261002.csv.gz", [krx_row("20261002", "005930", "273,500", "277,000", "271,500",
                                                     "276,000", "11,501,250")])

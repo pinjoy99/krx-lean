@@ -48,7 +48,7 @@ docs/user/, docs/dev/
 
 - **Raw is the only state.** Downloads are kept as received; every output is rebuilt from `raw/`,
   so fixing a rule never needs a re-download, and the same raw files + the same krx-lean commit
-  give the same LEAN data.
+  give the same LEAN data, byte for byte.
 - **One source per fact.** Daily bars come only from the KRX Open API; aikstockdata and Yahoo
   only cross-check them. Dividends come only from data.go.kr.
 - **C# and Python models are equivalent.** Every change is made in both and checked with a

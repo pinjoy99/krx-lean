@@ -1,0 +1,35 @@
+name: Bug report
+description: Something doesn't work as the docs say
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Don't paste API keys** (check for `KRX_API_KEY`, `DATA_GO_KR_KEY`, `serviceKey=`), and don't attach market data.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran, what you expected, and what you got. For a failed backtest, add the end of `klean logs PROJECT --console`.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: klean doctor and version
+      description: Output of `klean doctor` and `klean --version`.
+      render: text
+  - type: input
+    id: system
+    attributes:
+      label: System
+      placeholder: Ubuntu 24.04 on WSL2
+  - type: dropdown
+    id: data
+    attributes:
+      label: Data
+      options:
+        - real KRX data
+        - synthetic demo data
+        - not relevant
