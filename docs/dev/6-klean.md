@@ -7,10 +7,10 @@ also runs under `lean backtest`.
 | Module | Does |
 |---|---|
 | `workspace.py` | `klean.json` (load/save, found upwards from the current folder), tested LEAN commit, Python package pins, `dotnet` and libpython lookup, `doctor` checks |
-| `cli.py` | commands; `install-lean`, `install-python` (uv's 3.11), `init`, `data install/status` (incl. `--demo`), `config`, `lean status/update` |
+| `cli.py` | commands; the `<verb> <noun>` commands (`install lean/python/data` (incl. `--demo`), `update data/lean/models/klean/all`, `status …`, `create/delete project`) plus the old names as hidden aliases; `init`, `config` |
 | `projects.py` | templates (Python, C#), algorithm class detection, `.csproj` (references the launcher DLLs; excludes `backtests/**`, `optimizations/**`) |
 | `backtest.py` | `prepare` (py_compile + requirements, or `dotnet build`), `run_once` (code snapshot, per-run config, launcher, manifest), `backtest` |
-| `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `data status` |
+| `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `status data` |
 | `optimize.py` | grid search |
 | `report.py` | LEAN's Report |
 | `research.py` | Jupyter with LEAN's QuantBook |
@@ -48,20 +48,20 @@ also runs under `lean backtest`.
    with output to `klean-detached.log`, and returns. Foreground runs poll the process every
    10 s (elapsed time on a terminal, the `--timeout` deadline, and killing LEAN on Ctrl+C).
 5. Demo data (`SYNTHETIC-DEMO-DATA.txt` in `data/equity/krx`): banners in `backtest`,
-   `optimize`, `compare`, `data status`, `doctor`; `"synthetic_demo_data": true` in the
+   `optimize`, `compare`, `status data`, `doctor`; `"synthetic_demo_data": true` in the
    manifest; report title and description; a GUI banner and badges; the `buy-hold` template's
    default stock becomes `D00010`.
 
-## Models copies and `klean update`
+## Models copies and `klean update data`
 
-Each project has its own copy of the models (copied by `project-create`), so a project stays
+Each project has its own copy of the models (copied by `create project`), so a project stays
 reproducible; the cost is drift after krx-lean is updated. `projects.models_state` compares the
 copy byte for byte with `examples/`: `klean backtest` prints a note and records `krx_models` in
 the manifest, `doctor` and the GUI show an informational row (never a failure: an edited copy is
-legitimate), `klean models update` replaces the copy and keeps the old one as `*.bak`.
+legitimate), `klean update models` replaces the copy and keeps the old one as `*.bak`.
 
-`klean update` = `krx_lean.cli.main(["--root", R, "all"])` in-process, then `install_data`.
-`R` is `data_root` in `klean.json`, saved by `klean data install --root`. Keys not in the
+`klean update data` = `krx_lean.cli.main(["--root", R, "all"])` in-process, then `install_data`.
+`R` is `data_root` in `klean.json`, saved by `klean install data --root`. Keys not in the
 environment are read from `--env-file` (default `~/.config/krx-lean.env`); values are never
 printed. Refused in a demo workspace.
 

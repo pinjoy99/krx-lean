@@ -17,20 +17,22 @@ step() { printf '\n=== %s\n' "$*"; }
 fail() { echo "E2E FAILED: $*" >&2; exit 1; }
 
 step "LEAN and Python 3.11"
-[ -f "$LEAN_DIR/Launcher/bin/Release/QuantConnect.Lean.Launcher.dll" ] || klean install-lean --dir "$LEAN_DIR" >"$WORK/lean-build.log" 2>&1 \
+[ -f "$LEAN_DIR/Launcher/bin/Release/QuantConnect.Lean.Launcher.dll" ] || klean install lean --dir "$LEAN_DIR" >"$WORK/lean-build.log" 2>&1 \
   || { tail -40 "$WORK/lean-build.log"; fail "LEAN build"; }
-[ -x "$PY_DIR/bin/python" ] || klean install-python --dir "$PY_DIR"
+[ -x "$PY_DIR/bin/python" ] || klean install python --dir "$PY_DIR"
 
 step "workspace with synthetic demo data"
 klean init "$WS" --lean "$LEAN_DIR" --python-venv "$PY_DIR"
 cd "$WS"
-klean data install --demo
+klean install data --demo
 klean doctor || fail "doctor reports a problem"
-klean data status | grep -q "SYNTHETIC DEMO DATA" || fail "data status doesn't say the data is synthetic"
+klean status data | grep -q "SYNTHETIC DEMO DATA" || fail "data status doesn't say the data is synthetic"
+klean status all | grep -q "no projects" || fail "status all"
+klean data status >/dev/null || fail 'the 0.0.9 name "klean data status" no longer works'
 
 step "backtests: C# and Python must be identical"
-klean project-create Cs --language csharp --template top-market-cap
-klean project-create Py --template top-market-cap
+klean create project Cs --language csharp --template top-market-cap
+klean create project Py --template top-market-cap
 klean backtest Cs
 klean backtest Py
 klean compare Py Cs | tee compare.txt
@@ -55,10 +57,10 @@ print(f"end equity {plain:,.0f} -> {slipped:,.0f} with 1 tick of slippage")
 EOF
 
 step "models check and update"
-klean models status | grep -q "current" || fail "models status"
+klean status models | grep -q "current" || fail "models status"
 echo "# edited" >> Py/krx_models.py
 klean doctor | grep -q "note: Py differ" || fail "doctor doesn't note the edited models"
-klean models update Py | grep -q "updated" || fail "models update"
+klean update models Py | grep -q "updated" || fail "models update"
 [ -f Py/krx_models.py.bak ] || fail "no backup of the edited models"
 
 step "KOSDAQ: its own taxes and tick sizes, identical in both languages"
@@ -69,14 +71,14 @@ klean compare "Py/$KQ_PY" "Cs/$KQ_CS" | tail -1 | grep -qx "IDENTICAL" || fail "
 grep -q '"Total Orders": "[1-9]' "Cs/backtests/$KQ_CS"/*-summary.json || fail "the KOSDAQ run placed no orders"
 
 step "buy-hold template, both languages"
-klean project-create HoldPy
-klean project-create HoldCs --language csharp
+klean create project HoldPy
+klean create project HoldCs --language csharp
 klean backtest HoldPy
 klean backtest HoldCs
 klean compare HoldPy HoldCs | tail -1 | grep -qx "IDENTICAL" || fail "buy-hold differs between C# and Python"
 
 step "a strategy that raises must be reported as failed"
-klean project-create Broken --template empty
+klean create project Broken --template empty
 "$PY_DIR/bin/python" - <<'EOF'     # (not sed -i: GNU and BSD/macOS sed differ)
 import pathlib
 p = pathlib.Path("Broken/main.py")

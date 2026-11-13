@@ -11,10 +11,10 @@ users track on a built-in demo data set, after [1. Install](1-install.md):
 ```bash
 klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-demo
-klean data install --demo          # ~10 s: generates, builds and installs the synthetic data
+klean install data --demo          # ~10 s: generates, builds and installs the synthetic data
 klean doctor
-klean project-create Hold                           # buy and hold (the demo stock D00010)
-klean project-create Top20 --template top-market-cap
+klean create project Hold                           # buy and hold (the demo stock D00010)
+klean create project Top20 --template top-market-cap
 klean backtest Hold
 klean backtest Top20
 klean backtest Top20 --parameter slippage_ticks 1   # the same with slippage switched on (off by default)
@@ -47,7 +47,7 @@ work as they will with real data.
 
 - Codes start with `D`, `Q` or `E` (no real KRX code does); names say "SYNTHETIC DEMO".
 - Every data folder has a `SYNTHETIC-DEMO-DATA.txt` file.
-- `klean doctor` and `klean data status` say "SYNTHETIC DEMO DATA".
+- `klean doctor` and `klean status data` say "SYNTHETIC DEMO DATA".
 - `klean backtest`, `optimize` and `compare` print a `*** SYNTHETIC DEMO DATA … ***` banner;
   each run's `manifest.json` has `"synthetic_demo_data": true`.
 - Reports are titled "… - SYNTHETIC DEMO DATA" and say so in the description.

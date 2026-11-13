@@ -57,7 +57,7 @@ def prepare(ws: Workspace) -> dict[str, str]:
     start = ws.launcher_dir / "start.py"
     if not (start.exists() and (ws.launcher_dir / "QuantConnect.Research.dll").exists()):
         raise KleanError(f"LEAN's research files aren't in {ws.launcher_dir}: rebuild LEAN "
-                         "(`klean lean update`)")
+                         "(`klean update lean`)")
     folder = research_dir(ws)
     startup = folder / "ipython" / "profile_default" / "startup"
     startup.mkdir(parents=True, exist_ok=True)

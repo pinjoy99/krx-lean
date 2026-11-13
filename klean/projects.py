@@ -1,4 +1,4 @@
-"""`klean project-create`: a Python or C# project folder in the LEAN CLI's layout, with the KRX
+"""`klean create project`: a Python or C# project folder in the LEAN CLI's layout, with the KRX
 models next to the algorithm."""
 
 from __future__ import annotations
@@ -246,7 +246,7 @@ def models_row(ws: Workspace) -> tuple[str, bool, str]:
     if not stale:
         return ("KRX models in projects", True, "all current")
     return ("KRX models in projects", True, f"note: {', '.join(stale)} differ from krx-lean's current models "
-            "(`klean models status`, `klean models update NAME`)")
+            "(`klean status models`, `klean update models NAME`)")
 
 
 def language_of(project: Path) -> str:

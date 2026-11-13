@@ -9,10 +9,10 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 |---|---|
 | `dotnet not found` | install the .NET 10 SDK and add `~/.dotnet` to `PATH` ([1. Install](1-install.md)) |
 | .NET: `Couldn't find a valid ICU package` | `sudo apt install -y libicu-dev` |
-| `no Python 3.11` | install uv, then `klean install-python` again |
-| `no shared libpython3.11` | use uv's Python (`klean install-python` without `--python`) |
+| `no Python 3.11` | install uv, then `klean install python` again |
+| `no shared libpython3.11` | use uv's Python (`klean install python` without `--python`) |
 | `no klean.json in … or its parents` | run inside the workspace, or `klean init` |
-| `no LEAN build in …` | `klean install-lean --dir ~/Lean`, or fix `lean_root` with `klean config set` |
+| `no LEAN build in …` | `klean install lean --dir ~/Lean`, or fix `lean_root` with `klean config set` |
 | `no Python environment in klean.json` | `klean config set python_venv ~/.klean/py311` |
 
 ## Data
@@ -28,20 +28,20 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `network error, stopping (re-run the same command to resume)` | a timeout or dropped connection: run the same command again; days already downloaded are kept |
 | `krx --sample` data can't run any template | expected: KRX's sample endpoint has no KOSPI 200 and only a few rotating stocks; use the [synthetic demo](demo.md) instead |
 | the latest trading day is missing | KRX publishes the next day; rerun later |
-| `klean data status` shows an old `last_date` | run `klean update` (or `klean data install --root ~/krx-data` after `krx-lean all`) |
-| `no data root known for this workspace` | `klean update --root ~/krx-data` once; it's remembered |
+| `klean status data` shows an old `last_date` | run `klean update data` (or `klean install data --root ~/krx-data` after `krx-lean all`) |
+| `no data root known for this workspace` | `klean update data --root ~/krx-data` once; it's remembered |
 
 ## Backtests
 
 | Message (in the output or console.txt) | Fix |
 |---|---|
 | `backtest FAILED …` | the algorithm stopped with an error, shown right after; fix it (or the data) and run again |
-| `no kospi200 index data at …` | the workspace has no KRX index data: `krx-lean --root ~/krx-data krx-index` (needs the KRX key), then `klean data install --root ~/krx-data`; or try the [demo](demo.md) |
+| `no kospi200 index data at …` | the workspace has no KRX index data: `krx-lean --root ~/krx-data krx-index` (needs the KRX key), then `klean install data --root ~/krx-data`; or try the [demo](demo.md) |
 | `doctor`: `KOSPI 200 index (benchmark)` NO | same as above |
 | `… holds SYNTHETIC demo data` / `… already has real KRX data` | demo and real data never share a workspace: use `~/krx-demo` for the demo and `~/krx-workspace` for real data |
-| `note: …/krx_models.py differs from krx-lean's current KRX models` | the project has an older (or edited) copy of the models: `klean models update NAME` ([6. Daily update](6-daily-update.md#after-updating-krx-lean-itself)) |
+| `note: …/krx_models.py differs from krx-lean's current KRX models` | the project has an older (or edited) copy of the models: `klean update models NAME` ([6. Daily update](6-daily-update.md#after-updating-krx-lean-itself)) |
 | `unexpected equity Market krx` | the strategy has no KRX fee model: keep `krx_initialize` / `KrxFeeModel` |
-| market hours not found for `Equity-krx` | `klean data install …` wasn't run in this workspace |
+| market hours not found for `Equity-krx` | `klean install data …` wasn't run in this workspace |
 | `No module named krx_models` | keep `krx_models.py` next to `main.py` |
 | `No module named …` (another package) | add it to the project's `requirements.txt` |
 | `expected one class deriving from QCAlgorithm` | keep exactly one algorithm class per project |
@@ -63,7 +63,7 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `this run failed, so there's nothing to report` | run the backtest successfully first |
 | `--pdf needs wkhtmltopdf or Chromium` | `sudo apt install -y wkhtmltopdf` (the HTML report is written anyway) |
 | report fails | read `report-console.txt` next to the report |
-| `klean research`: `LEAN's research files aren't in …` | rebuild LEAN: `klean lean update` |
+| `klean research`: `LEAN's research files aren't in …` | rebuild LEAN: `klean update lean` |
 | `klean research`: the notebook says `QuantBook` isn't defined | the kernel didn't load LEAN: start Jupyter with `klean research` (not plain `jupyter lab`); see `.klean/research/log.txt` |
 | `klean research`: `port … is already in use` | another Jupyter is running: stop it, or `--port` another number |
 | GUI: `403` | open the full URL klean printed (it has the token) |

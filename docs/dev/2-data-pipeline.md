@@ -116,7 +116,7 @@ volume.
 
 ## Synthetic demo data (`demo.py`)
 
-`krx-lean --root DIR demo` (or `klean data install --demo`) writes **made-up** raw files in the
+`krx-lean --root DIR demo` (or `klean install data --demo`) writes **made-up** raw files in the
 exact formats of the real downloads — `raw/krx/{KOSPI,ETF}/…`, `raw/krx_index/KOSPI/…` (index
 names 코스피 / 코스피 200, so the build writes `kospi` / `kospi200`), and a data.go.kr dividend
 snapshot — then runs the normal `build`. Content: 29 stocks `D00010`…`D00280` (one preferred,

@@ -65,7 +65,7 @@ same raw files and the same krx-lean commit give the same LEAN data, byte for by
 ## Release checklist
 
 1. CI is green on the release commit (unit suites, end-to-end on demo data).
-2. LEAN builds at `LEAN_COMMIT` from scratch (`klean install-lean` into an empty folder).
+2. LEAN builds at `LEAN_COMMIT` from scratch (`klean install lean` into an empty folder).
 3. On real data: parity check ([4. KRX models](4-krx-models.md#parity-check-c--python)) prints
    IDENTICAL; a report and a small optimization complete; `klean research PROJECT --execute`
    runs the starter notebook (and the demo workspace's).

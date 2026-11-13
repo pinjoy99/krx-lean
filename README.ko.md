@@ -25,8 +25,8 @@
 
 ```bash
 klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
-cd ~/krx-demo && klean data install --demo        # 가상 데모 데이터 (인증키 불필요)
-klean project-create Top20 --template top-market-cap
+cd ~/krx-demo && klean install data --demo        # 가상 데모 데이터 (인증키 불필요)
+klean create project Top20 --template top-market-cap
 klean backtest Top20                               # 슬리피지는 기본 꺼짐: --parameter slippage_ticks 1 로 켭니다
 klean report Top20
 klean gui
@@ -34,7 +34,7 @@ klean research Top20
 ```
 
 실제 데이터: [KRX Open API](https://openapi.krx.co.kr/)(시세)와 [공공데이터포털](https://www.data.go.kr/)(배당)의
-무료 인증키를 받은 뒤 `krx-lean --root ~/krx-data all`로 내려받고, 이후에는 워크스페이스에서 `klean update`로 갱신합니다.
+무료 인증키를 받은 뒤 `krx-lean --root ~/krx-data all`로 내려받고, 이후에는 워크스페이스에서 `klean update data`로 갱신합니다. `klean update all`은 krx-lean, (필요하면) LEAN, 데이터를 한 번에 갱신합니다.
 
 ## 문서
 

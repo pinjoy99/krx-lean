@@ -6,21 +6,21 @@ into the workspace:
 
 ```bash
 cd ~/krx-workspace
-klean update                      # prints the new date range when done
+klean update data            # prints the new date range when done
 ```
 
-`klean update` does the whole routine: it reads your keys from `~/.config/krx-lean.env` (if
+`klean update data` does the whole routine: it reads your keys from `~/.config/krx-lean.env` (if
 they aren't already in the environment; another file with `--env-file`), runs
 `krx-lean --root <data root> all`, and installs the result into the workspace. It uses the data
-root you last installed from (`klean data install --root ~/krx-data`); name it once with
-`klean update --root ~/krx-data` if the workspace was set up another way. If the download stops
+root you last installed from (`klean install data --root ~/krx-data`); name it once with
+`klean update data --root ~/krx-data` if the workspace was set up another way. If the download stops
 early (network, quota), run it again. The same by hand:
 
 ```bash
 set -a; . ~/.config/krx-lean.env; set +a
 krx-lean --root ~/krx-data all
-cd ~/krx-workspace && klean data install --root ~/krx-data
-klean data status                 # last_date should be the latest trading day
+cd ~/krx-workspace && klean install data --root ~/krx-data
+klean status data            # last_date should be the latest trading day
 ```
 
 Installing data adds and replaces files; it never deletes your projects or results. Only files
@@ -36,7 +36,7 @@ Save as `~/bin/krx-update` and `chmod +x` it:
 #!/usr/bin/env bash
 set -euo pipefail
 export PATH="$HOME/.krx-lean/venv/bin:$HOME/.dotnet:$PATH"
-cd "$HOME/krx-workspace" && klean update
+cd "$HOME/krx-workspace" && klean update data
 ```
 
 ### Linux: cron
@@ -62,15 +62,23 @@ Windows Task Scheduler task that runs `wsl.exe -d Ubuntu-24.04 -- bash -lc ~/bin
 
 ## After updating krx-lean itself
 
-`git -C ~/krx-lean pull` updates the tools, but each project keeps the copy of the KRX models
+```bash
+cd ~/krx-workspace
+klean update klean           # git pull of your krx-lean clone (~/krx-lean)
+klean update all             # the same, then LEAN (only if krx-lean now uses another commit),
+                             # then the data, then a check of the projects' models
+```
+
+`klean update all` never touches your projects; it only reports which ones have an older copy
+of the models. Each project keeps the copy of the KRX models
 (`krx_models.py` / `KrxModels.cs`) it was created with, including its tax rates and tick tables.
 `klean backtest` and `klean doctor` tell you when a project's copy differs from the current
 models:
 
 ```bash
-klean models status               # current / differs, per project
-klean models update Top20         # replace the copy (yours is kept as krx_models.py.bak)
-klean models update --all
+klean status models          # current / differs, per project
+klean update models Top20    # replace the copy (yours is kept as krx_models.py.bak)
+klean update models --all
 ```
 
 If you edited the models yourself, "differs" is expected; update only if you want krx-lean's

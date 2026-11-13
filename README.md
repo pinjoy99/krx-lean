@@ -42,26 +42,30 @@ fresh computer to your first backtest and notebook in under an hour.
 
 ## Quick look
 
-No keys yet? `klean data install --demo` installs **synthetic** demo data (made-up prices,
+No keys yet? `klean install data --demo` installs **synthetic** demo data (made-up prices,
 clearly marked) so you can try everything first: [Try it without keys](docs/user/demo.md).
 
 ```bash
 krx-lean --root ~/krx-data all                 # download KRX prices + dividends, build LEAN data
 klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
-cd ~/krx-workspace && klean data install --root ~/krx-data
-klean project-create Top20 --template top-market-cap
+cd ~/krx-workspace && klean install data --root ~/krx-data
+klean create project Top20 --template top-market-cap
 klean backtest Top20
 klean report Top20
 klean gui
 klean research Top20                           # Jupyter notebook with LEAN's QuantBook
+klean update all                               # later: new krx-lean, LEAN if needed, new KRX days
 ```
+
+Commands read `klean <verb> <noun>` (`klean install lean`, `klean update data`, `klean status all`, …);
+`klean --help` lists them.
 
 ## What you need
 
 - Linux or WSL2, about 5 GB of disk (LEAN build ~1 GB, data ~1 GB for 2010 onward, the Python
   3.11 environment ~0.5 GB with the notebook packages).
 - git, Python 3.10+ for the tools, the .NET 10 SDK, and Python 3.11 for LEAN's Python
-  strategies (installed for you by `klean install-python` via [uv](https://docs.astral.sh/uv/)).
+  strategies (installed for you by `klean install python` via [uv](https://docs.astral.sh/uv/)).
 - Free API keys: [KRX Open API](https://openapi.krx.co.kr/) (prices) and
   [data.go.kr](https://www.data.go.kr/) (dividends). See [2. Keys and data](docs/user/2-data.md).
 

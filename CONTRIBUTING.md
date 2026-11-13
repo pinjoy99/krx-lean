@@ -14,7 +14,7 @@ Open an [issue](https://github.com/pinjoy99/krx-lean/issues/new/choose) and incl
 **Never paste API keys.** krx-lean hides keys in its own messages, but check anything you copy
 from a terminal or a log for `KRX_API_KEY`, `DATA_GO_KR_KEY` or `serviceKey=` values first.
 Don't attach market data either: it can't be redistributed. If a problem needs data to
-reproduce, try it on the synthetic demo data (`klean data install --demo`) or name the stock
+reproduce, try it on the synthetic demo data (`klean install data --demo`) or name the stock
 code and date.
 
 Security problems: see [SECURITY.md](SECURITY.md), not a public issue.

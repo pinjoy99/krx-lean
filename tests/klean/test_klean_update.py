@@ -107,7 +107,7 @@ class UpdateTest(unittest.TestCase):
         with mock.patch("krx_lean.cli.main", lambda argv: calls.append(argv) or 1), self.assertLogs(level="INFO"):
             code, out = quiet(cli.cmd_update, self.args())     # root remembered; download stopped early
         self.assertEqual(code, 1)
-        self.assertIn("run `klean update` again", out)
+        self.assertIn("run `klean update data` again", out)
 
     def test_update_refuses_demo_workspaces_and_explains_missing_keys(self):
         with mock.patch("krx_lean.cli.main", side_effect=SystemExit("KRX_API_KEY is not set")):

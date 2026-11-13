@@ -5,9 +5,9 @@
 ```bash
 klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace
-klean data install --root ~/krx-data      # LEAN data + KRX market hours and symbol properties
+klean install data --root ~/krx-data      # LEAN data + KRX market hours and symbol properties
 klean doctor                              # every line should say OK (incl. the KOSPI 200 index)
-klean data status                         # date range, securities, indices
+klean status data                         # date range, securities, indices
 ```
 
 A workspace is a folder with `klean.json` (settings) and `data/` (LEAN's data folder for this
@@ -30,14 +30,14 @@ krx-workspace/
 ## Create a project and run it
 
 ```bash
-klean project-create Top20 --template top-market-cap      # Python (default)
+klean create project Top20 --template top-market-cap      # Python (default)
 klean backtest Top20
 ```
 
 Templates: `buy-hold` (default: buys Samsung Electronics; another stock with
 `--parameter code 000660`), `top-market-cap` (the example
 strategy: the 20 largest KOSPI common stocks, equal weight, rebalanced monthly), `empty`.
-For C#: `klean project-create Top20CS --language csharp --template top-market-cap`.
+For C#: `klean create project Top20CS --language csharp --template top-market-cap`.
 
 What `backtest` does: checks (Python) or compiles (C#) the project, runs LEAN with the
 workspace's data, and prints the main statistics. If the algorithm fails (an exception in

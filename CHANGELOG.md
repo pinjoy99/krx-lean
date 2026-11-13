@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.10 — 2026-11-13
+
+- **Commands read `klean <verb> <noun>`:** `install lean | python | data`, `update data | lean |
+  models | klean | all`, `status data | lean | models | all`, `create project`, `delete project`.
+  `klean --help` groups them (setup, keeping up to date, projects and runs) and lists
+  `--timeout` / `--detach`.
+- New: **`klean update klean`** (git pull of the krx-lean clone; reinstalls if `pyproject.toml`
+  changed), **`klean update all`** (klean, then LEAN only if krx-lean now uses another commit,
+  then data, then a models check; the steps after the pull run with the new code) and
+  **`klean status all`**.
+- The 0.0.9 names (`install-lean`, `install-python`, `data install|status`, `project-create`,
+  `project-delete`, `lean status|update`, `models status|update`, bare `update`) still work but
+  are no longer listed in `--help`. All docs use the new names.
+
 ## 0.0.9 — 2026-11-11
 
 - **KOSDAQ** is in scope. `krx-lean all` / `klean update` also download KOSDAQ prices and the

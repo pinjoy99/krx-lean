@@ -202,8 +202,8 @@ source ~/.bashrc</code></pre></div>
         <div class="code"><pre><code>git clone https://github.com/pinjoy99/krx-lean.git ~/krx-lean
 python3 -m venv ~/.krx-lean/venv
 ~/.krx-lean/venv/bin/pip install -e ~/krx-lean
-klean install-lean --dir ~/Lean              <span class="c"># downloads and builds LEAN (2–10 min)</span>
-klean install-python --dir ~/.klean/py311    <span class="c"># Python 3.11 + pandas for LEAN</span></code></pre></div>
+klean install lean --dir ~/Lean              <span class="c"># downloads and builds LEAN (2–10 min)</span>
+klean install python --dir ~/.klean/py311    <span class="c"># Python 3.11 + pandas for LEAN</span></code></pre></div>
         <p>Check: <code>klean --version</code> prints a version number. Warnings during the LEAN build are normal.</p>
       </div>
     </div>
@@ -217,7 +217,7 @@ klean install-python --dir ~/.klean/py311    <span class="c"># Python 3.11 + pan
           learn everything before your API key arrives.</p>
         <div class="code"><pre><code>klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-demo
-klean data install --demo
+klean install data --demo
 klean doctor                   <span class="c"># every line should say OK</span></code></pre></div>
         <div class="note warn">The demo data is <strong>not real</strong>: its companies (codes <code>D00010</code>…)
           don't exist, and klean labels every result "SYNTHETIC DEMO DATA". It's for learning the tools, not for
@@ -231,7 +231,7 @@ klean doctor                   <span class="c"># every line should say OK</span>
         <h3>Run your first backtest <span class="time">2 min</span></h3>
         <p>Create a project from the ready-made example (buy the 20 largest stocks, equal weights, rebalance every
           month) and run it over 2011–2026:</p>
-        <div class="code"><pre><code>klean project-create Top20 --template top-market-cap
+        <div class="code"><pre><code>klean create project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>After a minute or two you'll see statistics like the yearly return (CAGR), the worst fall (drawdown) and
           the final value. Then look at it properly:</p>
@@ -335,11 +335,11 @@ krx-lean --root ~/krx-data all</code></pre></div>
         <h3>A workspace for real data</h3>
         <div class="code"><pre><code>klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace
-klean data install --root ~/krx-data
-klean project-create Top20 --template top-market-cap
+klean install data --root ~/krx-data
+klean create project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>Keep the demo and real workspaces separate (klean won't mix them). To get new days later, run
-          <code>klean update</code> in the workspace.</p>
+          <code>klean update data</code> in the workspace.</p>
       </div>
     </div>
   </div>
@@ -351,7 +351,7 @@ klean backtest Top20</code></pre></div>
     <p class="sub">A strategy is a small Python program. Create an empty project and replace its <code>main.py</code>
       with this one, which keeps two stocks at about half each and rebalances every month (try ideas in the
       project's notebook first: <code>klean research MyFirst</code>):</p>
-    <div class="code"><pre><code>klean project-create MyFirst --template empty
+    <div class="code"><pre><code>klean create project MyFirst --template empty
 nano MyFirst/main.py</code></pre></div>
     <div class="code"><pre><code>from AlgorithmImports import *
 from krx_models import KrxBoards, krx_benchmark, krx_initialize

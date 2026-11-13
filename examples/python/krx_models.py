@@ -183,8 +183,8 @@ def load_index(ticker: str, data_folder: str = None) -> tuple:
     if not os.path.exists(path):
         raise FileNotFoundError(
             f"no {ticker} index data at {path}. KRX index files come from `krx-lean krx-index` "
-            "(needs a KRX Open API key), then `klean data install --root <data>`; "
-            "to try klean without keys, use a new workspace with `klean data install --demo`.")
+            "(needs a KRX Open API key), then `klean install data --root <data>`; "
+            "to try klean without keys, use a new workspace with `klean install data --demo`.")
     dates, closes = [], []
     with zipfile.ZipFile(path) as z:
         for line in z.read(z.namelist()[0]).decode().splitlines():

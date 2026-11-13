@@ -22,7 +22,7 @@ benchmark. While you wait, you can try everything on [synthetic demo data](demo.
    | 주식 | 코스닥 종목기본정보 | KOSDAQ ISIN, listing date, share class (optional) |
 
    KOSDAQ is optional: without its services everything works for KOSPI and ETFs, and
-   `krx-lean all` says `KOSDAQ … skipped`. Approve them later and run `klean update` again to
+   `krx-lean all` says `KOSDAQ … skipped`. Approve them later and run `klean update data` again to
    add KOSDAQ.
 
 4. Approval usually takes up to a day (**마이페이지 → 이용현황**).

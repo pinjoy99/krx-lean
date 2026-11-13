@@ -16,7 +16,7 @@ dotnet build Launcher/QuantConnect.Lean.Launcher.csproj -c Release     # ~2 min,
 dotnet build Report/QuantConnect.Report.csproj -c Release              # only for reports
 ```
 
-`klean install-lean` does the same with a shallow fetch of that commit. Output:
+`klean install lean` does the same with a shallow fetch of that commit. Output:
 `Launcher/bin/Release/` (launcher, engine, LEAN's own example algorithm DLLs, and the research
 parts: `QuantConnect.Research.dll`, `start.py`), `Report/bin/Release/`.
 
@@ -29,7 +29,7 @@ export PYTHONNET_PYDLL=<path to libpython3.11.so>
 export PYTHONPATH=<venv>/lib/python3.11/site-packages
 ```
 
-`klean install-python` creates the venv from uv's CPython 3.11 (python-build-standalone, built
+`klean install python` creates the venv from uv's CPython 3.11 (python-build-standalone, built
 with `--enable-shared`, ships `lib/libpython3.11.so`) and records the library path
 (`find_python_dll` in `klean/workspace.py`). Any CPython 3.11 with a shared library works
 (Debian 12: `libpython3.11`; Ubuntu: deadsnakes PPA).
@@ -45,7 +45,7 @@ differ from Linux and matter for tests: temp folders sit behind a symlink (`/var
 
 ## Updating LEAN
 
-1. Build the new commit (`klean lean update --commit C`, which also rebuilds `Report` if it was
+1. Build the new commit (`klean update lean --commit C`, which also rebuilds `Report` if it was
    built).
 2. Rerun the reference backtests (top-market-cap in C# and Python) and `klean compare` them with
    runs on the previous commit.

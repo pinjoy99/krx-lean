@@ -1,4 +1,4 @@
-"""Backtest results: finding runs, run manifests, `klean compare`, `klean logs`, `klean data status`."""
+"""Backtest results: finding runs, run manifests, `klean compare`, `klean logs`, `klean status data`."""
 
 from __future__ import annotations
 

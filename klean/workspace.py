@@ -38,7 +38,7 @@ class Workspace:
     lean_root: str
     python_venv: str = ""
     python_dll: str = ""
-    # the krx-lean data root last installed with `klean data install --root` (used by `klean update`)
+    # the krx-lean data root last installed with `klean install data --root` (used by `klean update data`)
     data_root: str = ""
     # LEAN config keys applied to every backtest of this workspace (like the LEAN CLI's lean.json)
     lean_config: dict = field(default_factory=dict)
@@ -120,14 +120,14 @@ def check(ws: Workspace | None) -> list[tuple[str, bool, str]]:
         rows.append((f"data/{name}", (ws.data / name).is_dir(), str(ws.data / name)))
     mhdb = ws.data / "market-hours" / "market-hours-database.json"
     has_krx = mhdb.exists() and "Equity-krx-[*]" in mhdb.read_text(encoding="utf-8")
-    rows.append(("Equity-krx market hours", has_krx, "present" if has_krx else "run `klean data install`"))
+    rows.append(("Equity-krx market hours", has_krx, "present" if has_krx else "run `klean install data`"))
     n = len(list((ws.data / "equity" / "krx" / "daily").glob("*.zip")))
     demo = (ws.data / "equity" / "krx" / "SYNTHETIC-DEMO-DATA.txt").exists()
     rows.append(("KRX daily data", n > 0, f"{n} securities" + (" (SYNTHETIC DEMO DATA, not real)" if demo else "")))
     k200 = ws.data / "index" / "krx" / "daily" / "kospi200.zip"
     rows.append(("KOSPI 200 index (benchmark)", k200.exists(),
                  str(k200) if k200.exists() else "missing: every template uses it; `krx-lean krx-index` "
-                 "(needs a KRX key) + `klean data install`, or try `klean data install --demo` in a new workspace"))
+                 "(needs a KRX key) + `klean install data`, or try `klean install data --demo` in a new workspace"))
     if ws.python_venv:
         py = venv_python(ws.python_venv)
         ok = py.exists() and subprocess.run([str(py), "-c", "import sys, pandas, numpy; "
@@ -135,7 +135,7 @@ def check(ws: Workspace | None) -> list[tuple[str, bool, str]]:
         rows.append(("Python 3.11 env (pandas, numpy)", ok, ws.python_venv))
         rows.append(("libpython3.11", bool(ws.python_dll) and Path(ws.python_dll).exists(), ws.python_dll or "not set"))
     else:
-        rows.append(("Python env", False, "not set (only needed for Python projects; `klean install-python`)"))
+        rows.append(("Python env", False, "not set (only needed for Python projects; `klean install python`)"))
     return rows
 
 

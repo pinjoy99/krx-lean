@@ -1,23 +1,30 @@
-"""klean: `klean <command>` (or `python -m klean <command>`).
+"""klean: `klean <command> [<noun>] [args]` (or `python -m klean ...`).
 
-    klean install-lean  [--dir ~/Lean]                  clone LEAN (tested commit) and build it
-    klean install-python [--dir ~/.klean/py311]         Python 3.11 env with pandas/numpy for LEAN
+Setup
+    klean install lean   [--dir ~/Lean]                 clone LEAN (tested commit) and build it
+    klean install python [--dir ~/.klean/py311]         Python 3.11 env with pandas/numpy for LEAN
     klean init [DIR] --lean ~/Lean [--python-venv ...]  workspace: klean.json + data/ (LEAN config files)
-    klean data install lean.zip | --root DATA_ROOT | --demo   KRX data (or SYNTHETIC demo data) into data/
-    klean data status                                   KRX data range, securities, indices
-    klean project-create NAME [--language] [--template] project with the KRX models next to it
-    klean project-delete NAME                           delete a project and its backtests
-    klean backtest NAME [--parameter K V] [--extra-config K V] [--backtest-name N] [--output DIR]
+    klean install data lean.zip | --root DATA_ROOT | --demo   KRX data (or SYNTHETIC demo data) into data/
+
+Keeping up to date
+    klean update data [--root DATA_ROOT]                download new days, rebuild, install into the workspace
+    klean update lean [--commit C]                      rebuild LEAN at the tested (or another) commit
+    klean update models NAME... | --all                 refresh projects' copies of the KRX models (.bak kept)
+    klean update klean                                  git pull the krx-lean clone
+    klean update all                                    klean, then LEAN if needed, then data; checks models
+    klean status data | lean | models | all             what's installed
+    klean doctor                                        check the setup
+
+Projects and runs
+    klean create project NAME [--language] [--template] project with the KRX models next to it
+    klean delete project NAME [--yes]                   delete a project and its backtests
+    klean backtest NAME [--parameter K V] [--backtest-name N] [--timeout S] [--detach]
     klean optimize NAME --parameter P MIN MAX STEP [...] [--target T] [--constraint "Drawdown < 25"]
     klean report [RUN] [--report-destination F] [--pdf]  LEAN's HTML report for a run (default: latest)
     klean research NAME [--port N] [--no-browser]       JupyterLab with LEAN's QuantBook on the workspace's data
     klean logs NAME|RUN [--console] [--tail N]          a run's algorithm log (or LEAN's console output)
     klean compare RUN RUN [...] [--all]                 statistics and equity curves side by side
     klean config list | get KEY | set KEY VALUE | unset KEY
-    klean lean status | update [--commit C]             the LEAN build used by the workspace
-    klean update [--root DATA_ROOT]                     download new days, rebuild, install into the workspace
-    klean models status | update NAME... | update --all the projects' copies of the KRX models
-    klean doctor                                        check the setup
     klean gui [--port N] [--no-browser]                 local web page: projects, runs, charts, compare
 """
 
@@ -118,7 +125,7 @@ def cmd_init(args) -> None:
     if args.data_zip:
         install_data(ws, zip_path=Path(args.data_zip))
     else:
-        print("Next: klean data install lean.zip")
+        print("Next: klean install data lean.zip")
 
 
 def install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None = None) -> None:
@@ -140,7 +147,7 @@ def install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None 
         lean_install.install(ws.root, ws.data, config_only=True)
     else:
         lean_install.install(root, ws.data)
-        ws.data_root = str(root.resolve())       # `klean update` uses it
+        ws.data_root = str(root.resolve())       # `klean update data` uses it
         ws.save()
 
 
@@ -205,7 +212,7 @@ def cmd_data_status(args) -> None:
     for name, rng in st["indices"].items():
         print(f"  index {name:13} {rng['first']} → {rng['last']}")
     mh = st.get("market_hours", {})
-    print(f"  Equity-krx hours    {'installed, ' + str(mh['holidays']) + ' holidays' if mh.get('installed') else 'MISSING: run klean data install'}")
+    print(f"  Equity-krx hours    {'installed, ' + str(mh['holidays']) + ' holidays' if mh.get('installed') else 'MISSING: run klean install data'}")
 
 
 def cmd_project_create(args) -> None:
@@ -286,7 +293,7 @@ def cmd_research(args) -> int:
         ws = Workspace.load(Path.cwd())
         project = ws.root / project
     if not project.is_dir():
-        raise KleanError(f"no project {project}: create it with `klean project-create`")
+        raise KleanError(f"no project {project}: create it with `klean create project`")
     project = project.resolve()
     if args.execute:
         out = research.execute(ws, project, args.execute, timeout=args.timeout)
@@ -427,7 +434,7 @@ def cmd_backtest(args) -> int:
     if project.is_dir() and projects.models_state(project) == "differs":
         copy, _ = projects.models_copy(project)
         print(f"note: {project.name}/{copy.name} differs from krx-lean's current KRX models (older tax/tick "
-              f"rules, or your own edits). `klean models update {project.name}` replaces it.", flush=True)
+              f"rules, or your own edits). `klean update models {project.name}` replaces it.", flush=True)
     result = backtest(ws, project, dict(args.parameter or []), extra_config=dict(args.extra_config or []),
                       output=Path(args.output) if args.output else None, backtest_name=args.backtest_name or "",
                       build_config=args.build_config, timeout=args.timeout)
@@ -484,13 +491,13 @@ def load_env_file(path: Path) -> list[str]:
 
 
 def cmd_update(args) -> int:
-    """The daily routine in one command: `krx-lean --root R all`, then `klean data install --root R`."""
+    """The daily routine in one command: `krx-lean --root R all`, then `klean install data --root R`."""
     ws = Workspace.load(Path.cwd())
     if results.is_demo_data(ws):
         raise KleanError(f"{ws.root} holds SYNTHETIC demo data: nothing to update (real data goes in its own workspace)")
     root = Path(args.root).expanduser() if args.root else Path(ws.data_root) if ws.data_root else None
     if root is None:
-        raise KleanError("no data root known for this workspace: `klean update --root ~/krx-data` "
+        raise KleanError("no data root known for this workspace: `klean update data --root ~/krx-data` "
                          "(remembered afterwards)")
     env_file = Path(args.env_file).expanduser()
     if env_file.is_file():
@@ -511,7 +518,7 @@ def cmd_update(args) -> int:
     st = results.data_status(ws)
     print(f"klean: workspace data now {st.get('first_date', '?')} → {st.get('last_date', '?')}, "
           f"{st['securities']} securities" + ("" if code == 0 else
-          "  (the download stopped early: run `klean update` again to continue)"))
+          "  (the download stopped early: run `klean update data` again to continue)"))
     return code
 
 
@@ -523,7 +530,7 @@ def cmd_models(args) -> int:
         print(results.format_table(["project", "language", "file", "KRX models"], rows) if rows else "no projects")
         if any(r[3] == "differs" for r in rows):
             print("\n'differs': krx-lean's models changed after the project was created (tax rates, tick sizes, "
-                  "fixes), or you edited the copy.\n`klean models update NAME` replaces it and keeps yours as *.bak.")
+                  "fixes), or you edited the copy.\n`klean update models NAME` replaces it and keeps yours as *.bak.")
         return 0
     names = [p.name for p in projects.list_projects(ws)] if args.all else args.names
     if not names:
@@ -552,56 +559,173 @@ def cmd_doctor(args) -> int:
     return 0 if all(ok for item, ok, _ in rows if not item.startswith("Python env")) else 1
 
 
+def cmd_update_klean(args) -> int:
+    """`git pull` the krx-lean clone klean runs from (an editable install)."""
+    if not (REPO_ROOT / ".git").exists():
+        raise KleanError(f"klean isn't running from a git clone ({REPO_ROOT}): update it the way you installed it")
+    before = git_commit(REPO_ROOT)
+    pyproject = (REPO_ROOT / "pyproject.toml").read_bytes() if (REPO_ROOT / "pyproject.toml").exists() else b""
+    run(["git", "-C", str(REPO_ROOT), "pull", "--ff-only", "-q"])
+    after = git_commit(REPO_ROOT)
+    if before == after:
+        print(f"krx-lean {REPO_ROOT}: already up to date ({after[:7]})")
+        return 0
+    if (REPO_ROOT / "pyproject.toml").exists() and (REPO_ROOT / "pyproject.toml").read_bytes() != pyproject:
+        run([sys.executable, "-m", "pip", "install", "-q", "-e", str(REPO_ROOT)])     # new dependencies
+    print(f"krx-lean {REPO_ROOT}: {before[:7]} -> {after[:7]} (see CHANGELOG.md)")
+    return 0
+
+
+def cmd_update_all(args) -> int:
+    """klean (git pull), then LEAN (only if not at the tested commit), data, and a models check.
+    The steps after the pull run in a fresh process so they use the new code."""
+    Workspace.load(Path.cwd())                      # fail early outside a workspace
+    if not args.after_pull:
+        print("== klean", flush=True)
+        cmd_update_klean(args)
+        cmd = [sys.executable, "-m", "klean", "update", "all", "--after-pull", "--env-file", args.env_file]
+        if args.root:
+            cmd += ["--root", args.root]
+        return subprocess.run(cmd).returncode
+    ws = Workspace.load(Path.cwd())
+    print("\n== LEAN", flush=True)
+    if git_commit(Path(ws.lean_root)).startswith(LEAN_COMMIT) and (ws.launcher_dir / "QuantConnect.Lean.Launcher.dll").exists():
+        print(f"LEAN {ws.lean_root}: already at the tested commit {LEAN_COMMIT[:7]}")
+    else:
+        args.lean_cmd, args.commit = "update", LEAN_COMMIT
+        cmd_lean(args)
+    print("\n== data", flush=True)
+    code = 0
+    if results.is_demo_data(ws):
+        print(f"{ws.root} holds SYNTHETIC demo data: skipped")
+    elif not (args.root or ws.data_root):
+        print("no data root known for this workspace: skipped (`klean update data --root ~/krx-data` once)")
+    else:
+        code = cmd_update(args)
+    print("\n== models", flush=True)
+    args.models_cmd = "status"
+    cmd_models(args)
+    return code
+
+
+def cmd_status_all(args) -> int:
+    print("== LEAN")
+    args.lean_cmd = "status"
+    cmd_lean(args)
+    print("\n== data")
+    args.json = False
+    cmd_data_status(args)
+    print("\n== models")
+    args.models_cmd = "status"
+    return cmd_models(args)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="klean", description="Local LEAN workflow for KRX data on a LEAN source "
                                 "build: no Docker, no QuantConnect account.",
                                 epilog=__doc__.split("\n\n", 1)[1] if __doc__ else None,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--version", action="version", version=f"klean {__version__}")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd", required=True, metavar="<command>")
 
-    s = sub.add_parser("install-lean", help="clone LEAN at the tested commit and build it (needs git, .NET 10)")
-    s.add_argument("--dir", default="~/Lean")
-    s.add_argument("--commit", default=LEAN_COMMIT)
-    s.set_defaults(func=cmd_install_lean)
+    # The pieces shared by the `<verb> <noun>` commands and the old names kept as hidden aliases
+    # (install-lean, install-python, data install|status, project-create|-delete, lean status|update,
+    # update, models status|update), so scripts written for klean <= 0.0.9 keep working.
+    def install_lean_args(s):
+        s.add_argument("--dir", default="~/Lean")
+        s.add_argument("--commit", default=LEAN_COMMIT)
+        s.set_defaults(func=cmd_install_lean)
 
-    s = sub.add_parser("install-python", help="create a Python 3.11 environment with pandas/numpy for LEAN")
-    s.add_argument("--dir", default="~/.klean/py311")
-    s.add_argument("--python", help="a CPython 3.11 with a shared libpython (default: uv's 3.11, else python3.11)")
-    s.add_argument("--package", action="append", default=[], help="extra pip package (repeatable)")
-    s.set_defaults(func=cmd_install_python)
+    def install_python_args(s):
+        s.add_argument("--dir", default="~/.klean/py311")
+        s.add_argument("--python", help="a CPython 3.11 with a shared libpython (default: uv's 3.11, else python3.11)")
+        s.add_argument("--package", action="append", default=[], help="extra pip package (repeatable)")
+        s.set_defaults(func=cmd_install_python)
+
+    def install_data_args(s):
+        s.add_argument("zip", nargs="?")
+        s.add_argument("--root", help="krx-lean data root with lean/ (instead of a zip)")
+        s.add_argument("--demo", action="store_true",
+                       help="SYNTHETIC demo data (made-up prices) to try klean without API keys; use its own workspace")
+        s.set_defaults(func=cmd_data_install)
+
+    def update_data_args(s, func=cmd_update):
+        s.add_argument("--root", help="krx-lean data root (default: the one last installed here)")
+        s.add_argument("--env-file", default="~/.config/krx-lean.env",
+                       help="file with KRX_API_KEY=... / DATA_GO_KR_KEY=... lines, used for keys not already "
+                            "in the environment (default: ~/.config/krx-lean.env)")
+        s.set_defaults(func=func)
+
+    def update_lean_args(s):
+        s.add_argument("--commit", default=LEAN_COMMIT, help="default: the commit krx-lean was tested with")
+        s.set_defaults(func=cmd_lean, lean_cmd="update")
+
+    def update_models_args(s):
+        s.add_argument("names", nargs="*")
+        s.add_argument("--all", action="store_true")
+        s.set_defaults(func=cmd_models, models_cmd="update")
+
+    def status_data_args(s):
+        s.add_argument("--json", action="store_true")
+        s.set_defaults(func=cmd_data_status)
+
+    def create_project_args(s):
+        s.add_argument("name")
+        s.add_argument("--language", choices=["python", "csharp"], default="python")
+        s.add_argument("--template", choices=projects.TEMPLATES, default="buy-hold",
+                       help="buy-hold (default), top-market-cap (the example strategy) or empty")
+        s.set_defaults(func=cmd_project_create)
+
+    def delete_project_args(s):
+        s.add_argument("name")
+        s.add_argument("--yes", action="store_true", help="don't ask for confirmation")
+        s.set_defaults(func=cmd_project_delete)
+
+    s = sub.add_parser("install", help="install lean | python | data")
+    nsub = s.add_subparsers(dest="noun", required=True, metavar="<noun>")
+    install_lean_args(nsub.add_parser("lean", help="clone LEAN at the tested commit and build it (needs git, .NET 10)"))
+    install_python_args(nsub.add_parser("python", help="create a Python 3.11 environment with pandas/numpy for LEAN"))
+    install_data_args(nsub.add_parser("data", help="unzip lean.zip into data/ (or copy from a krx-lean data root, "
+                                                   "or --demo) + KRX config"))
 
     s = sub.add_parser("init", help="create a workspace (klean.json + data/)")
     s.add_argument("dir", nargs="?", default=".")
-    s.add_argument("--lean", required=True, help="the LEAN clone built with `klean install-lean`")
-    s.add_argument("--python-venv", help="Python 3.11 env (from `klean install-python`) for Python projects")
+    s.add_argument("--lean", required=True, help="the LEAN clone built with `klean install lean`")
+    s.add_argument("--python-venv", help="Python 3.11 env (from `klean install python`) for Python projects")
     s.add_argument("--data-zip", help="also install this lean.zip")
     s.add_argument("--sample-data", action="store_true", help="also copy LEAN's sample data (US equities etc.)")
     s.set_defaults(func=cmd_init)
 
-    s = sub.add_parser("data", help="KRX data")
-    dsub = s.add_subparsers(dest="data_cmd", required=True)
-    d = dsub.add_parser("install", help="unzip lean.zip into data/ (or copy from a krx-lean data root) + KRX config")
-    d.add_argument("zip", nargs="?")
-    d.add_argument("--root", help="krx-lean data root with lean/ (instead of a zip)")
-    d.add_argument("--demo", action="store_true",
-                   help="SYNTHETIC demo data (made-up prices) to try klean without API keys; use its own workspace")
-    d.set_defaults(func=cmd_data_install)
-    d = dsub.add_parser("status", help="KRX data range, securities, universe files, indices, market hours")
-    d.add_argument("--json", action="store_true")
-    d.set_defaults(func=cmd_data_status)
+    s = sub.add_parser("update", help="update data | lean | models | klean | all")
+    nsub = s.add_subparsers(dest="noun", metavar="<noun>")
+    update_data_args(nsub.add_parser("data", help="download new KRX days, rebuild, and install into this workspace"))
+    update_lean_args(nsub.add_parser("lean", help="check out a LEAN commit (default: the tested one) and rebuild"))
+    update_models_args(nsub.add_parser("models", help="replace projects' copies of the KRX models with the current "
+                                                      "ones (old copy kept as .bak)"))
+    nsub.add_parser("klean", help="git pull the krx-lean clone klean runs from").set_defaults(func=cmd_update_klean)
+    u = nsub.add_parser("all", help="klean, then LEAN (if not at the tested commit), then data; checks the models")
+    update_data_args(u, func=cmd_update_all)
+    u.add_argument("--after-pull", action="store_true", help=argparse.SUPPRESS)
+    # `klean update data [--root R]` alone: the 0.0.9 command, = `klean update data` (options hidden from --help)
+    s.add_argument("--root", help=argparse.SUPPRESS)
+    s.add_argument("--env-file", default="~/.config/krx-lean.env", help=argparse.SUPPRESS)
+    s.set_defaults(func=cmd_update)
 
-    s = sub.add_parser("project-create", help="create a project with the KRX models")
-    s.add_argument("name")
-    s.add_argument("--language", choices=["python", "csharp"], default="python")
-    s.add_argument("--template", choices=projects.TEMPLATES, default="buy-hold",
-                   help="buy-hold (default), top-market-cap (the example strategy) or empty")
-    s.set_defaults(func=cmd_project_create)
+    s = sub.add_parser("status", help="status data | lean | models | all")
+    nsub = s.add_subparsers(dest="noun", required=True, metavar="<noun>")
+    status_data_args(nsub.add_parser("data", help="KRX data range, securities, universe files, indices, market hours"))
+    nsub.add_parser("lean", help="LEAN commit and build state").set_defaults(func=cmd_lean, lean_cmd="status")
+    nsub.add_parser("models", help="which projects have krx-lean's current KRX models").set_defaults(
+        func=cmd_models, models_cmd="status")
+    nsub.add_parser("all", help="all three").set_defaults(func=cmd_status_all)
 
-    s = sub.add_parser("project-delete", help="delete a project folder and its backtests")
-    s.add_argument("name")
-    s.add_argument("--yes", action="store_true", help="don't ask for confirmation")
-    s.set_defaults(func=cmd_project_delete)
+    s = sub.add_parser("create", help="create project")
+    nsub = s.add_subparsers(dest="noun", required=True, metavar="<noun>")
+    create_project_args(nsub.add_parser("project", help="create a project with the KRX models"))
+
+    s = sub.add_parser("delete", help="delete project")
+    nsub = s.add_subparsers(dest="noun", required=True, metavar="<noun>")
+    delete_project_args(nsub.add_parser("project", help="delete a project folder and its backtests"))
 
     s = sub.add_parser("backtest", help="run a backtest; results in <project>/backtests/<timestamp>/")
     s.add_argument("project")
@@ -681,28 +805,6 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("key")
     c.set_defaults(func=cmd_config)
 
-    s = sub.add_parser("lean", help="the LEAN build used by this workspace")
-    lsub = s.add_subparsers(dest="lean_cmd", required=True)
-    lsub.add_parser("status", help="commit and build state").set_defaults(func=cmd_lean)
-    u = lsub.add_parser("update", help="check out another LEAN commit and rebuild")
-    u.add_argument("--commit", default=LEAN_COMMIT, help="default: the commit krx-lean was tested with")
-    u.set_defaults(func=cmd_lean)
-
-    s = sub.add_parser("update", help="download new KRX days, rebuild, and install into this workspace")
-    s.add_argument("--root", help="krx-lean data root (default: the one last installed here)")
-    s.add_argument("--env-file", default="~/.config/krx-lean.env",
-                   help="file with KRX_API_KEY=... / DATA_GO_KR_KEY=... lines, used for keys not already "
-                        "in the environment (default: ~/.config/krx-lean.env)")
-    s.set_defaults(func=cmd_update)
-
-    s = sub.add_parser("models", help="the projects' copies of the KRX models (krx_models.py / KrxModels.cs)")
-    msub = s.add_subparsers(dest="models_cmd", required=True)
-    msub.add_parser("status", help="which projects have krx-lean's current models").set_defaults(func=cmd_models)
-    m = msub.add_parser("update", help="replace a project's copy with the current models (old copy kept as .bak)")
-    m.add_argument("names", nargs="*")
-    m.add_argument("--all", action="store_true")
-    m.set_defaults(func=cmd_models)
-
     s = sub.add_parser("doctor", help="check dotnet, the LEAN build, data and the Python env")
     s.set_defaults(func=cmd_doctor)
 
@@ -710,6 +812,24 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--port", type=int, default=0, help="port (default: a free one)")
     s.add_argument("--no-browser", action="store_true", help="don't open the browser")
     s.set_defaults(func=cmd_gui)
+
+    # Hidden aliases: the klean <= 0.0.9 names (no help=, so --help doesn't list them).
+    install_lean_args(sub.add_parser("install-lean"))
+    install_python_args(sub.add_parser("install-python"))
+    s = sub.add_parser("data")
+    dsub = s.add_subparsers(dest="data_cmd", required=True)
+    install_data_args(dsub.add_parser("install"))
+    status_data_args(dsub.add_parser("status"))
+    create_project_args(sub.add_parser("project-create"))
+    delete_project_args(sub.add_parser("project-delete"))
+    s = sub.add_parser("lean")
+    lsub = s.add_subparsers(dest="lean_cmd", required=True)
+    lsub.add_parser("status").set_defaults(func=cmd_lean)
+    update_lean_args(lsub.add_parser("update"))
+    s = sub.add_parser("models")
+    msub = s.add_subparsers(dest="models_cmd", required=True)
+    msub.add_parser("status").set_defaults(func=cmd_models, models_cmd="status")
+    update_models_args(msub.add_parser("update"))
 
     args = p.parse_args(argv)
     try:

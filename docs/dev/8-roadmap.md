@@ -5,16 +5,16 @@
 | LEAN CLI | klean |
 |---|---|
 | `init`, `create-project`, `delete-project`, `config`, `backtest`, `optimize`, `report`, `logs`, `gui`, `research` | ✅ (`optimize`: grid only; `research`: Python notebooks only) |
-| `build` | `lean status` / `lean update` (no images) |
+| `build` | `status lean` / `update lean` (no images) |
 | `backtest --detach` | ✅ |
-| `library add/remove` | partly: `klean models status/update` keeps per-project copies current; a shared library later |
+| `library add/remove` | partly: `klean status models` / `update models` keeps per-project copies current; a shared library later |
 | `backtest --debug` | planned (C# attach, debugpy) |
 | `object-store` | later |
 | `live …` | not in scope for now |
 | `login`, `cloud …`, `data download`, `encrypt` | not applicable (QuantConnect services) |
 
-KRX-specific additions: `doctor`, `data install/status`, synthetic demo data
-(`data install --demo`), run manifest and code snapshot, failure detection from LEAN's run
+KRX-specific additions: `doctor`, `install data` / `status data`, synthetic demo data
+(`install data --demo`), run manifest and code snapshot, failure detection from LEAN's run
 status, `compare`; planned `check-models` (run the `CHECK` cases in both languages and compare).
 `research`: C# notebooks (.NET Interactive) later, if wanted.
 

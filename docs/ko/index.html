@@ -202,8 +202,8 @@ source ~/.bashrc</code></pre></div>
         <div class="code"><pre><code>git clone https://github.com/pinjoy99/krx-lean.git ~/krx-lean
 python3 -m venv ~/.krx-lean/venv
 ~/.krx-lean/venv/bin/pip install -e ~/krx-lean
-klean install-lean --dir ~/Lean              <span class="c"># LEAN 내려받기와 빌드 (2~10분)</span>
-klean install-python --dir ~/.klean/py311    <span class="c"># LEAN용 Python 3.11 + pandas</span></code></pre></div>
+klean install lean --dir ~/Lean              <span class="c"># LEAN 내려받기와 빌드 (2~10분)</span>
+klean install python --dir ~/.klean/py311    <span class="c"># LEAN용 Python 3.11 + pandas</span></code></pre></div>
         <p>확인: <code>klean --version</code>이 버전 번호를 출력합니다. LEAN 빌드 중 나오는 경고(warning)는 정상입니다.</p>
       </div>
     </div>
@@ -217,7 +217,7 @@ klean install-python --dir ~/.klean/py311    <span class="c"># LEAN용 Python 3.
           익힐 수 있습니다.</p>
         <div class="code"><pre><code>klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-demo
-klean data install --demo
+klean install data --demo
 klean doctor                   <span class="c"># 모든 줄이 OK여야 합니다</span></code></pre></div>
         <div class="note warn">데모 데이터는 <strong>실제 데이터가 아닙니다</strong>. 종목(코드 <code>D00010</code>…)은
           존재하지 않는 회사이며, klean은 모든 결과에 "SYNTHETIC DEMO DATA"라고 표시합니다. 도구를 배우기 위한
@@ -231,7 +231,7 @@ klean doctor                   <span class="c"># 모든 줄이 OK여야 합니�
         <h3>첫 백테스트 실행 <span class="time">2분</span></h3>
         <p>준비된 예제(시가총액 상위 20종목을 같은 비중으로 사서 매달 리밸런싱)로 프로젝트를 만들어 2011~2026년
           구간으로 실행합니다.</p>
-        <div class="code"><pre><code>klean project-create Top20 --template top-market-cap
+        <div class="code"><pre><code>klean create project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>1~2분 뒤 연평균 수익률(CAGR), 최대 낙폭(drawdown), 최종 자산 같은 통계가 나옵니다. 이어서 자세히 살펴봅니다.</p>
         <div class="code"><pre><code>klean report Top20      <span class="c"># 상세 HTML 리포트</span>
@@ -333,11 +333,11 @@ krx-lean --root ~/krx-data all</code></pre></div>
         <h3>실제 데이터용 워크스페이스</h3>
         <div class="code"><pre><code>klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace
-klean data install --root ~/krx-data
-klean project-create Top20 --template top-market-cap
+klean install data --root ~/krx-data
+klean create project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>데모와 실제 데이터의 워크스페이스는 따로 두세요(klean이 섞이지 않게 막습니다). 나중에 새 거래일을
-          받으려면 워크스페이스에서 <code>klean update</code>를 실행합니다.</p>
+          받으려면 워크스페이스에서 <code>klean update data</code>를 실행합니다.</p>
       </div>
     </div>
   </div>
@@ -349,7 +349,7 @@ klean backtest Top20</code></pre></div>
     <p class="sub">전략은 작은 Python 프로그램입니다. 빈 프로젝트를 만들고 <code>main.py</code>를 아래 내용으로
       바꾸세요. 두 종목을 절반씩 보유하며 매달 리밸런싱하는 전략입니다(아이디어는 먼저 프로젝트 노트북에서 시험해
       보세요: <code>klean research MyFirst</code>).</p>
-    <div class="code"><pre><code>klean project-create MyFirst --template empty
+    <div class="code"><pre><code>klean create project MyFirst --template empty
 nano MyFirst/main.py</code></pre></div>
     <div class="code"><pre><code>from AlgorithmImports import *
 from krx_models import KrxBoards, krx_benchmark, krx_initialize

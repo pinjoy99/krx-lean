@@ -63,12 +63,12 @@ new projects. To update later: `git -C ~/krx-lean pull`.
 ## LEAN
 
 ```bash
-klean install-lean --dir ~/Lean          # clones LEAN at the tested commit and builds it (2–10 min)
-klean install-python --dir ~/.klean/py311   # Python 3.11 + pandas/numpy for LEAN (via uv)
+klean install lean --dir ~/Lean          # clones LEAN at the tested commit and builds it (2–10 min)
+klean install python --dir ~/.klean/py311   # Python 3.11 + pandas/numpy for LEAN (via uv)
 ```
 
-`install-lean` uses the LEAN commit krx-lean was tested with; don't build another one unless you
-want to test it (see [5. Tools](5-tools.md#updating-lean)). `install-python` prints the Python
+`klean install lean` uses the LEAN commit krx-lean was tested with; don't build another one unless you
+want to test it (see [5. Tools](5-tools.md#updating-lean)). `klean install python` prints the Python
 library it found (`…/libpython3.11.so`). Packages needed only by some tools are added to that
 environment the first time you use them: matplotlib for `klean report`, JupyterLab for
 `klean research`.
@@ -90,8 +90,8 @@ source ~/.zshrc
 git clone https://github.com/pinjoy99/krx-lean.git ~/krx-lean
 uv venv --python 3.12 ~/.krx-lean/venv                   # macOS's own python3 is too old
 uv pip install --python ~/.krx-lean/venv/bin/python -e ~/krx-lean
-klean install-lean --dir ~/Lean
-klean install-python --dir ~/.klean/py311
+klean install lean --dir ~/Lean
+klean install python --dir ~/.klean/py311
 ```
 
 No `apt` packages are needed, the shell profile is `~/.zshrc`, and `klean gui` /

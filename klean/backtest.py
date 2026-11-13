@@ -108,7 +108,7 @@ def launcher_args(ws: Workspace, language: str, location: Path, cls: str, result
 
 def python_env(ws: Workspace) -> dict[str, str]:
     if not ws.python_venv or not ws.python_dll:
-        raise KleanError("no Python environment in klean.json: run `klean install-python` "
+        raise KleanError("no Python environment in klean.json: run `klean install python` "
                          "(or `klean init --python-venv ...`)")
     return {"PYTHONNET_PYDLL": ws.python_dll, "PYTHONPATH": site_packages(ws.python_venv)}
 
@@ -161,7 +161,7 @@ def check_project(ws: Workspace, project: Path) -> tuple[Path, str]:
     if not project.is_dir():
         raise KleanError(f"{project} is not a project folder")
     if not (ws.launcher_dir / "QuantConnect.Lean.Launcher.dll").exists():
-        raise KleanError(f"no LEAN build in {ws.launcher_dir}: run `klean install-lean`")
+        raise KleanError(f"no LEAN build in {ws.launcher_dir}: run `klean install lean`")
     return project, projects.language_of(project)
 
 

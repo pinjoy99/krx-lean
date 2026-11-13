@@ -150,18 +150,24 @@ editor.
 
 ## Other commands
 
+klean's commands read `klean <verb> <noun>`: `install`, `update`, `status`, `create` and
+`delete` take a noun (`lean`, `python`, `data`, `models`, `project`, …); `klean <verb> --help`
+lists them. (The 0.0.9 names such as `klean install-lean` or `klean project-create` still work.)
+
 ```bash
-klean project-delete Old           # asks you to type the name
-klean data status
-klean update                       # new KRX days into the workspace (6. Daily update)
-klean models status                # are the projects' KRX models current?
-klean lean status                  # LEAN commit in use and build state
+klean delete project Old     # asks you to type the name
+klean status data            # data range, securities, indices
+klean status models          # are the projects' KRX models current?
+klean status lean            # LEAN commit in use and build state
+klean status all             # all three
+klean update data            # new KRX days into the workspace (6. Daily update)
+klean update all             # krx-lean, LEAN if needed, data (6. Daily update)
 klean doctor
 ```
 
 ## Updating LEAN
 
-`klean lean update` checks out and rebuilds the tested commit; `--commit C` another one. After
+`klean update lean` checks out and rebuilds the tested commit; `--commit C` another one. After
 changing LEAN, rerun a reference backtest and `klean compare` it with an earlier run before
 trusting new results.
 

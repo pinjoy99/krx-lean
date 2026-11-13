@@ -67,7 +67,7 @@ class DemoAndDoctorTest(unittest.TestCase):
             self.assertFalse(results.is_demo_data(ws))
             rows = {item: (ok, detail) for item, ok, detail in check(ws)}
             self.assertFalse(rows["KOSPI 200 index (benchmark)"][0])
-            self.assertIn("klean data install --demo", rows["KOSPI 200 index (benchmark)"][1])
+            self.assertIn("klean install data --demo", rows["KOSPI 200 index (benchmark)"][1])
             (krx / results.DEMO_MARKER).write_text("synthetic")
             idx = ws.data / "index" / "krx" / "daily"
             idx.mkdir(parents=True)
