@@ -147,5 +147,38 @@ class UpdateAllTest(unittest.TestCase):
                 cli.cmd_update_klean(None)
 
 
+
+class MakeVenvTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.target = Path(self.tmp.name) / "py311"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def make(self, uv=True):
+        with mock.patch.object(cli, "run") as run, \
+             mock.patch.object(cli.shutil, "which", return_value="/bin/uv" if uv else None), \
+             contextlib.redirect_stdout(io.StringIO()):
+            cli.make_venv("/py311", self.target)
+        return [c[0][0] for c in run.call_args_list]
+
+    def test_uv_seeds_pip_without_ensurepip(self):
+        self.assertEqual(self.make(), [["uv", "venv", "-q", "--seed", "--python", "/py311", str(self.target)]])
+        self.assertEqual(self.make(uv=False), [["/py311", "-m", "venv", str(self.target)]])
+
+    def test_half_made_environment_is_replaced(self):
+        self.target.mkdir()
+        (self.target / "pyvenv.cfg").write_text("home = /x\n")
+        self.assertEqual(self.make()[0][:2], ["uv", "venv"])
+        self.assertFalse(self.target.exists())          # removed before uv recreates it (mocked here)
+
+    def test_other_folders_are_left_alone(self):
+        self.target.mkdir()
+        (self.target / "notes.txt").write_text("mine")
+        with self.assertRaisesRegex(KleanError, "isn't a Python environment"):
+            self.make()
+        self.assertTrue((self.target / "notes.txt").exists())
+
 if __name__ == "__main__":
     unittest.main()

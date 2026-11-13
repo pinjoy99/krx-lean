@@ -82,9 +82,30 @@ def base_python311(given: str | None) -> str:
                      "and rerun, or give --python /path/to/python3.11")
 
 
+def has_pip(py: Path) -> bool:
+    return py.exists() and subprocess.run([str(py), "-m", "pip", "--version"], capture_output=True).returncode == 0
+
+
+def make_venv(base: str, target: Path) -> None:
+    """A virtual environment with pip. With uv, `uv venv --seed` (pip from PyPI): `python -m venv`
+    runs ensurepip, which fails on some setups (e.g. a pip.conf with `user = true`) and hides why."""
+    py = venv_python(str(target))
+    if has_pip(py):
+        return                                    # already there (rerun, or --package added)
+    if (target / "pyvenv.cfg").exists():          # left half-made by an earlier attempt
+        print(f"klean: removing the incomplete environment {target}")
+        shutil.rmtree(target)
+    elif target.exists() and any(target.iterdir()):
+        raise KleanError(f"{target} exists and isn't a Python environment: choose another --dir")
+    if shutil.which("uv"):
+        run(["uv", "venv", "-q", "--seed", "--python", base, str(target)])
+    else:
+        run([base, "-m", "venv", str(target)])
+
+
 def cmd_install_python(args) -> None:
     target = Path(args.dir).expanduser().resolve()
-    run([base_python311(args.python), "-m", "venv", str(target)])
+    make_venv(base_python311(args.python), target)
     py = str(venv_python(str(target)))
     run([py, "-m", "pip", "install", "-q", "--upgrade", "pip"])
     run([py, "-m", "pip", "install", "-q", *PYTHON_PACKAGES, *args.package])

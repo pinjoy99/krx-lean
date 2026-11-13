@@ -2,6 +2,10 @@
 
 ## 0.0.11 — 2026-11-13
 
+- `klean install python` creates the environment with `uv venv --seed` instead of
+  `python -m venv`, whose ensurepip step failed on some machines without saying why. An
+  environment left half-made by an earlier attempt is replaced; any other existing folder is
+  left alone. `klean --help` has the same layout on Python 3.10 as on 3.11+.
 - Projects: **`klean create-project`** and **`klean delete-project`** (one command each, as in
   lean's `create-project` alias). 0.0.10's `create project` / `delete project` and the older
   `project-create` / `project-delete` still work, unlisted.
