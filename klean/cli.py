@@ -620,11 +620,24 @@ def cmd_status_all(args) -> int:
     return cmd_models(args)
 
 
+class HelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Room for `create-project` next to its help. Python 3.10's argparse measures the command
+    names without their indentation (fixed in 3.11) and would put their help on the next line."""
+
+    def __init__(self, prog):
+        super().__init__(prog, max_help_position=30)
+
+    def format_help(self):
+        if sys.version_info < (3, 11):
+            self._action_max_length += self._indent_increment
+        return super().format_help()
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="klean", description="Local LEAN workflow for KRX data on a LEAN source "
                                 "build: no Docker, no QuantConnect account.",
                                 epilog=__doc__.split("\n\n", 1)[1] if __doc__ else None,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
+                                formatter_class=HelpFormatter)
     p.add_argument("--version", action="version", version=f"klean {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True, metavar="<command>")
 

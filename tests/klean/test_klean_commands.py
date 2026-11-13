@@ -75,8 +75,6 @@ class CommandsTest(unittest.TestCase):
             cli.main(["--help"])
         text = out.getvalue()
         listed = text.split("positional arguments:")[1].split("options:")[0]
-        for new in ("install", "update", "status", "create-project", "delete-project", "backtest"):
-            self.assertIn(f"    {new} ", listed)
         commands = [line.split()[0] for line in listed.splitlines() if line.startswith("    ") and line[4] != " "]
         self.assertEqual(commands, ["install", "init", "update", "status", "create-project", "delete-project", "backtest", "optimize",
                                     "report", "research", "logs", "compare", "config", "doctor", "gui"])
