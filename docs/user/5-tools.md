@@ -150,12 +150,13 @@ editor.
 
 ## Other commands
 
-klean's commands read `klean <verb> <noun>`: `install`, `update`, `status`, `create` and
-`delete` take a noun (`lean`, `python`, `data`, `models`, `project`, …); `klean <verb> --help`
-lists them. (The 0.0.9 names such as `klean install-lean` or `klean project-create` still work.)
+`install`, `update` and `status` take a noun (`klean install lean`, `klean update data`,
+`klean status all`); `klean <verb> --help` lists them. Projects are `klean create-project` and
+`klean delete-project`. (Older names such as `klean install-lean` or lean's `project-create` still
+work.)
 
 ```bash
-klean delete project Old     # asks you to type the name
+klean delete-project Old     # asks you to type the name
 klean status data            # data range, securities, indices
 klean status models          # are the projects' KRX models current?
 klean status lean            # LEAN commit in use and build state

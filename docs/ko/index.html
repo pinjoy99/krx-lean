@@ -231,7 +231,7 @@ klean doctor                   <span class="c"># 모든 줄이 OK여야 합니�
         <h3>첫 백테스트 실행 <span class="time">2분</span></h3>
         <p>준비된 예제(시가총액 상위 20종목을 같은 비중으로 사서 매달 리밸런싱)로 프로젝트를 만들어 2011~2026년
           구간으로 실행합니다.</p>
-        <div class="code"><pre><code>klean create project Top20 --template top-market-cap
+        <div class="code"><pre><code>klean create-project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>1~2분 뒤 연평균 수익률(CAGR), 최대 낙폭(drawdown), 최종 자산 같은 통계가 나옵니다. 이어서 자세히 살펴봅니다.</p>
         <div class="code"><pre><code>klean report Top20      <span class="c"># 상세 HTML 리포트</span>
@@ -334,7 +334,7 @@ krx-lean --root ~/krx-data all</code></pre></div>
         <div class="code"><pre><code>klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace
 klean install data --root ~/krx-data
-klean create project Top20 --template top-market-cap
+klean create-project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>데모와 실제 데이터의 워크스페이스는 따로 두세요(klean이 섞이지 않게 막습니다). 나중에 새 거래일을
           받으려면 워크스페이스에서 <code>klean update data</code>를 실행합니다.</p>
@@ -349,7 +349,7 @@ klean backtest Top20</code></pre></div>
     <p class="sub">전략은 작은 Python 프로그램입니다. 빈 프로젝트를 만들고 <code>main.py</code>를 아래 내용으로
       바꾸세요. 두 종목을 절반씩 보유하며 매달 리밸런싱하는 전략입니다(아이디어는 먼저 프로젝트 노트북에서 시험해
       보세요: <code>klean research MyFirst</code>).</p>
-    <div class="code"><pre><code>klean create project MyFirst --template empty
+    <div class="code"><pre><code>klean create-project MyFirst --template empty
 nano MyFirst/main.py</code></pre></div>
     <div class="code"><pre><code>from AlgorithmImports import *
 from krx_models import KrxBoards, krx_benchmark, krx_initialize

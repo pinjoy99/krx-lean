@@ -7,7 +7,7 @@ also runs under `lean backtest`.
 | Module | Does |
 |---|---|
 | `workspace.py` | `klean.json` (load/save, found upwards from the current folder), tested LEAN commit, Python package pins, `dotnet` and libpython lookup, `doctor` checks |
-| `cli.py` | commands; the `<verb> <noun>` commands (`install lean/python/data` (incl. `--demo`), `update data/lean/models/klean/all`, `status …`, `create/delete project`) plus the old names as hidden aliases; `init`, `config` |
+| `cli.py` | commands; the `<verb> <noun>` commands (`install lean/python/data` (incl. `--demo`), `update data/lean/models/klean/all`, `status …`, `create-project` / `delete-project`) plus the old names as hidden aliases; `init`, `config` |
 | `projects.py` | templates (Python, C#), algorithm class detection, `.csproj` (references the launcher DLLs; excludes `backtests/**`, `optimizations/**`) |
 | `backtest.py` | `prepare` (py_compile + requirements, or `dotnet build`), `run_once` (code snapshot, per-run config, launcher, manifest), `backtest` |
 | `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `status data` |
@@ -54,7 +54,7 @@ also runs under `lean backtest`.
 
 ## Models copies and `klean update data`
 
-Each project has its own copy of the models (copied by `create project`), so a project stays
+Each project has its own copy of the models (copied by `create-project`), so a project stays
 reproducible; the cost is drift after krx-lean is updated. `projects.models_state` compares the
 copy byte for byte with `examples/`: `klean backtest` prints a note and records `krx_models` in
 the manifest, `doctor` and the GUI show an informational row (never a failure: an edited copy is

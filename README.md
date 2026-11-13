@@ -49,7 +49,7 @@ clearly marked) so you can try everything first: [Try it without keys](docs/user
 krx-lean --root ~/krx-data all                 # download KRX prices + dividends, build LEAN data
 klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace && klean install data --root ~/krx-data
-klean create project Top20 --template top-market-cap
+klean create-project Top20 --template top-market-cap
 klean backtest Top20
 klean report Top20
 klean gui
@@ -57,7 +57,7 @@ klean research Top20                           # Jupyter notebook with LEAN's Qu
 klean update all                               # later: new krx-lean, LEAN if needed, new KRX days
 ```
 
-Commands read `klean <verb> <noun>` (`klean install lean`, `klean update data`, `klean status all`, …);
+Most commands read `klean <verb> <noun>` (`klean install lean`, `klean update data`, `klean status all`);
 `klean --help` lists them.
 
 ## What you need

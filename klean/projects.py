@@ -1,4 +1,4 @@
-"""`klean create project`: a Python or C# project folder in the LEAN CLI's layout, with the KRX
+"""`klean create-project`: a Python or C# project folder in the LEAN CLI's layout, with the KRX
 models next to the algorithm."""
 
 from __future__ import annotations

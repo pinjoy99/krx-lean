@@ -3,7 +3,7 @@
 A project is a folder in the workspace. Python: `main.py` (one class deriving from
 `QCAlgorithm`), `krx_models.py`, any other `.py` files, and optionally `requirements.txt`
 (installed into the Python 3.11 environment before each run). C#: `Main.cs`, `KrxModels.cs` and
-a `.csproj` referencing your LEAN build. Start from a template (`klean create project`) and edit
+a `.csproj` referencing your LEAN build. Start from a template (`klean create-project`) and edit
 `main.py` / `Main.cs` in any editor.
 
 LEAN's own documentation covers the API (orders, indicators, scheduling, universes):

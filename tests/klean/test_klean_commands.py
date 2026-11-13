@@ -50,9 +50,9 @@ class CommandsTest(unittest.TestCase):
         self.check(["status", "lean"], "cmd_lean", lean_cmd="status")
         self.check(["status", "models"], "cmd_models", models_cmd="status")
         self.check(["status", "all"], "cmd_status_all")
-        self.check(["create", "project", "P", "--language", "csharp"], "cmd_project_create", name="P",
+        self.check(["create-project", "P", "--language", "csharp"], "cmd_project_create", name="P",
                    language="csharp", template="buy-hold")
-        self.check(["delete", "project", "P", "--yes"], "cmd_project_delete", name="P", yes=True)
+        self.check(["delete-project", "P", "--yes"], "cmd_project_delete", name="P", yes=True)
 
     def test_old_names_still_work(self):
         self.check(["install-lean"], "cmd_install_lean", dir="~/Lean")
@@ -67,21 +67,23 @@ class CommandsTest(unittest.TestCase):
         self.check(["models", "update", "--all"], "cmd_models", models_cmd="update", all=True)
         self.check(["update"], "cmd_update", root=None, env_file="~/.config/krx-lean.env")
         self.check(["update", "--root", "/r"], "cmd_update", root="/r")
+        self.check(["create", "project", "P"], "cmd_project_create", name="P")       # 0.0.10
+        self.check(["delete", "project", "P", "--yes"], "cmd_project_delete", yes=True)
 
     def test_help_lists_only_the_new_names(self):
         with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
             cli.main(["--help"])
         text = out.getvalue()
         listed = text.split("positional arguments:")[1].split("options:")[0]
-        for new in ("install", "update", "status", "create", "delete", "backtest"):
+        for new in ("install", "update", "status", "create-project", "delete-project", "backtest"):
             self.assertIn(f"    {new} ", listed)
         commands = [line.split()[0] for line in listed.splitlines() if line.startswith("    ") and line[4] != " "]
-        self.assertEqual(commands, ["install", "init", "update", "status", "create", "delete", "backtest", "optimize",
+        self.assertEqual(commands, ["install", "init", "update", "status", "create-project", "delete-project", "backtest", "optimize",
                                     "report", "research", "logs", "compare", "config", "doctor", "gui"])
         self.assertIn("klean update all", text)
 
     def test_noun_required(self):
-        for verb in ("install", "status", "create", "delete"):
+        for verb in ("install", "status"):
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as e:
                 cli.main([verb])
             self.assertEqual(e.exception.code, 2, verb)

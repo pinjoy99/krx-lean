@@ -231,7 +231,7 @@ klean doctor                   <span class="c"># every line should say OK</span>
         <h3>Run your first backtest <span class="time">2 min</span></h3>
         <p>Create a project from the ready-made example (buy the 20 largest stocks, equal weights, rebalance every
           month) and run it over 2011–2026:</p>
-        <div class="code"><pre><code>klean create project Top20 --template top-market-cap
+        <div class="code"><pre><code>klean create-project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>After a minute or two you'll see statistics like the yearly return (CAGR), the worst fall (drawdown) and
           the final value. Then look at it properly:</p>
@@ -336,7 +336,7 @@ krx-lean --root ~/krx-data all</code></pre></div>
         <div class="code"><pre><code>klean init ~/krx-workspace --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-workspace
 klean install data --root ~/krx-data
-klean create project Top20 --template top-market-cap
+klean create-project Top20 --template top-market-cap
 klean backtest Top20</code></pre></div>
         <p>Keep the demo and real workspaces separate (klean won't mix them). To get new days later, run
           <code>klean update data</code> in the workspace.</p>
@@ -351,7 +351,7 @@ klean backtest Top20</code></pre></div>
     <p class="sub">A strategy is a small Python program. Create an empty project and replace its <code>main.py</code>
       with this one, which keeps two stocks at about half each and rebalances every month (try ideas in the
       project's notebook first: <code>klean research MyFirst</code>):</p>
-    <div class="code"><pre><code>klean create project MyFirst --template empty
+    <div class="code"><pre><code>klean create-project MyFirst --template empty
 nano MyFirst/main.py</code></pre></div>
     <div class="code"><pre><code>from AlgorithmImports import *
 from krx_models import KrxBoards, krx_benchmark, krx_initialize

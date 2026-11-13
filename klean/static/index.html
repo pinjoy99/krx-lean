@@ -198,7 +198,7 @@ async function pageWorkspace() {
   app.innerHTML = `<h1>Workspace</h1>
     <div class="panel"><h2>Projects</h2>${w.projects.length ? `<table><tr><th>Project</th><th>Language</th><th class="num">Runs</th><th>Last run</th>
       <th class="num">CAGR</th><th class="num">Drawdown</th><th class="num">Sharpe</th><th class="num">End equity</th></tr>${proj}</table>`
-      : `<p class="muted">No projects yet. Create one with <code>klean create project NAME</code> (templates: ${w.templates.map(esc).join(", ")}).</p>`}</div>
+      : `<p class="muted">No projects yet. Create one with <code>klean create-project NAME</code> (templates: ${w.templates.map(esc).join(", ")}).</p>`}</div>
     <div class="grid">
       <div class="panel"><h2>KRX data</h2>${d.error ? `<div class="err">${esc(d.error)}</div>` : `<table>
         <tr><td>Securities</td><td class="num">${d.securities ?? "—"}</td></tr>

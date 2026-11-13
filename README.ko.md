@@ -26,7 +26,7 @@
 ```bash
 klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-demo && klean install data --demo        # 가상 데모 데이터 (인증키 불필요)
-klean create project Top20 --template top-market-cap
+klean create-project Top20 --template top-market-cap
 klean backtest Top20                               # 슬리피지는 기본 꺼짐: --parameter slippage_ticks 1 로 켭니다
 klean report Top20
 klean gui

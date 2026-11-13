@@ -87,8 +87,8 @@ dates; compare them after a change.
 ## Parity check (C# = Python)
 
 ```bash
-klean create project P --template top-market-cap
-klean create project C --language csharp --template top-market-cap
+klean create-project P --template top-market-cap
+klean create-project C --language csharp --template top-market-cap
 klean backtest P && klean backtest C
 klean compare P C              # must print IDENTICAL (statistics and equity curves)
 ```

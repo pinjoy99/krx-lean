@@ -13,8 +13,8 @@ klean init ~/krx-demo --lean ~/Lean --python-venv ~/.klean/py311
 cd ~/krx-demo
 klean install data --demo          # ~10 s: generates, builds and installs the synthetic data
 klean doctor
-klean create project Hold                           # buy and hold (the demo stock D00010)
-klean create project Top20 --template top-market-cap
+klean create-project Hold                           # buy and hold (the demo stock D00010)
+klean create-project Top20 --template top-market-cap
 klean backtest Hold
 klean backtest Top20
 klean backtest Top20 --parameter slippage_ticks 1   # the same with slippage switched on (off by default)

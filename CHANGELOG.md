@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.11 — 2026-11-13
+
+- Projects: **`klean create-project`** and **`klean delete-project`** (one command each, as in
+  lean's `create-project` alias). 0.0.10's `create project` / `delete project` and the older
+  `project-create` / `project-delete` still work, unlisted.
+
 ## 0.0.10 — 2026-11-13
 
 - **Commands read `klean <verb> <noun>`:** `install lean | python | data`, `update data | lean |

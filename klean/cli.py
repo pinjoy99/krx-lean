@@ -16,8 +16,8 @@ Keeping up to date
     klean doctor                                        check the setup
 
 Projects and runs
-    klean create project NAME [--language] [--template] project with the KRX models next to it
-    klean delete project NAME [--yes]                   delete a project and its backtests
+    klean create-project NAME [--language] [--template] project with the KRX models next to it
+    klean delete-project NAME [--yes]                   delete a project and its backtests
     klean backtest NAME [--parameter K V] [--backtest-name N] [--timeout S] [--detach]
     klean optimize NAME --parameter P MIN MAX STEP [...] [--target T] [--constraint "Drawdown < 25"]
     klean report [RUN] [--report-destination F] [--pdf]  LEAN's HTML report for a run (default: latest)
@@ -293,7 +293,7 @@ def cmd_research(args) -> int:
         ws = Workspace.load(Path.cwd())
         project = ws.root / project
     if not project.is_dir():
-        raise KleanError(f"no project {project}: create it with `klean create project`")
+        raise KleanError(f"no project {project}: create it with `klean create-project`")
     project = project.resolve()
     if args.execute:
         out = research.execute(ws, project, args.execute, timeout=args.timeout)
@@ -630,7 +630,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # The pieces shared by the `<verb> <noun>` commands and the old names kept as hidden aliases
     # (install-lean, install-python, data install|status, project-create|-delete, lean status|update,
-    # update, models status|update), so scripts written for klean <= 0.0.9 keep working.
+    # update, models status|update, and 0.0.10's create|delete project), so older scripts keep working.
     def install_lean_args(s):
         s.add_argument("--dir", default="~/Lean")
         s.add_argument("--commit", default=LEAN_COMMIT)
@@ -719,13 +719,8 @@ def main(argv: list[str] | None = None) -> int:
         func=cmd_models, models_cmd="status")
     nsub.add_parser("all", help="all three").set_defaults(func=cmd_status_all)
 
-    s = sub.add_parser("create", help="create project")
-    nsub = s.add_subparsers(dest="noun", required=True, metavar="<noun>")
-    create_project_args(nsub.add_parser("project", help="create a project with the KRX models"))
-
-    s = sub.add_parser("delete", help="delete project")
-    nsub = s.add_subparsers(dest="noun", required=True, metavar="<noun>")
-    delete_project_args(nsub.add_parser("project", help="delete a project folder and its backtests"))
+    create_project_args(sub.add_parser("create-project", help="create a project with the KRX models"))
+    delete_project_args(sub.add_parser("delete-project", help="delete a project folder and its backtests"))
 
     s = sub.add_parser("backtest", help="run a backtest; results in <project>/backtests/<timestamp>/")
     s.add_argument("project")
@@ -820,8 +815,12 @@ def main(argv: list[str] | None = None) -> int:
     dsub = s.add_subparsers(dest="data_cmd", required=True)
     install_data_args(dsub.add_parser("install"))
     status_data_args(dsub.add_parser("status"))
-    create_project_args(sub.add_parser("project-create"))
+    create_project_args(sub.add_parser("project-create"))       # lean's own name, and klean <= 0.0.9
     delete_project_args(sub.add_parser("project-delete"))
+    s = sub.add_parser("create")                                  # klean 0.0.10
+    create_project_args(s.add_subparsers(dest="noun", required=True).add_parser("project"))
+    s = sub.add_parser("delete")
+    delete_project_args(s.add_subparsers(dest="noun", required=True).add_parser("project"))
     s = sub.add_parser("lean")
     lsub = s.add_subparsers(dest="lean_cmd", required=True)
     lsub.add_parser("status").set_defaults(func=cmd_lean)

@@ -31,8 +31,8 @@ klean status all | grep -q "no projects" || fail "status all"
 klean data status >/dev/null || fail 'the 0.0.9 name "klean data status" no longer works'
 
 step "backtests: C# and Python must be identical"
-klean create project Cs --language csharp --template top-market-cap
-klean create project Py --template top-market-cap
+klean create-project Cs --language csharp --template top-market-cap
+klean create-project Py --template top-market-cap
 klean backtest Cs
 klean backtest Py
 klean compare Py Cs | tee compare.txt
@@ -71,14 +71,14 @@ klean compare "Py/$KQ_PY" "Cs/$KQ_CS" | tail -1 | grep -qx "IDENTICAL" || fail "
 grep -q '"Total Orders": "[1-9]' "Cs/backtests/$KQ_CS"/*-summary.json || fail "the KOSDAQ run placed no orders"
 
 step "buy-hold template, both languages"
-klean create project HoldPy
-klean create project HoldCs --language csharp
+klean create-project HoldPy
+klean create-project HoldCs --language csharp
 klean backtest HoldPy
 klean backtest HoldCs
 klean compare HoldPy HoldCs | tail -1 | grep -qx "IDENTICAL" || fail "buy-hold differs between C# and Python"
 
 step "a strategy that raises must be reported as failed"
-klean create project Broken --template empty
+klean create-project Broken --template empty
 "$PY_DIR/bin/python" - <<'EOF'     # (not sed -i: GNU and BSD/macOS sed differ)
 import pathlib
 p = pathlib.Path("Broken/main.py")
