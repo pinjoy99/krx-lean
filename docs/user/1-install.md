@@ -26,13 +26,14 @@ venv, and ICU.)
 ## .NET 10 SDK
 
 ```bash
-curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
+curl -sSL https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh | bash -s -- --channel 10.0
 echo 'export DOTNET_ROOT="$HOME/.dotnet"; export PATH="$HOME/.dotnet:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 dotnet --version            # 10.0.x
 ```
 
-The installer unpacks in `/tmp` (about 1 GB). If `/tmp` is small and it fails with "No space
+(`https://dot.net/v1/dotnet-install.sh` is a short link to the same script; it can fail with
+"Connection reset by peer" on some networks.) The installer unpacks in `/tmp` (about 1 GB). If `/tmp` is small and it fails with "No space
 left on device", run it with `TMPDIR=~/tmp` (after `mkdir -p ~/tmp`) in front of `bash`.
 
 ## uv (provides Python 3.11 for LEAN)
@@ -82,7 +83,7 @@ find. The differences from the Linux steps above:
 
 ```bash
 xcode-select --install                                   # git (skip if already installed)
-curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
+curl -sSL https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh | bash -s -- --channel 10.0
 curl -LsSf https://astral.sh/uv/install.sh | sh
 echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> ~/.zshrc
 echo 'export PATH="$HOME/.dotnet:$HOME/.krx-lean/venv/bin:$HOME/.local/bin:$PATH"' >> ~/.zshrc
