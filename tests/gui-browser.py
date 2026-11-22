@@ -50,14 +50,19 @@ def start_gui() -> str:
 
     threading.Thread(target=run, daemon=True).start()
     url = f"http://127.0.0.1:{port}/?token={token}"
-    deadline = time.time() + 30
+    deadline, last_error = time.time() + 30, None
     while time.time() < deadline and not failed:
         try:
             urllib.request.urlopen(url, timeout=2).read()
             return url
-        except OSError:
+        except OSError as e:
+            last_error = e
             time.sleep(0.3)
-    raise SystemExit("klean gui didn't start:\n" + ("".join(failed) or "no answer in 30 s"))
+    print(f"last error: {last_error!r}", file=sys.stderr)
+    if not failed:                    # hanging somewhere: show where every thread is
+        import faulthandler
+        faulthandler.dump_traceback(all_threads=True)
+    raise SystemExit("klean gui didn't start:\n" + ("".join(failed) or f"no answer from {url} in 30 s"))
 
 
 def check(page: Page, errors: list[str], name: str, hash_: str, charts: int) -> None:
