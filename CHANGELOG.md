@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.12 — 2026-11-22
+
+First step of the GUI and research upgrade (the page looks the same; the work is underneath).
+
+- **Charts on uPlot:** zoom by dragging (double-click resets), values at the cursor in the
+  legend (the latest ones otherwise), log scale for equity curves; the optimization chart marks
+  the tested parameter values. uPlot 1.6.32 (MIT) is copied into `klean/static/vendor/` (no CDN).
+- The page is split into modules (`klean/static/js/`: router, one module per page, charts,
+  helpers) and has a Content-Security-Policy that allows only its own scripts.
+- **Browser check** (`tests/gui-browser.py`, Playwright) in CI after the end-to-end check: every
+  page in light and dark mode without console errors, chart zoom and legend, compare, a backtest
+  started from the page.
+- Checked for the next steps: JupyterLab started at the workspace folder can be embedded in the
+  GUI page (LEAN kernel, the project's `krx_models` importable).
+
 ## 0.0.11 — 2026-11-13
 
 - `klean install python` creates the environment with `uv venv --seed` instead of

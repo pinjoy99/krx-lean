@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "krx-lean"
-version = "0.0.11"
+version = "0.0.12"
 description = "KRX (KOSPI, ETF) daily data and market models for QuantConnect LEAN built from source, with klean, a local workspace tool"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -23,4 +23,4 @@ klean = "klean.cli:main"
 packages = ["krx_lean", "klean"]
 
 [tool.setuptools.package-data]
-klean = ["static/*.html"]
+klean = ["static/*.html", "static/*.css", "static/js/*.js", "static/js/pages/*.js", "static/vendor/uplot/*"]

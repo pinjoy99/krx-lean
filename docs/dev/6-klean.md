@@ -14,7 +14,7 @@ also runs under `lean backtest`.
 | `optimize.py` | grid search |
 | `report.py` | LEAN's Report |
 | `research.py` | Jupyter with LEAN's QuantBook |
-| `gui.py`, `static/index.html` | local web page |
+| `gui.py`, `static/` | local web page: `index.html` (shell), `app.css`, `js/main.js` (router), `js/pages/*.js` (one module per page), `js/chart.js` (uPlot charts), `js/util.js`; `vendor/uplot/` (MIT, copied in; no CDN, no npm build) |
 
 ## A run
 
@@ -129,5 +129,8 @@ timestamp prefix).
 `ThreadingHTTPServer` on 127.0.0.1, random port by default. Every request needs the random token
 (query string or `X-Klean-Token` header); POSTs need the header (a cross-site form can't set it).
 Every project, run and file path is resolved and must be inside the workspace (code files inside
-the run's snapshot). Reports are served with a Content-Security-Policy allowing no scripts.
+the run's snapshot). The page's scripts and styles (`/static/…`, code only, no data) load without the token; only `.js`
+and `.css` files inside `klean/static` are served. The page itself has a Content-Security-Policy
+allowing only its own scripts (no inline or third-party ones) and no framing by other sites.
+Reports are served with a Content-Security-Policy allowing no scripts.
 `Referrer-Policy: no-referrer` keeps the token out of requests the report page makes.

@@ -141,6 +141,10 @@ klean gui --port 8765 --no-browser
 | Optimization | target by parameter, ranked runs, Compare |
 | Compare | equity curves overlaid, statistics side by side |
 
+Charts: drag across a chart to zoom into a period, double-click to zoom out; the legend under
+the chart shows the values at the cursor (the latest ones otherwise); *log scale* on equity
+charts makes long periods easier to read.
+
 It listens on 127.0.0.1 only and needs the token in the printed URL; keep that URL to yourself.
 Under WSL2 the page opens in your Windows browser (with `wslu` installed), or open the printed
 URL yourself. Stop it with Ctrl+C (notebooks started from the page stop with it). *Delete*

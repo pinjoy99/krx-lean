@@ -84,6 +84,11 @@ jobs:
         run: |
           mkdir -p "$E2E_DIR"
           tests/e2e-demo.sh
+      - name: GUI in a browser (Playwright, on the workspace the end-to-end check left)
+        run: |
+          python -m pip install playwright==1.63.0
+          python -m playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} chromium
+          python tests/gui-browser.py "$(ls -d "$E2E_DIR"/ws-* | head -1)" "$E2E_DIR/gui-shots"
       - name: Keep logs if it failed
         if: failure()
         uses: actions/upload-artifact@v4
@@ -94,5 +99,6 @@ jobs:
             ~/e2e/ws-*/*.txt
             ~/e2e/ws-*/*/backtests/*/console.txt
             ~/e2e/ws-*/*/backtests/*/manifest.json
+            ~/e2e/gui-shots/*.png
           if-no-files-found: ignore
           retention-days: 7

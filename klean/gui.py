@@ -30,6 +30,19 @@ from klean.report import report
 from klean.workspace import KleanError, Workspace, check
 
 STATIC = Path(__file__).with_name("static")
+# The page's own files: scripts and styles from klean/static only (no CDN), inline style
+# attributes for layout, no inline scripts.
+PAGE_CSP = ("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+            "connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+STATIC_TYPES = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
+
+
+def static_file(path: str) -> Path | None:
+    """A file under klean/static for a /static/... URL, or None (also for anything outside it)."""
+    target = (STATIC / path.removeprefix("/static/")).resolve()
+    if STATIC.resolve() in target.parents and target.suffix in STATIC_TYPES and target.is_file():
+        return target
+    return None
 # LEAN's report: inline styles and data: images, plus its stylesheets, fonts and logo from CDNs; no scripts.
 REPORT_CSP = ("default-src 'none'; img-src data: https://cdn.quantconnect.com; style-src 'unsafe-inline' "
               "https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com "
@@ -413,12 +426,20 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
         def do_GET(self):  # noqa: N802
             url = urlparse(self.path)
             q = parse_qs(url.query)
+            if url.path.startswith("/static/"):     # code and styles, no data: served without the token
+                f = static_file(url.path)
+                if f is None:
+                    self._send(HTTPStatus.NOT_FOUND, b"not found", "text/plain")
+                else:
+                    self._send(200, f.read_bytes(), STATIC_TYPES[f.suffix])
+                return
             if not self._authorized(q):
                 self._send(HTTPStatus.FORBIDDEN, b"Open the URL printed by `klean gui` (it includes the access token).",
                            "text/plain; charset=utf-8")
                 return
             if url.path in ("/", "/index.html"):
-                self._send(200, (STATIC / "index.html").read_bytes(), "text/html; charset=utf-8")
+                self._send(200, (STATIC / "index.html").read_bytes(), "text/html; charset=utf-8",
+                           {"Content-Security-Policy": PAGE_CSP})
                 return
             try:
                 if url.path in gets:

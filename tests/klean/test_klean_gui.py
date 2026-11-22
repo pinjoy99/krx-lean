@@ -74,6 +74,32 @@ class GuiTest(unittest.TestCase):
         self.assertTrue(c["verdict"]["identical"])
         self.assertEqual(json.loads(self.get("/api/log?ref=A&tail=1")[1])["lines"], ["line 3"])
 
+    def test_static_files(self):
+        # the page's code and styles load without the token (they hold no data)...
+        for path in ("/static/js/main.js", "/static/js/pages/run.js", "/static/app.css",
+                     "/static/vendor/uplot/uPlot.esm.js"):
+            self.assertEqual(self.get(path, token=False)[0], 200, path)
+        # ...but nothing outside klean/static, and only scripts and styles
+        for path in ("/static/../gui.py", "/static/%2e%2e/gui.py", "/static/index.html",
+                     "/static/vendor/uplot/LICENSE", "/static/nope.js"):
+            self.assertEqual(self.get(path, token=False)[0], 404, path)
+        self.assertIsNone(gui.static_file("/static/../../klean.json"))
+        # every module the page imports exists (a missing one would leave the page blank)
+        import re
+        for js in gui.STATIC.rglob("*.js"):
+            if "vendor" in js.parts:
+                continue
+            for target in re.findall(r'from "(\.{1,2}/[^"]+)"', js.read_text()):
+                self.assertTrue((js.parent / target).resolve().is_file(), f"{js.name} imports {target}")
+
+    def test_page_security_headers(self):
+        req = urllib.request.Request(f"{self.base}/?token={self.token}")
+        with urllib.request.urlopen(req) as r:
+            csp = r.headers["Content-Security-Policy"]
+        self.assertIn("script-src 'self'", csp)          # no inline or third-party scripts
+        self.assertIn("frame-ancestors 'none'", csp)     # can't be framed by another site
+        self.assertNotIn("<script>", (gui.STATIC / "index.html").read_text())
+
     def test_outside_workspace_refused(self):
         status, body = self.get("/api/run?ref=" + urllib.request.quote(str(self.outside)))
         self.assertEqual(status, 400)

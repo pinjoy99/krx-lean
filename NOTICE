@@ -10,3 +10,7 @@ unmodified, cloned and built from source on the user's machine. krx-lean contain
 
 No market data is included. Users download data with their own API keys (KRX Open API,
 data.go.kr) under those services' terms.
+
+Third-party code included:
+- uPlot 1.6.32 (https://github.com/leeoniya/uPlot), MIT License, Copyright (c) 2022 Leon Sorokin:
+  klean/static/vendor/uplot/ (charts in `klean gui`; the license is in that folder).

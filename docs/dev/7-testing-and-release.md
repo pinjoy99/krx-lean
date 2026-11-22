@@ -23,9 +23,20 @@ of slippage (which must lower the end equity); a KOSDAQ strategy (its own tax an
 raises must exit 1 with `backtest FAILED`; `--timeout`; a small optimization; a report; the
 research notebook run headless with both charts.
 
+Then the GUI in a real browser, on the workspace the script left (needs `pip install
+playwright` and `python -m playwright install chromium`):
+
+```bash
+python tests/gui-browser.py ~/e2e/ws-<n> [screenshot folder]
+```
+
+Every page in light and dark mode with no browser console errors; chart zoom, the legend
+following the cursor and the log scale; comparing two runs from the project page; a backtest
+started from the page finishing and appearing in the runs list.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`, every pull request,
 weekly, and on demand: lint and both unit suites on Ubuntu 22.04 / Python 3.10, Ubuntu 24.04 /
-Python 3.12 and 3.13 and macOS / Python 3.12, and the end-to-end script on Ubuntu 24.04 and on
+Python 3.12 and 3.13 and macOS / Python 3.12, and the end-to-end script plus the browser check on Ubuntu 24.04 and on
 macOS (Apple Silicon) with .NET 10 (the LEAN build is cached per `LEAN_COMMIT` and system). CI has no secrets and read-only permissions; real-data checks stay
 manual (below).
 
