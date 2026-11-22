@@ -119,8 +119,10 @@ trying chart labels as symbols).
 
 POST endpoints (all need the token header): `/api/backtest`, `/api/report`, `/api/optimize`
 (validated with `optimize(estimate=True)` first; progress lines kept in the job),
-`/api/research` (one JupyterLab per project through `research.start`; terminated when the GUI
-stops, also on SIGTERM), `/api/run-rename` and `/api/run-delete` (`stored_run`: only a folder
+`/api/research` (one JupyterLab for the whole workspace, `research.start_workspace_server`, started in
+a thread after installing the packages if needed; GET reports `off | installing | starting | ready |
+failed | stopped`; JupyterLab's CSP lets only the GUI's origin frame it; terminated when the GUI stops,
+also on SIGTERM and SIGHUP), `/api/run-rename` and `/api/run-delete` (`stored_run`: only a folder
 directly under `<project>/backtests/`, inside the workspace, and not running; rename keeps the
 timestamp prefix).
 
@@ -131,6 +133,7 @@ timestamp prefix).
 Every project, run and file path is resolved and must be inside the workspace (code files inside
 the run's snapshot). The page's scripts and styles (`/static/…`, code only, no data) load without the token; only `.js`
 and `.css` files inside `klean/static` are served. The page itself has a Content-Security-Policy
-allowing only its own scripts (no inline or third-party ones) and no framing by other sites.
+allowing only its own scripts (no inline or third-party ones), frames only from 127.0.0.1 (the
+Research tab's JupyterLab), and no framing by other sites.
 Reports are served with a Content-Security-Policy allowing no scripts.
 `Referrer-Policy: no-referrer` keeps the token out of requests the report page makes.

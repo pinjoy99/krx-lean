@@ -1,13 +1,15 @@
-// klean GUI: hash router. Pages live in ./pages/, one module each.
+// klean GUI: hash router (#/, #/project/P, #/run/P/…, #/optimization/P/O, #/compare?ref=…, #/research[/P]). Pages live in ./pages/, one module each.
 import {TOKEN, api, pageState, showError} from "./util.js";
 import {pageWorkspace} from "./pages/workspace.js";
 import {pageProject} from "./pages/project.js";
 import {pageRun} from "./pages/run.js";
 import {pageOptimization} from "./pages/optimization.js";
 import {pageCompare} from "./pages/compare.js";
+import {pageResearch} from "./pages/research.js";
 
 async function route() {
   clearTimeout(pageState.pollTimer);
+  document.body.classList.remove("wide");
   const [path, query] = location.hash.slice(1).split("?");
   const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
   try {
@@ -15,6 +17,7 @@ async function route() {
     if (parts[0] === "project") await pageProject(parts[1]);
     else if (parts[0] === "run") await pageRun(parts.slice(1).join("/"));
     else if (parts[0] === "optimization") await pageOptimization(parts[1], parts[2]);
+    else if (parts[0] === "research") await pageResearch(parts[1] || "");
     else if (parts[0] === "compare") await pageCompare(new URLSearchParams(query || "").getAll("ref"));
     else await pageWorkspace();
     if (!document.getElementById("ws").textContent) api("/api/workspace").then(w => {

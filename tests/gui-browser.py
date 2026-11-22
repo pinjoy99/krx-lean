@@ -11,6 +11,7 @@ legend, log scale, compare from the project page, and a backtest started from th
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -36,6 +37,9 @@ def start_gui() -> str:
     from klean import gui
     from klean.workspace import Workspace
 
+    global JOBS
+    JOBS = gui.Jobs()                  # its JupyterLab is stopped at the end, as `klean gui` does
+
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
@@ -44,7 +48,9 @@ def start_gui() -> str:
 
     def run():
         try:
-            gui.serve(Workspace.load(WS), port=port, open_browser=False, token=token)
+            from http.server import ThreadingHTTPServer
+            server = ThreadingHTTPServer(("127.0.0.1", port), gui.make_handler(Workspace.load(WS), token, JOBS))
+            server.serve_forever()
         except BaseException:          # noqa: BLE001 - reported below
             failed.append(traceback.format_exc())
 
@@ -75,6 +81,7 @@ def check(page: Page, errors: list[str], name: str, hash_: str, charts: int) -> 
     print(f"ok  {name}")
 
 
+JOBS = None
 BASE = start_gui()
 with sync_playwright() as pw:
     exe = os.environ.get("KLEAN_CHROMIUM")
@@ -128,6 +135,25 @@ with sync_playwright() as pw:
         check(page, errors, f"{scheme}-optimization", f"#/optimization/Cs/{opt}", 1)
         page.close()
 
+    # Research: the workspace's JupyterLab inside the page, the project's notebook on the LEAN kernel
+    page = browser.new_page(viewport={"width": 1400, "height": 950})
+    errors = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(BASE + "#/project/Py")
+    page.get_by_role("link", name=re.compile("in Research")).click()
+    expect(page.locator("iframe.lab")).to_be_visible(timeout=300_000)    # may install JupyterLab first
+    lab = page.frame_locator("iframe.lab")
+    expect(lab.locator(".jp-Notebook")).to_be_visible(timeout=120_000)
+    lab.locator(".jp-CodeCell .cm-content").first.click()
+    page.keyboard.press("Shift+Enter")
+    expect(lab.locator(".jp-OutputArea-output").first).to_contain_text("securities", timeout=180_000)
+    page.screenshot(path=str(SHOTS / "research.png"))
+    if errors:
+        raise SystemExit(f"research: browser errors: {errors}")
+    print("ok  research: JupyterLab in the page, the notebook runs on LEAN")
+    page.close()
+
     # a backtest started from the page finishes and shows up in the runs list
     page = browser.new_page(viewport={"width": 1300, "height": 900})
     page.goto(BASE + "#/project/HoldPy")
@@ -140,4 +166,5 @@ with sync_playwright() as pw:
     expect(page.locator(".uplot")).to_have_count(2)
     print("ok  backtest started from the page")
     browser.close()
+JOBS.stop_all()
 print(f"GUI BROWSER CHECK OK (screenshots in {SHOTS})")

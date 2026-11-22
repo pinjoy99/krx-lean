@@ -32,7 +32,8 @@ python tests/gui-browser.py ~/e2e/ws-<n> [screenshot folder]
 
 Every page in light and dark mode with no browser console errors; chart zoom, the legend
 following the cursor and the log scale; comparing two runs from the project page; a backtest
-started from the page finishing and appearing in the runs list.
+started from the page finishing and appearing in the runs list; the Research tab opening a
+project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`, every pull request,
 weekly, and on demand: lint and both unit suites on Ubuntu 22.04 / Python 3.10, Ubuntu 24.04 /

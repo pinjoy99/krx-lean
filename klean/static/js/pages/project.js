@@ -43,8 +43,8 @@ export async function pageProject(name) {
       <pre id="oconsole" style="display:none;margin-top:10px"></pre>
     </div>
     <div class="panel"><h2>Research notebook</h2>
-      <div class="row"><button class="secondary" id="nb">Start JupyterLab for this project</button><span id="nbstate" class="muted">
-        LEAN's QuantBook on this workspace's data; the first start installs JupyterLab (a few minutes).</span></div></div>
+      <div class="row"><a class="button secondary" href="${href("research", p.name)}">Open ${esc(p.name)}/research.ipynb in Research</a>
+        <span class="muted">JupyterLab with LEAN's QuantBook on this workspace's data, inside this page.</span></div></div>
     <div class="panel"><h2>Files</h2><div class="muted">${p.files.map(esc).join(" · ")}</div></div>`;
   const oRow = () => { const d = document.createElement("div"); d.className = "kv4";
     d.innerHTML = `<input type="text" placeholder="name"><input type="text" placeholder="min"><input type="text" placeholder="max"><input type="text" placeholder="step"><a title="remove">✕</a>`;
@@ -75,15 +75,6 @@ export async function pageProject(name) {
       };
       poll();
     } catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; btn.disabled = false; }
-  };
-  document.getElementById("nb").onclick = async () => {
-    const btn = document.getElementById("nb"), state = document.getElementById("nbstate");
-    btn.disabled = true; state.innerHTML = '<span class="badge run">starting</span> (the first time this installs JupyterLab)';
-    try {
-      const r = await api("/api/research", {}, {project: p.name});
-      state.innerHTML = `<span class="badge ok">${r.started ? "started" : "already running"}</span> <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open the notebook</a> (give it a few seconds; it stops when klean gui stops)`;
-    } catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; }
-    btn.disabled = false;
   };
   const kvRow = target => { const d = document.createElement("div"); d.className = "kv";
     d.innerHTML = `<input type="text" placeholder="name"><input type="text" placeholder="value"><a title="remove">✕</a>`;

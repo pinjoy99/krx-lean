@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.13 — 2026-11-22
+
+- **Research tab in `klean gui`:** JupyterLab for the whole workspace inside the page, with LEAN
+  loaded in every notebook. Pick a project's `research.ipynb` at the top (or *Open … in
+  Research* on a project page); notebooks run in their project's folder, so its `krx_models`
+  imports. Files, code editor and terminal are JupyterLab's own. Started on first use
+  (installing JupyterLab once), stopped with the GUI, also when its terminal is closed.
+- The browser check runs a notebook cell in the Research tab on the LEAN kernel.
+
 ## 0.0.12 — 2026-11-22
 
 First step of the GUI and research upgrade (the page looks the same; the work is underneath).

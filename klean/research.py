@@ -43,10 +43,12 @@ def research_dir(ws: Workspace) -> Path:
     return ws.root / ".klean" / "research"
 
 
+PACKAGES_CHECK = "import jupyterlab, ipykernel, nbconvert, clr_loader, matplotlib"
+
+
 def ensure_packages(ws: Workspace, log=print) -> None:
     py = str(venv_python(ws.python_venv))
-    check = "import jupyterlab, ipykernel, nbconvert, clr_loader, matplotlib"
-    if subprocess.run([py, "-c", check], capture_output=True).returncode:
+    if subprocess.run([py, "-c", PACKAGES_CHECK], capture_output=True).returncode:
         log(f"klean: installing {' '.join(RESEARCH_PACKAGES)} into {ws.python_venv} (once, a few minutes)")
         run([py, "-m", "pip", "install", "-q", *RESEARCH_PACKAGES], env=python_env(ws))
 
@@ -166,6 +168,21 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
+def jupyter_command(ws: Workspace, root: Path, port: int, token: str, frame_ancestors: str = "") -> list[str]:
+    py = str(venv_python(ws.python_venv))
+    cmd = [py, "-m", "jupyter", "lab", "--no-browser", "--ip=127.0.0.1", f"--port={port}",
+           f"--ServerApp.root_dir={root}", f"--IdentityProvider.token={token}",
+           "--ServerApp.port_retries=0",
+           # no "news" / "new version" pop-ups (and no calls to jupyter.org): a local tool
+           "--LabApp.news_url=None", "--LabApp.check_for_updates_class=jupyterlab.NeverCheckForUpdate"]
+    if frame_ancestors:   # `klean gui` shows JupyterLab in its page (another port on 127.0.0.1)
+        csp = f"frame-ancestors 'self' {frame_ancestors}"
+        cmd.append("--ServerApp.tornado_settings=" + json.dumps({"headers": {"Content-Security-Policy": csp}}))
+    if hasattr(os, "geteuid") and os.geteuid() == 0:     # containers, some WSL setups
+        cmd.append("--allow-root")
+    return cmd
+
+
 def start(ws: Workspace, project: Path, port: int = 0, log=print, output=None) -> tuple[subprocess.Popen, str]:
     """Start JupyterLab for the project and return (process, URL with its token)."""
     ensure_packages(ws, log)
@@ -174,15 +191,23 @@ def start(ws: Workspace, project: Path, port: int = 0, log=print, output=None) -
     port = port or free_port()
     token = secrets.token_urlsafe(24)
     url = f"http://127.0.0.1:{port}/lab/tree/{nb.name}?token={token}"
-    py = str(venv_python(ws.python_venv))
-    cmd = [py, "-m", "jupyter", "lab", "--no-browser", "--ip=127.0.0.1", f"--port={port}",
-           f"--ServerApp.root_dir={project}", f"--IdentityProvider.token={token}",
-           "--ServerApp.port_retries=0",
-           # no "news" / "new version" pop-ups (and no calls to jupyter.org): a local tool
-           "--LabApp.news_url=None", "--LabApp.check_for_updates_class=jupyterlab.NeverCheckForUpdate"]
-    if hasattr(os, "geteuid") and os.geteuid() == 0:     # containers, some WSL setups
-        cmd.append("--allow-root")
+    cmd = jupyter_command(ws, project, port, token)
     return subprocess.Popen(cmd, cwd=project, env={**os.environ, **env}, stdout=output, stderr=output), url
+
+
+def start_workspace_server(ws: Workspace, frame_ancestors: str, output=None) -> tuple[subprocess.Popen, int, str]:
+    """JupyterLab over the whole workspace for `klean gui` (packages must be installed already).
+    Notebooks run in their own folder, so a project's notebook imports that project's modules.
+    Returns (process, port, token)."""
+    env = prepare(ws)
+    port, token = free_port(), secrets.token_urlsafe(24)
+    cmd = jupyter_command(ws, ws.root, port, token, frame_ancestors)
+    return subprocess.Popen(cmd, cwd=ws.root, env={**os.environ, **env}, stdout=output, stderr=output), port, token
+
+
+def packages_installed(ws: Workspace) -> bool:
+    py = str(venv_python(ws.python_venv))
+    return subprocess.run([py, "-c", PACKAGES_CHECK], capture_output=True).returncode == 0
 
 
 def launch(ws: Workspace, project: Path, port: int = 0, open_browser: bool = True, log=print) -> int:

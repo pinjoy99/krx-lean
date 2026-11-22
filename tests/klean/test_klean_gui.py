@@ -100,6 +100,27 @@ class GuiTest(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", csp)     # can't be framed by another site
         self.assertNotIn("<script>", (gui.STATIC / "index.html").read_text())
 
+    def test_research_endpoint(self):
+        import json
+        # GET only reports; nothing is started
+        status, body = self.get("/api/research")
+        self.assertEqual((status, json.loads(body)), (200, {"status": "off"}))
+        # POST for a project outside the workspace is refused before anything starts
+        status, body = self.get("/api/research", data=json.dumps({"project": "../x"}).encode())
+        self.assertEqual(status, 400)
+        self.assertEqual(json.loads(self.get("/api/research")[1])["status"], "off")
+        # the page may frame JupyterLab (another port on 127.0.0.1), nothing else
+        self.assertIn("frame-src 'self' http://127.0.0.1:*;", gui.PAGE_CSP)
+
+    def test_jupyter_may_be_framed_by_the_gui_only(self):
+        from klean import research
+        cmd = research.jupyter_command(self.ws, self.ws.root, 8888, "tok", "http://127.0.0.1:5000")
+        setting = next(c for c in cmd if c.startswith("--ServerApp.tornado_settings="))
+        self.assertIn("frame-ancestors 'self' http://127.0.0.1:5000", setting)
+        self.assertIn("--ip=127.0.0.1", cmd)
+        plain = research.jupyter_command(self.ws, self.ws.root, 8888, "tok")
+        self.assertFalse(any(c.startswith("--ServerApp.tornado_settings") for c in plain))
+
     def test_outside_workspace_refused(self):
         status, body = self.get("/api/run?ref=" + urllib.request.quote(str(self.outside)))
         self.assertEqual(status, 400)

@@ -91,6 +91,11 @@ US/global events and are empty outside your data's dates.
 
 ## Research notebooks
 
+The easiest way in is the GUI's **Research** tab (`klean gui`, then *Research*, or *Open … in
+Research* on a project page): JupyterLab for the whole workspace inside the page, with every
+project's files, notebooks and a terminal. Pick a project's `research.ipynb` from the list at the
+top. The first time, klean installs JupyterLab (a few minutes). On its own:
+
 ```bash
 klean research Top20                  # JupyterLab in the browser, with the project's research.ipynb
 klean research Top20 --port 8888 --no-browser
@@ -136,7 +141,8 @@ klean gui --port 8765 --no-browser
 | Page | Shows |
 |---|---|
 | Workspace | projects with their last run, data status, setup check, settings |
-| Project | runs (tick two or more → Compare), optimizations; forms to start a backtest and an optimization (grid search); a button that starts JupyterLab for the project |
+| Project | runs (tick two or more → Compare), optimizations; forms to start a backtest and an optimization (grid search); *Open … in Research* |
+| Research | JupyterLab inside the page, over the whole workspace (notebooks, code files, a terminal), LEAN loaded in every notebook; *Open in a new tab* |
 | Run | figures, equity vs KOSPI 200, drawdown, statistics, orders, log, **code**, run record; *Make LEAN report* / *Open report*; *Rename* and *Delete* |
 | Optimization | target by parameter, ranked runs, Compare |
 | Compare | equity curves overlaid, statistics side by side |
@@ -147,9 +153,11 @@ charts makes long periods easier to read.
 
 It listens on 127.0.0.1 only and needs the token in the printed URL; keep that URL to yourself.
 Under WSL2 the page opens in your Windows browser (with `wslu` installed), or open the printed
-URL yourself. Stop it with Ctrl+C (notebooks started from the page stop with it). *Delete*
+URL yourself. Stop it with Ctrl+C or by closing its terminal (JupyterLab stops with it).
+*Delete*
 removes a run's folder for good, after asking; only runs in a project's `backtests/` folder can
-be renamed or deleted, and never one that is still running. It doesn't edit code: use your
+be renamed or deleted, and never one that is still running. To edit a strategy, open its
+`main.py` in the Research tab (JupyterLab's editor; files save automatically) or use your own
 editor.
 
 ## Other commands

@@ -22,6 +22,7 @@ import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import urllib.request
 from urllib.parse import parse_qs, urlparse
 
 from klean import __version__, projects, results
@@ -33,7 +34,7 @@ STATIC = Path(__file__).with_name("static")
 # The page's own files: scripts and styles from klean/static only (no CDN), inline style
 # attributes for layout, no inline scripts.
 PAGE_CSP = ("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-            "connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+            "connect-src 'self'; frame-src 'self' http://127.0.0.1:*; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 STATIC_TYPES = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
 
 
@@ -276,7 +277,7 @@ class Jobs:
     def __init__(self):
         self.lock = threading.Lock()
         self.jobs: dict[str, dict] = {}
-        self.notebooks: dict[str, tuple[subprocess.Popen, str]] = {}
+        self.notebook: dict = {}            # the workspace's JupyterLab (Research tab)
 
     def start(self, ws: Workspace, body: dict) -> dict:
         project = inside(ws, ws.root / str(body.get("project", "")))
@@ -356,25 +357,72 @@ class Jobs:
         threading.Thread(target=work, daemon=True).start()
         return {k: v for k, v in job.items() if k != "lines"}
 
-    def start_research(self, ws: Workspace, body: dict) -> dict:
-        """JupyterLab for a project (one per project; it stops when the GUI stops)."""
+    def research(self, ws: Workspace, body: dict | None, gui_port: int) -> dict:
+        """The workspace's JupyterLab, shown in the page's Research tab: started on the first POST
+        (installing JupyterLab into the Python env the first time), stopped with the GUI. GET
+        (body None) only reports its state. With a project, also its notebook's address."""
         from klean import research
-        project = inside(ws, ws.root / str(body.get("project", "")))
-        projects.language_of(project)
+        project = None
+        if body and body.get("project"):
+            project = inside(ws, ws.root / str(body["project"]))
+            projects.language_of(project)
         with self.lock:
-            proc, url = self.notebooks.get(project.name, (None, ""))
-            if proc is not None and proc.poll() is None:
-                return {"url": url, "started": False}
-        log = open(research.research_dir(ws) / "jupyter.log", "w") if research.research_dir(ws).is_dir() else None
-        proc, url = research.start(ws, project, log=lambda *a: None, output=log or subprocess.DEVNULL)
-        with self.lock:
-            self.notebooks[project.name] = (proc, url)
-        return {"url": url, "started": True}
+            nb = self.notebook
+            alive = nb.get("proc") is not None and nb["proc"].poll() is None
+            if nb.get("status") == "ready" and not alive:          # JupyterLab exited
+                nb.clear()
+                nb.update(status="stopped", error="JupyterLab stopped (see .klean/research/jupyter.log)")
+            if body is not None and nb.get("status") not in ("installing", "starting", "ready"):
+                nb.clear()
+                nb.update(status="starting", error="", started=time.time())
+                threading.Thread(target=self._start_notebook, args=(ws, gui_port), daemon=True).start()
+            state = {k: v for k, v in nb.items() if k in ("status", "error", "started")}
+        if not state:
+            state = {"status": "off"}
+        if state["status"] == "ready":
+            base = f"http://127.0.0.1:{nb['port']}"
+            state["url"] = f"{base}/lab?token={nb['token']}"
+            if project is not None:
+                notebook = research.ensure_notebook(ws, project)
+                state["url"] = f"{base}/lab/tree/{project.name}/{notebook.name}?token={nb['token']}"
+        return state
+
+    def _start_notebook(self, ws: Workspace, gui_port: int) -> None:
+        from klean import research
+        nb = self.notebook
+        try:
+            if not research.packages_installed(ws):
+                nb["status"] = "installing"
+                research.ensure_packages(ws, log=lambda *a: None)
+            nb["status"] = "starting"
+            folder = research.research_dir(ws)
+            folder.mkdir(parents=True, exist_ok=True)
+            log = open(folder / "jupyter.log", "w")
+            origins = f"http://127.0.0.1:{gui_port} http://localhost:{gui_port}"
+            proc, port, token = research.start_workspace_server(ws, origins, output=log)
+            nb.update(proc=proc, port=port, token=token)
+            deadline = time.time() + 120
+            while time.time() < deadline:
+                if proc.poll() is not None:
+                    raise KleanError(f"JupyterLab exited ({proc.returncode}); see {folder / 'jupyter.log'}")
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status?token={token}", timeout=2):
+                        nb["status"] = "ready"
+                        return
+                except OSError:
+                    time.sleep(0.5)
+            raise KleanError(f"JupyterLab didn't answer in 2 minutes; see {folder / 'jupyter.log'}")
+        except Exception as e:  # noqa: BLE001 - shown on the page
+            nb.update(status="failed", error=str(e))
 
     def stop_all(self) -> None:
-        for proc, _ in self.notebooks.values():
-            if proc.poll() is None:
-                proc.terminate()
+        proc = self.notebook.get("proc")
+        if proc is not None and proc.poll() is None:
+            proc.terminate()                  # JupyterLab shuts its kernels down first
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
     def status(self, job_id: str) -> dict:
         job = self.jobs.get(job_id)
@@ -449,6 +497,8 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                     if not page.exists():
                         raise KleanError("no report for this run yet")
                     self._send(200, page.read_bytes(), "text/html; charset=utf-8", {"Content-Security-Policy": REPORT_CSP})
+                elif url.path == "/api/research":
+                    self._json(jobs.research(Workspace.load(ws.root), None, self.server.server_address[1]))
                 elif url.path == "/api/jobs":
                     self._json(jobs.all())
                 elif url.path == "/api/job":
@@ -475,7 +525,7 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                 elif url.path == "/api/optimize":
                     self._json(jobs.start_optimize(Workspace.load(ws.root), body))
                 elif url.path == "/api/research":
-                    self._json(jobs.start_research(Workspace.load(ws.root), body))
+                    self._json(jobs.research(Workspace.load(ws.root), body, self.server.server_address[1]))
                 elif url.path == "/api/run-delete":
                     self._json(api_run_delete(Workspace.load(ws.root), body))
                 elif url.path == "/api/run-rename":
@@ -508,6 +558,8 @@ def serve(ws: Workspace, port: int = 0, open_browser: bool = True, token: str | 
         raise KeyboardInterrupt
     try:
         signal.signal(signal.SIGTERM, stop)
+        if hasattr(signal, "SIGHUP"):
+            signal.signal(signal.SIGHUP, stop)     # the terminal was closed
     except ValueError:            # not the main thread (tests)
         pass
     try:
