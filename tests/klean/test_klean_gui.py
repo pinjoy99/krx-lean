@@ -6,7 +6,6 @@ import threading
 import unittest
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 _HERE = Path(__file__).resolve()
@@ -34,7 +33,7 @@ class GuiTest(unittest.TestCase):
         make_run(self.root / "A", "2026-10-28_11-00-00", 110.0, stats)
         self.outside = make_run(base / "other", "2026-10-28_10-00-00", 1.0, stats)
         self.token = "t0ken"
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), gui.make_handler(self.ws, self.token, gui.Jobs()))
+        self.server = gui.LocalServer(("127.0.0.1", 0), gui.make_handler(self.ws, self.token, gui.Jobs()))
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
 
@@ -99,6 +98,14 @@ class GuiTest(unittest.TestCase):
         self.assertIn("script-src 'self'", csp)          # no inline or third-party scripts
         self.assertIn("frame-ancestors 'none'", csp)     # can't be framed by another site
         self.assertNotIn("<script>", (gui.STATIC / "index.html").read_text())
+
+    def test_server_starts_without_a_dns_lookup(self):
+        # HTTPServer.server_bind calls socket.getfqdn, which hung for minutes on macOS CI
+        from unittest import mock
+        with mock.patch("socket.getfqdn", side_effect=AssertionError("reverse DNS lookup")):
+            server = gui.LocalServer(("127.0.0.1", 0), gui.make_handler(self.ws, "t", gui.Jobs()))
+        self.assertEqual(server.server_name, "127.0.0.1")
+        server.server_close()
 
     def test_research_endpoint(self):
         import json

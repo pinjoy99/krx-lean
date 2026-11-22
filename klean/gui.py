@@ -14,6 +14,7 @@ import re
 import secrets
 import shutil
 import signal
+import socketserver
 import subprocess
 import threading
 import time
@@ -538,6 +539,17 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
     return Handler
 
 
+class LocalServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without the reverse DNS lookup of its address (`socket.getfqdn` in
+    HTTPServer.server_bind), which can hang for a long time on some systems (seen on macOS)."""
+
+    daemon_threads = True
+
+    def server_bind(self) -> None:
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def open_page(url: str) -> None:
     """The default browser; under WSL the Windows one (wslview, from wslu) if it's installed."""
     if "microsoft" in platform.release().lower() and shutil.which("wslview"):
@@ -549,7 +561,7 @@ def open_page(url: str) -> None:
 def serve(ws: Workspace, port: int = 0, open_browser: bool = True, token: str | None = None) -> None:
     token = token or secrets.token_urlsafe(24)
     jobs = Jobs()
-    server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(ws, token, jobs))
+    server = LocalServer(("127.0.0.1", port), make_handler(ws, token, jobs))
     url = f"http://127.0.0.1:{server.server_address[1]}/?token={token}"
     print(f"klean gui for {ws.root}\n  {url}\n(Ctrl+C to stop)", flush=True)
     if open_browser:

@@ -8,6 +8,8 @@
   imports. Files, code editor and terminal are JupyterLab's own. Started on first use
   (installing JupyterLab once), stopped with the GUI, also when its terminal is closed.
 - The browser check runs a notebook cell in the Research tab on the LEAN kernel.
+- Fix: `klean gui` could hang at start on macOS: Python's web server looks up a host name for
+  127.0.0.1 (reverse DNS), which stalled there. klean's server skips that lookup.
 
 ## 0.0.12 — 2026-11-22
 

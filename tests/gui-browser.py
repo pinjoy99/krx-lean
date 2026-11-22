@@ -48,8 +48,7 @@ def start_gui() -> str:
 
     def run():
         try:
-            from http.server import ThreadingHTTPServer
-            server = ThreadingHTTPServer(("127.0.0.1", port), gui.make_handler(Workspace.load(WS), token, JOBS))
+            server = gui.LocalServer(("127.0.0.1", port), gui.make_handler(Workspace.load(WS), token, JOBS))
             server.serve_forever()
         except BaseException:          # noqa: BLE001 - reported below
             failed.append(traceback.format_exc())
