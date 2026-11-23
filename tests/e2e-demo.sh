@@ -111,6 +111,34 @@ EOF2
 klean live status Py | grep -q "running (backdated)" || fail "live status"
 klean live stop Py "$(basename "$(ls -d Py/live/*_e2e)")" | grep -q "stopped" || fail "live stop"
 
+step "live paper trading through klean's LEAN plugin: three trading days, then the same days as a backtest"
+python - <<'EOF2' || fail "live paper trading"
+import glob, json
+from pathlib import Path
+from klean import live
+from klean.workspace import Workspace
+ws = Workspace.load(Path("."))
+dep = live.deploy(ws, Path("HoldPy"), "e2e", start="2026-09-23")
+runs = live.run(ws, dep, max_sessions=3)
+assert [r["ok"] for r in runs] == [True] * 3, runs
+book = live.ledger(dep)
+fills = book["fills"]
+assert len(fills) == 1 and fills[0]["session"] == "2026-09-28", fills          # ordered on 09-23, filled at the next open
+assert book["open_orders"] == [] and book["last_session"] == "2026-09-29", book
+json.dump(fills[0], open("live-fill.json", "w"))
+print("live fill", fills[0])
+EOF2
+klean backtest HoldPy --parameter start_date 2026-09-23 --parameter end_date 2026-09-29 --backtest-name livecheck >/dev/null
+python - <<'EOF2' || fail "the live fill differs from the backtest's"
+import glob, json
+live_fill = json.load(open("live-fill.json"))
+run = sorted(glob.glob("HoldPy/backtests/*_livecheck"))[-1]
+fills = [e for e in json.load(open(glob.glob(run + "/*-order-events.json")[0])) if e["status"] == "filled"]
+assert len(fills) == 1, fills
+assert (fills[0]["fillQuantity"], fills[0]["fillPrice"]) == (live_fill["quantity"], live_fill["price"]), (fills[0], live_fill)
+print("backtest fill", fills[0]["fillQuantity"], fills[0]["fillPrice"], "= live")
+EOF2
+
 step "optimize"
 klean optimize Cs --parameter holdings 10 20 10 --max-concurrent-backtests 2 --name e2e
 grep -q '"best": "00' Cs/optimizations/*_e2e/optimization.json || fail "the optimization has no best run"

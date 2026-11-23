@@ -11,3 +11,5 @@ klean.json
 # Keys
 .env
 *.key
+klean/plugin/bin/
+klean/plugin/obj/

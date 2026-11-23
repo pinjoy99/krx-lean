@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- klean's LEAN plugin for KRX live (paper) trading. Built by klean against the LEAN build in
+       use (LeanBin = <LEAN>/Launcher/bin/Release) into that folder, where LEAN finds it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>QuantConnect.Krx</AssemblyName>
+    <RootNamespace>QuantConnect.Krx</RootNamespace>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="QuantConnect.Common"><HintPath>$(LeanBin)/QuantConnect.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="QuantConnect.Algorithm"><HintPath>$(LeanBin)/QuantConnect.Algorithm.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="QuantConnect.Lean.Engine"><HintPath>$(LeanBin)/QuantConnect.Lean.Engine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="QuantConnect.Brokerages"><HintPath>$(LeanBin)/QuantConnect.Brokerages.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="QuantConnect.Configuration"><HintPath>$(LeanBin)/QuantConnect.Configuration.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="QuantConnect.Logging"><HintPath>$(LeanBin)/QuantConnect.Logging.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Python.Runtime"><HintPath>$(LeanBin)/Python.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="NodaTime"><HintPath>$(LeanBin)/NodaTime.dll</HintPath><Private>false</Private></Reference>
+    <!-- the same KRX tax, tick-size and board rules as the strategies (krx-lean/examples) -->
+    <Compile Include="../../examples/KrxModels.cs" Link="KrxModels.cs" />
+  </ItemGroup>
+</Project>

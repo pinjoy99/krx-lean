@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.16 — 2026-11-23
+
+Groundwork for live paper trading in LEAN's own live mode (commands and GUI follow).
+
+- **klean's LEAN plugin** (`klean/plugin`, built into the LEAN build as `QuantConnect.Krx.dll`
+  when first needed): `KrxDailyDataQueue` feeds one trading day of KRX bars per run;
+  `KrxPaperBrokerage` keeps a paper account in `ledger.json` and fills the orders of one day
+  at the next trading day's open, with KRX commission, sell tax (by settlement date) and
+  slippage in ticks, before the strategy runs; each run ends by itself.
+- `klean/live.py`: deployments (frozen code + paper account) and the daily runs, one LEAN
+  process per trading day, catching up missed days in order.
+- Checked: buy-and-hold on the demo data over three trading days fills the same shares at the
+  same price as a backtest of those days. The live commission is on the traded value; the
+  backtest's KRX fee model uses the previous close (₩260 apart on a ₩90M buy).
+
 ## 0.0.15 — 2026-11-23
 
 - **Forward tests (Live dashboard, `klean live`)**: paper trading on daily data. A forward test
