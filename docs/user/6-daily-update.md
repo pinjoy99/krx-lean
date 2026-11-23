@@ -30,35 +30,56 @@ Recent days that KRX hasn't published yet are retried on the next run. Rerun `ri
 
 ## Run it automatically
 
-Save as `~/bin/krx-update` and `chmod +x` it:
+Save as `~/bin/krx-update` and `chmod +x` it (use the folder `which klean` shows if yours
+differs from `~/.krx-lean/venv/bin`):
 
 ```bash
 #!/usr/bin/env bash
+# Daily: new KRX data, then live paper deployments trade the new day(s).
 set -euo pipefail
-export PATH="$HOME/.krx-lean/venv/bin:$HOME/.dotnet:$PATH"
-cd "$HOME/krx-workspace" && klean update data
+exec >> "$HOME/krx-update.log" 2>&1
+export DOTNET_ROOT="$HOME/.dotnet"
+export PATH="$HOME/.krx-lean/venv/bin:$HOME/.dotnet:$HOME/.local/bin:$PATH"
+echo "=== $(date)"
+cd "$HOME/krx-workspace"
+klean update data
+klean live status
 ```
 
-### Linux: cron
+When: KRX publishes a trading day's data the next day, by early afternoon in Korea. Run it
+once a day after that; days without new data do nothing, and missed days are caught up.
 
-`crontab -e`, weekdays at 15:00 KST (cron uses the system time zone; 15:00 KST = 06:00 UTC):
+| You are in | Run at (local) | Gets |
+|---|---|---|
+| Korea (KST) | 15:00 | the previous trading day |
+| US Eastern (EST/EDT) | 07:30 | the trading day that ended in Korea ~18 h earlier (Monday: Friday's) |
+| UTC | 06:00 | the previous trading day |
+
+### WSL2: Windows Task Scheduler (recommended)
+
+Cron inside WSL only runs while WSL is running, and WSL stops soon after its last terminal
+closes. Task Scheduler starts WSL itself and uses the Windows clock. In PowerShell
+(`wsl -l -v` shows your distribution's name; replace `<you>` with your Linux user name):
+
+```powershell
+schtasks /Create /TN "krx-update" /SC DAILY /ST 07:30 /TR "wsl.exe -d Ubuntu -e /home/<you>/bin/krx-update"
+schtasks /Run /TN "krx-update"          # try it now; then `tail ~/krx-update.log` in Ubuntu
+```
+
+In Task Scheduler, the task's Properties can make it run while you're logged out and wake the
+computer for it.
+
+### Linux (or WSL left running): cron
+
+Cron uses the system time zone (`date` shows it; `sudo timedatectl set-timezone
+America/New_York` changes it). `crontab -e`:
 
 ```
-0 6 * * 1-5  $HOME/bin/krx-update >> $HOME/krx-update.log 2>&1
+30 7 * * *  $HOME/bin/krx-update
 ```
 
-### WSL2
-
-Cron only runs while WSL is running and, on Ubuntu, needs systemd: add
-
-```
-[boot]
-systemd=true
-```
-
-to `/etc/wsl.conf`, run `wsl --shutdown` in PowerShell, reopen Ubuntu, then
-`sudo systemctl enable --now cron` and add the crontab line above. Alternatively, create a
-Windows Task Scheduler task that runs `wsl.exe -d Ubuntu-24.04 -- bash -lc ~/bin/krx-update`.
+On WSL, cron also needs systemd: add `[boot]` / `systemd=true` to `/etc/wsl.conf`, run
+`wsl --shutdown` in PowerShell, reopen Ubuntu, then `sudo systemctl enable --now cron`.
 
 ## After updating krx-lean itself
 

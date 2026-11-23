@@ -179,9 +179,22 @@ with sync_playwright() as pw:
     expect(page.locator("iframe.lab")).to_be_visible(timeout=300_000)    # may install JupyterLab first
     lab = page.frame_locator("iframe.lab")
     expect(lab.locator(".jp-Notebook")).to_be_visible(timeout=120_000)
-    lab.locator(".jp-CodeCell .cm-content").first.click()
-    page.keyboard.press("Shift+Enter")
-    expect(lab.locator(".jp-OutputArea-output").first).to_contain_text("securities", timeout=180_000)
+    # wait until the kernel (with LEAN loaded) is idle: a keypress sent earlier can be lost
+    expect(lab.get_by_text(re.compile(r"\| Idle"))).to_be_visible(timeout=180_000)
+    output = lab.locator(".jp-OutputArea-output").first
+    for attempt in range(3):
+        lab.locator(".jp-CodeCell .cm-content").first.click()
+        if attempt == 0:
+            page.keyboard.press("Shift+Enter")
+        else:                          # the toolbar's Run button, if the keypress didn't reach the cell
+            lab.locator(".jp-NotebookPanel-toolbar [data-command='notebook:run-cell-and-select-next']").click()
+        try:
+            expect(output).to_contain_text("securities", timeout=90_000)
+            break
+        except AssertionError:
+            if attempt == 2:
+                raise
+            print(f"research: no output yet (attempt {attempt + 1}), running the cell again")
     page.screenshot(path=str(SHOTS / "research.png"))
     if errors:
         raise SystemExit(f"research: browser errors: {errors}")
