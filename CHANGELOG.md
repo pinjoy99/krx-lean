@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.22 — 2026-11-23
+
+Documentation for the current scope: research and paper trading, no real-money orders.
+
+- README (English and Korean), the beginner's guide (both languages), the users and developers
+  tracks, CONTRIBUTING and SECURITY describe daily paper trading (klean's paper broker or a KIS
+  모의투자 account) as in scope and real-money trading as out of scope; the guide's FAQ no
+  longer says nothing connects to a broker.
+- Users: KIS-PAPER keys next to the other keys, a `~/bin/klean-kis-paper` script and cron line
+  for the pre-open schedule, and why `klean update data` skips KIS-PAPER deployments; a
+  troubleshooting table for live paper trading.
+- Developers: how a live session runs, succeeds or rolls back (6. klean internals); the plugin
+  in the architecture; the roadmap's live items; a KIS-PAPER step in the release checklist.
+
 ## 0.0.21 — 2026-11-23
 
 - **KIS-PAPER broker** for live deployments: `klean live deploy NAME --broker kis-paper` sends

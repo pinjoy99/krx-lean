@@ -1,4 +1,4 @@
-# 5. Tools: compare, optimize, report, research, GUI
+# 5. Tools: compare, optimize, report, research, GUI, live paper trading
 
 ## Naming runs
 
@@ -238,8 +238,22 @@ klean's own paper broker: broker `kis-paper`. klean only ever connects to KIS's 
    | Korea | 08:35 |
    | US Eastern | 18:35 in winter (EST), 19:35 in summer (EDT): schedule both |
 
-   Windows Task Scheduler (PowerShell; a script like `~/bin/krx-update` that runs
-   `cd ~/krx-workspace && klean live run`):
+   A script for it, `~/bin/klean-kis-paper` (`chmod +x`; same environment lines as `~/bin/krx-update`
+   in [6. Daily update](6-daily-update.md#run-it-automatically)):
+
+   ```bash
+   #!/usr/bin/env bash
+   set -euo pipefail
+   exec >> "$HOME/klean-kis-paper.log" 2>&1
+   export DOTNET_ROOT="$HOME/.dotnet"
+   export PATH="$HOME/.krx-lean/venv/bin:$HOME/.dotnet:$HOME/.local/bin:$PATH"
+   echo "=== $(date)"
+   cd "$HOME/krx-workspace" && klean live run
+   ```
+
+   Linux cron, with the system clock on US Eastern: `35 18,19 * * 0-4 $HOME/bin/klean-kis-paper`
+   (Sunday to Thursday evening is Monday to Friday morning in Korea; on Korean time:
+   `35 8 * * 1-5 …`). WSL2, Windows Task Scheduler (PowerShell):
 
    ```powershell
    schtasks /Create /TN "klean-kis-paper-est" /SC DAILY /ST 18:35 /TR "wsl.exe -d Ubuntu -e /home/<you>/bin/klean-kis-paper"

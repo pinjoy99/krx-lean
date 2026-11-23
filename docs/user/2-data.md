@@ -55,6 +55,10 @@ KRX_API_KEY=your-krx-key
 DATA_GO_KR_KEY=your-data-go-kr-decoding-key
 ```
 
+(Later, only if you paper-trade on a Korea Investment 모의투자 account, its keys go in the same
+file: `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_ACCOUNT`; see
+[5. Tools](5-tools.md#kis-paper-a-korea-investment-모의투자-paper-account).)
+
 Load them into a shell before downloading:
 
 ```bash

@@ -64,7 +64,7 @@ class KisTest(unittest.TestCase):
 
     def test_paper_only(self):
         self.assertEqual(kis.PAPER_URL, "https://openapivts.koreainvestment.com:29443")   # KIS 모의투자
-        for old in ("KIS_APP_KEY", "KIS_MOCK"):                                         # 0.0.20/0.0.21 names
+        for old in ("KIS_APP_KEY", "KIS_MOCK"):                                         # earlier names
             with mock.patch.dict(os.environ, {old: "x"}), self.assertRaisesRegex(KleanError, "KIS_PAPER_APP_KEY"):
                 kis.Kis()
         with mock.patch.dict(os.environ, {"KIS_PAPER_BASE_URL": ""}):

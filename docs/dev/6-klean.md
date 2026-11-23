@@ -117,11 +117,42 @@ Harmless log lines in `log.txt`: `QuantBook failed to determine Notebook kernel 
 outside Jupyter) and `SecurityIdentifier.TryParseProperties … '<label>'` (LEAN's pandas helper
 trying chart labels as symbols).
 
+## Live paper trading
+
+Paper only: klean has two brokerages, both paper, and no real-money one (see the guard test in
+`tests/klean/test_klean_kis.py`).
+
+- **Deploy** (`live.deploy`): refuses a project whose models copy isn't current (live runs read
+  the KRX universe through it; `--models-as-is` overrides); copies the code into `code/`; writes
+  `ledger.json` (cash, `start_cash`, holdings, open orders, fills, daily equity, `broker`) and
+  `deployment.json` (parameters, first session, `backdated`, `broker`, for KIS-PAPER the masked
+  account id `kis_account`). KIS-PAPER: no backdating, one running deployment per account, the
+  starting cash is the account's total.
+- **Sessions** (`pending_sessions`): paper, every trading day in the data after the ledger's
+  `last_session`, oldest first; KIS-PAPER, only the previous trading day by the Korean clock
+  (`kis.now_kst`, fixed by `KLEAN_KIS_NOW` in tests), once.
+- **A session** (`run_session`): one LEAN live-mode process with the frozen code; the config
+  sets klean's `KrxDailyDataQueue` and `KrxPaperBrokerage` (or `KisPaperBrokerage` with
+  `krx-kis-prices`), `krx-ledger` and `krx-session-date`; `KRX_SESSION_DATE` in the environment
+  for the universe reader. The brokerage settles the previous day's orders before LEAN reads the
+  account; `KrxSession.StopWhenDone` ends the run once the day's data is processed and the
+  algorithm is quiet (5 s), or after 180 s without data.
+- **Success**: the console has `session <day> done (data processed)` and the ledger's
+  `last_session` is the day. Otherwise the ledger is restored from `ledger.json.before`, the
+  error is recorded under `runs`, and the next run retries the day (`run` stops at the first
+  failure, so days stay in order).
+- **KIS-PAPER timing** (`run`): only in the pre-open auction, 08:30–08:59:30 KST on a trading
+  day (`kis.in_pre_open`; `--now` / `krx-kis-any-time` override); the plugin checks the same
+  window before sending an order. Orders are day orders (`ORD_DVSN` 01 market, 00 limit); the
+  next session reads their fills (`inquire-daily-ccld`) before the algorithm starts.
+- `klean update data` calls `run_all` after installing the data; KIS-PAPER deployments skip
+  themselves outside their window.
+
 ## GUI actions
 
 POST endpoints (all need the token header): `/api/backtest`, `/api/report`, `/api/optimize`
 (validated with `optimize(estimate=True)` first; progress lines kept in the job),
-`/api/research` (one JupyterLab for the whole workspace, `research.start_workspace_server`, started in
+`/api/live-deploy`, `/api/live-run`, `/api/live-stop`, `/api/research` (one JupyterLab for the whole workspace, `research.start_workspace_server`, started in
 a thread after installing the packages if needed; GET reports `off | installing | starting | ready |
 failed | stopped`; JupyterLab's CSP lets only the GUI's origin frame it; terminated when the GUI stops,
 also on SIGTERM and SIGHUP), `/api/run-rename` and `/api/run-delete` (`stored_run`: only a folder

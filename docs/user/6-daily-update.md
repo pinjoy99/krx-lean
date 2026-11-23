@@ -9,7 +9,8 @@ cd ~/krx-workspace
 klean update data            # prints the new date range when done
 ```
 
-`klean update data` does the whole routine (and then lets your live paper deployments trade the new days): it reads your keys from `~/.config/krx-lean.env` (if
+`klean update data` does the whole routine, and then lets your live paper deployments trade the
+new days ([5. Tools](5-tools.md#live-paper-trading-live)). It reads your keys from `~/.config/krx-lean.env` (if
 they aren't already in the environment; another file with `--env-file`), runs
 `krx-lean --root <data root> all`, and installs the result into the workspace. It uses the data
 root you last installed from (`klean install data --root ~/krx-data`); name it once with
@@ -48,6 +49,9 @@ klean live status
 
 When: KRX publishes a trading day's data the next day, by early afternoon in Korea. Run it
 once a day after that; days without new data do nothing, and missed days are caught up.
+Deployments on klean's paper broker trade the new days in the same run. **KIS-PAPER**
+deployments are skipped here: they trade at KRX's pre-open auction (08:30–08:59 KST) and need
+their own schedule ([5. Tools](5-tools.md#kis-paper-a-korea-investment-모의투자-paper-account)).
 
 | You are in | Run at (local) | Gets |
 |---|---|---|

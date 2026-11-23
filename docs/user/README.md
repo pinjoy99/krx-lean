@@ -1,14 +1,15 @@
 # Users track
 
 Write and test KOSPI, KOSDAQ and ETF strategies in Python or C# on your own machine, with `klean` doing the
-setup and the runs.
+setup and the runs, then paper-trade them day by day. Research and paper trading only: nothing
+here places real-money orders or is investment advice.
 
 1. [Install](1-install.md) — tools, .NET, LEAN, Python 3.11 (Linux, WSL2)
    - [Try it without keys](demo.md) — synthetic demo data, while your KRX key is approved
 2. [Keys and data](2-data.md) — API keys, first download, building the LEAN data
 3. [Workspace and first backtest](3-first-backtest.md)
 4. [Writing strategies](4-strategies.md) — the KRX setup every strategy needs, Python and C#
-5. [Tools](5-tools.md) — compare, optimize, report, research notebooks, GUI
+5. [Tools](5-tools.md) — compare, optimize, report, research notebooks, GUI, live paper trading (klean's paper broker or a KIS 모의투자 account)
 6. [Daily update](6-daily-update.md)
 7. [Troubleshooting](7-troubleshooting.md)
 
@@ -23,3 +24,5 @@ Paths used throughout (change them if you like):
 | `~/krx-data` | downloaded and built KRX data |
 | `~/krx-workspace` | your workspace: projects, their results and notebooks |
 | `~/krx-demo` | a separate workspace for the [synthetic demo data](demo.md) (optional) |
+| `~/.config/krx-lean.env` | your API keys (KRX, data.go.kr, optionally KIS-PAPER); readable only by you |
+| `~/.klean/` | klean's own files: the Python 3.11 environment, KIS-PAPER login tokens |

@@ -10,10 +10,10 @@
 | `library add/remove` | partly: `klean status models` / `update models` keeps per-project copies current; a shared library later |
 | `backtest --debug` | planned (C# attach, debugpy) |
 | `object-store` | later |
-| `live …` | not in scope for now |
+| `live …` | `klean live deploy / run / status / stop` in LEAN's live mode, daily, paper only: klean's paper broker or a KIS 모의투자 account (`--broker kis-paper`). No real-money brokerages (out of scope) |
 | `login`, `cloud …`, `data download`, `encrypt` | not applicable (QuantConnect services) |
 
-KRX-specific additions: `doctor`, `install data` / `status data`, synthetic demo data
+KRX-specific additions: `live kis-check`, `doctor`, `install data` / `status data`, synthetic demo data
 (`install data --demo`), run manifest and code snapshot, failure detection from LEAN's run
 status, `compare`; planned `check-models` (run the `CHECK` cases in both languages and compare).
 `research`: C# notebooks (.NET Interactive) later, if wanted.
@@ -33,12 +33,22 @@ status, `compare`; planned `check-models` (run the `CHECK` cases in both languag
 - Fill model (±30% limits, auctions, VI); T+2 settlement; `KrxBrokerageModel`.
 - Late opens in market hours (first trading day, 수능일).
 
+## Live paper trading
+
+- KIS-PAPER: check against KIS's real 모의투자 server (built from KIS's official sample code and
+  tested against `tests/fake_kis.py`; `klean live kis-check` is the first real test). Unfilled
+  day orders: optionally re-send them the next day.
+- klean's paper broker: splits and dividends on holdings; the ±30% daily price limits.
+- Real-money trading stays out of scope.
+
 ## Scope and platforms
 
 - macOS (Apple Silicon): passes CI end to end; needs a walkthrough by a person before it's
   called supported. Intel Macs untested.
 - CI: done for Ubuntu (unit suites, LEAN build, end-to-end on the demo data). Next: a scheduled
   job trying the newest LEAN commit; a release workflow creating tags.
+- Live paper trading: in scope since 0.0.17 (LEAN live mode, klean's paper broker) and 0.0.21 (KIS-PAPER),
+  paper only.
 - KOSDAQ: in scope since 0.0.9; to do: `verify` on a full real download, and the pre-2023 tick
   table from a primary source. KONEX (code paths exist; needs approval and verification); NXT (no
   source yet); minute data (needs a source with the full session).

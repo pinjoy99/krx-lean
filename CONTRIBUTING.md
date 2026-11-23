@@ -12,7 +12,8 @@ Open an [issue](https://github.com/pinjoy99/krx-lean/issues/new/choose) and incl
 - your system (Ubuntu version, WSL2 or native).
 
 **Never paste API keys.** krx-lean hides keys in its own messages, but check anything you copy
-from a terminal or a log for `KRX_API_KEY`, `DATA_GO_KR_KEY` or `serviceKey=` values first.
+from a terminal or a log for `KRX_API_KEY`, `DATA_GO_KR_KEY`, `KIS_PAPER_APP_KEY`,
+`KIS_PAPER_APP_SECRET`, `KIS_PAPER_ACCOUNT` or `serviceKey=` values first.
 Don't attach market data either: it can't be redistributed. If a problem needs data to
 reproduce, try it on the synthetic demo data (`klean install data --demo`) or name the stock
 code and date.
@@ -43,7 +44,12 @@ What reviewers look for:
   in both files, the source of any rate or table (add it to
   [docs/dev/4-krx-models.md](docs/dev/4-krx-models.md)), and `klean compare` printing
   `IDENTICAL` for the C# and Python runs.
-- **klean**: standard library only; nothing that needs Docker, an account or a cloud service.
+- **klean**: standard library only; nothing that needs Docker, an account or a cloud service
+  (the KIS-PAPER broker's 모의투자 account is the one optional exception).
+- **Live trading** (`klean/live.py`, `klean/kis.py`, `klean/plugin/`): paper only. Changes that
+  add a real-money brokerage, a KIS real-trading server or real-account order ids won't be
+  accepted (the guard test in `tests/klean/test_klean_kis.py` fails on them). KIS changes are
+  tested against `tests/fake_kis.py`, with the KIS sample code they follow named in the pull request.
 - **Docs**: commands in the docs must run as written.
 
 More background: [docs/dev/](docs/dev/), especially
@@ -51,9 +57,9 @@ More background: [docs/dev/](docs/dev/), especially
 
 ## Scope
 
-krx-lean covers KOSPI and KOSDAQ stocks and ETFs with daily data, for backtesting and research on your own
-machine. Live trading, other markets and intraday data are outside the current scope; open an
-issue to discuss before starting on them.
+krx-lean covers KOSPI and KOSDAQ stocks and ETFs with daily data, for backtesting, research and
+daily paper trading on your own machine. Real-money trading is out of scope. Other markets and
+intraday data are outside the current scope; open an issue to discuss before starting on them.
 
 By contributing you agree that your contribution is licensed under the
 [Apache-2.0 license](LICENSE).

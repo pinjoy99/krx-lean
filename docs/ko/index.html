@@ -140,11 +140,11 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
       <div class="card"><h3>전문가용 엔진</h3><p>많은 퀀트 투자자가 쓰는 오픈소스 엔진
         <a href="https://github.com/QuantConnect/Lean">LEAN</a>을 내 컴퓨터에서 소스로 빌드해 사용합니다.</p></div>
       <div class="card"><h3>쉬운 도구 하나</h3><p><code>klean</code> 명령 하나로 설치, 백테스트, 결과 비교, 파라미터 탐색,
-        리포트, 리서치 노트북, 브라우저 화면까지 처리합니다.</p></div>
+        리포트, 리서치 노트북, 모의투자, 브라우저 화면까지 처리합니다.</p></div>
     </div>
     <div class="note warn" style="margin-top:18px"><strong>투자 조언이 아닙니다.</strong> 과거 성과가 미래 수익을
       보장하지 않으며, 백테스트는 가정한 만큼만 정확합니다. 슬리피지는 기본적으로 꺼져 있고(켤 수 있습니다, 아래 참조),
-      가격제한폭은 아직 반영하지 않으며, krx-lean은 실제 주문을 내지 않습니다.</div>
+      가격제한폭은 아직 반영하지 않으며, krx-lean은 실제 돈으로 주문하지 않습니다.</div>
   </div>
 </section>
 
@@ -396,6 +396,7 @@ class MyFirstStrategy(QCAlgorithm):
       <tr><td><code>klean optimize P --parameter holdings 10 30 10</code></td><td>여러 설정값을 시험해 순위를 매깁니다(과최적화에 주의).</td></tr>
       <tr><td><code>klean research P</code></td><td>전략을 쓰기 전에 Jupyter 노트북에서 데이터를 살펴봅니다(시세, 지표, 차트).</td></tr>
       <tr><td><code>klean logs P</code></td><td>전략이 남긴 로그나 실행이 실패한 이유를 보여 줍니다.</td></tr>
+      <tr><td><code>klean live deploy P</code></td><td>다음 거래일부터 가상의 돈으로 하루 단위 모의투자를 합니다(실제 돈은 쓰지 않습니다). <code>klean live status</code>로 결과를 봅니다.</td></tr>
       <tr><td><code>klean doctor</code></td><td>문제가 있을 때 설치 상태를 점검합니다.</td></tr>
     </table>
   </div>
@@ -407,7 +408,9 @@ class MyFirstStrategy(QCAlgorithm):
     <details><summary>비용이 드나요?</summary>
       <p>아니요. krx-lean, LEAN, 데이터 API 모두 무료입니다. QuantConnect 계정이나 구독도 필요 없습니다.</p></details>
     <details><summary>실제 돈으로 매매할 수 있나요?</summary>
-      <p>아직은 아닙니다. 과거 데이터로 전략을 검증하기만 합니다. 증권사와는 전혀 연결되지 않습니다.</p></details>
+      <p>아니요. krx-lean은 연구와 모의투자 전용입니다. 과거 데이터로 검증한 전략은 <code>klean live deploy</code>로
+        하루 단위 모의투자를 할 수 있습니다. klean의 자체 모의 브로커나 한국투자증권 모의투자 계좌에서 가상의 돈으로만
+        거래하며, 실제 돈으로는 주문하지 않습니다.</p></details>
     <details><summary>어떤 시장과 데이터를 다루나요?</summary>
       <p>KOSPI 주식, ETF, KOSDAQ 주식(KOSDAQ은 KRX 인증키에 서비스 세 가지를 추가로 승인받아야 합니다)의 2010년 이후 일별 시세입니다. KONEX와 장중(분 단위) 데이터는 아직 다루지 않습니다.</p></details>
     <details><summary>Python과 C# 중 무엇을 쓰나요?</summary>

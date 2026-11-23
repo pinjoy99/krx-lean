@@ -23,7 +23,7 @@ from pathlib import Path
 from klean.workspace import KleanError
 
 PAPER_URL = "https://openapivts.koreainvestment.com:29443"      # KIS 모의투자: the only server klean uses
-OLD_NAMES = ("KIS_APP_KEY", "KIS_APP_SECRET", "KIS_ACCOUNT", "KIS_MOCK")     # klean 0.0.20 / 0.0.21
+OLD_NAMES = ("KIS_APP_KEY", "KIS_APP_SECRET", "KIS_ACCOUNT", "KIS_MOCK")     # names used by earlier klean versions
 KST = dt.timezone(dt.timedelta(hours=9))
 
 

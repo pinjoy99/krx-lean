@@ -124,7 +124,7 @@ BROKERS = ("paper", "kis-paper")
 
 
 def is_kis(record: dict) -> bool:
-    """A KIS-PAPER deployment (named "kis" in 0.0.20)."""
+    """A KIS-PAPER deployment (named "kis" in earlier versions)."""
     return record.get("broker") in ("kis-paper", "kis")
 
 
@@ -312,7 +312,7 @@ def run(ws: Workspace, dep: Path, log=print, max_sessions: int = 0, now: bool = 
             log(f"klean: live {record['project']}/{dep.name} (KIS-PAPER): orders go out during the pre-open auction, "
                 f"08:30-08:59 KST on trading days; it's {t:%a %H:%M} KST: skipped")
             return []
-        kis.Kis()                    # checks the KIS-PAPER keys (and says to rename keys from klean 0.0.20)
+        kis.Kis()                    # checks the KIS-PAPER keys (and says to rename keys from earlier versions)
     ensure_plugin(ws, log)
     done = []
     for session in pending_sessions(ws, dep)[: max_sessions or None]:

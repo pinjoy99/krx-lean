@@ -9,7 +9,7 @@ Korean stock market (KRX) data and market models for
 built from source on your own machine. Backtest KOSPI and KOSDAQ stocks and ETFs in Python or C#, with
 KRX fees, taxes and tick sizes, optional slippage, the KOSPI 200 benchmark, daily universes including delisted
 stocks, and prices adjusted for splits, rights issues and dividends; explore the data in Jupyter
-notebooks with LEAN's QuantBook.
+notebooks with LEAN's QuantBook; then paper-trade a strategy day by day in LEAN's live mode.
 
 Everything runs locally: no Docker, no QuantConnect account, no cloud service. You download the
 data yourself with your own free API keys.
@@ -22,12 +22,14 @@ data.go.kr  ──┴─▶ krx-lean (download → build) ──▶ LEAN (built 
                live paper trading (LEAN live mode, daily)
 ```
 
-**Research and paper trading only:** krx-lean places no real-money orders (live trading runs on
-klean's paper broker or a Korea Investment 모의투자 account) and is not investment advice.
+**Research and paper trading only.** krx-lean places no real-money orders: live deployments
+trade on klean's own paper broker or, optionally, a Korea Investment (KIS) **모의투자** (paper
+trading) account; klean never connects to a real-money trading server. Nothing here is
+investment advice.
 
-**Scope (0.0.x):** KOSPI stocks, ETFs and (new, needs its own KRX service approvals) KOSDAQ
-stocks, daily bars. Not covered: KONEX, NXT, minute
-data, live trading.
+**Scope (0.0.x):** KOSPI stocks, ETFs and (needs its own KRX service approvals) KOSDAQ
+stocks, daily bars; backtests, optimization, research notebooks and daily paper trading. Not
+covered: real-money trading, KONEX, NXT, minute data.
 
 **Platforms:** Linux (Ubuntu 24.04 / 22.04 tested) and Windows through WSL2. Other glibc Linux
 distributions should work. macOS on Apple Silicon passes the automated end-to-end check
@@ -74,6 +76,8 @@ Most commands read `klean <verb> <noun>` (`klean install lean`, `klean update da
   strategies (installed for you by `klean install python` via [uv](https://docs.astral.sh/uv/)).
 - Free API keys: [KRX Open API](https://openapi.krx.co.kr/) (prices) and
   [data.go.kr](https://www.data.go.kr/) (dividends). See [2. Keys and data](docs/user/2-data.md).
+- Optional, for the KIS-PAPER broker: Open API keys of a Korea Investment 모의투자 account
+  ([5. Tools](docs/user/5-tools.md#kis-paper-a-korea-investment-모의투자-paper-account)).
 
 ## License and data
 

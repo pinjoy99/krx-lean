@@ -140,11 +140,11 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--m
       <div class="card"><h3>A professional engine</h3><p>Built on <a href="https://github.com/QuantConnect/Lean">LEAN</a>,
         the open-source engine used by many quant traders, built from source on your machine.</p></div>
       <div class="card"><h3>One easy tool</h3><p><code>klean</code> sets everything up, runs backtests, compares runs,
-        searches parameters, makes reports, opens research notebooks, and shows results in your browser.</p></div>
+        searches parameters, makes reports, opens research notebooks, paper-trades strategies, and shows results in your browser.</p></div>
     </div>
     <div class="note warn" style="margin-top:18px"><strong>Not investment advice.</strong> Past results don't
       predict future returns, and a backtest is only as good as its assumptions. Slippage is off by default (you can
-      switch it on, see below), price limits aren't modelled yet, and krx-lean never places real orders.</div>
+      switch it on, see below), price limits aren't modelled yet, and krx-lean never places real-money orders.</div>
   </div>
 </section>
 
@@ -398,6 +398,7 @@ class MyFirstStrategy(QCAlgorithm):
       <tr><td><code>klean optimize P --parameter holdings 10 30 10</code></td><td>Try several settings and rank them (beware of overfitting).</td></tr>
       <tr><td><code>klean research P</code></td><td>Explore the data in a Jupyter notebook (history, indicators, charts) before writing a strategy.</td></tr>
       <tr><td><code>klean logs P</code></td><td>Show what the strategy logged, or why a run failed.</td></tr>
+      <tr><td><code>klean live deploy P</code></td><td>Paper-trade the strategy day by day from the next trading day, with pretend money (never real money). <code>klean live status</code> shows how it's doing.</td></tr>
       <tr><td><code>klean doctor</code></td><td>Check the setup when something doesn't work.</td></tr>
     </table>
   </div>
@@ -409,7 +410,9 @@ class MyFirstStrategy(QCAlgorithm):
     <details><summary>Does it cost anything?</summary>
       <p>No. krx-lean, LEAN and the data APIs are free. You don't need a QuantConnect account or subscription.</p></details>
     <details><summary>Can it trade with real money?</summary>
-      <p>Not yet. It only tests strategies on history. Nothing connects to a broker.</p></details>
+      <p>No. krx-lean is for research and paper trading only. Once a strategy works on history,
+        <code>klean live deploy</code> can paper-trade it day by day, with pretend money on klean's own paper broker or on a
+        Korea Investment 모의투자 (paper trading) account. It never places real-money orders.</p></details>
     <details><summary>Which markets and data are covered?</summary>
       <p>KOSPI stocks, ETFs and KOSDAQ stocks (KOSDAQ needs three more service approvals on your KRX key), daily prices from 2010. KONEX and intraday (minute) data aren't covered yet.</p></details>
     <details><summary>Python or C#?</summary>

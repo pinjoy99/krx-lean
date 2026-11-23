@@ -90,9 +90,12 @@ same raw files and the same krx-lean commit give the same LEAN data, byte for by
    once without keys (the demo page: every template runs, everything says SYNTHETIC; a
    workspace without index data fails with the "no kospi200 index data" message), and once with
    keys.
-5. Nothing that mustn't be published: `git ls-files` contains no data, keys, workspaces or
+5. Live paper trading: a paper deployment trades a day after `klean update data`; with a KIS
+   모의투자 account, `klean live kis-check`, then a KIS-PAPER deployment's pre-open run and, the
+   next day, its fills read back. No real-money account or key is used.
+6. Nothing that mustn't be published: `git ls-files` contains no data, keys, workspaces or
    third-party documents; run a secret scan.
-6. `CHANGELOG.md` entry; version in `pyproject.toml`, `krx_lean/__init__.py`, `klean/__init__.py`;
+7. `CHANGELOG.md` entry; version in `pyproject.toml`, `krx_lean/__init__.py`, `klean/__init__.py`;
    tag `vX.Y.Z`; release notes name the LEAN commit tested.
 
 ## Contributing

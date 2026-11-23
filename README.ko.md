@@ -6,7 +6,8 @@
 [QuantConnect LEAN](https://github.com/QuantConnect/Lean)에서 쓸 수 있게 해 주는 도구입니다. LEAN을 내 컴퓨터에서
 소스로 빌드해, KOSPI·KOSDAQ 주식과 ETF 전략을 Python이나 C#으로 백테스트합니다. KRX 수수료와 증권거래세, 호가가격단위,
 선택 가능한 슬리피지, KOSPI 200 벤치마크, 상장폐지 종목을 포함한 일별 유니버스, 액면분할·유무상증자·배당을 반영한
-수정주가를 지원하며, Jupyter 노트북(LEAN QuantBook)으로 데이터를 살펴볼 수 있습니다.
+수정주가를 지원하며, Jupyter 노트북(LEAN QuantBook)으로 데이터를 살펴볼 수 있습니다. 검증한 전략은 LEAN의 라이브 모드에서
+하루 단위로 모의투자해 볼 수 있습니다.
 
 모든 것이 내 컴퓨터에서 실행됩니다. Docker, QuantConnect 계정, 클라우드 서비스가 필요 없습니다. 데이터는 본인의
 무료 API 인증키로 직접 내려받습니다.
@@ -16,8 +17,12 @@
 
 ## 범위
 
-- **대상:** KOSPI 주식, ETF, 그리고 KOSDAQ 주식(신규, KRX에서 코스닥 서비스 이용 승인 필요)의 일별 데이터(2010년 이후).
-  KONEX, NXT, 분 단위 데이터, 실거래는 다루지 않습니다.
+- **대상:** KOSPI 주식, ETF, 그리고 KOSDAQ 주식(KRX에서 코스닥 서비스 이용 승인 필요)의 일별 데이터(2010년 이후).
+  백테스트, 최적화, 리서치 노트북, 일 단위 모의투자를 지원합니다. 실제 돈으로 하는 매매(실거래), KONEX, NXT, 분 단위
+  데이터는 다루지 않습니다.
+- **연구와 모의투자 전용:** krx-lean은 실제 돈으로 주문하지 않습니다. 라이브 배포는 klean의 자체 모의 브로커나,
+  선택하면 한국투자증권(KIS) **모의투자** 계좌에서만 거래하며, klean은 실전투자 서버에 접속하지 않습니다. 투자 권유나
+  투자 조언이 아닙니다.
 - **플랫폼:** Linux(Ubuntu 24.04 / 22.04에서 테스트)와 WSL2를 통한 Windows. Apple Silicon macOS는 자동 종단 간 검사를 통과했습니다(실험적: 사람이 직접 따라 해 보지는
   않았습니다. [설치 안내](docs/user/1-install.md#macos) 참조).
 
@@ -31,6 +36,8 @@ klean backtest Top20                               # 슬리피지는 기본 꺼�
 klean report Top20
 klean gui
 klean research Top20
+klean live deploy Top20                            # 다음 거래일부터 모의투자 (실제 돈 아님)
+                                                   # (--broker kis-paper: 한국투자증권 모의투자 계좌)
 ```
 
 실제 데이터: [KRX Open API](https://openapi.krx.co.kr/)(시세)와 [공공데이터포털](https://www.data.go.kr/)(배당)의
@@ -41,7 +48,7 @@ klean research Top20
 | | |
 |---|---|
 | [초보자 안내 (한국어)](https://pinjoy99.github.io/krx-lean/ko/) | 설치부터 첫 백테스트, 결과 읽기, 실제 데이터, 나만의 전략 |
-| [사용자 안내서 (영문)](docs/user/) | 설치, 데이터, 전략, 도구, 매일 업데이트, 문제 해결 |
+| [사용자 안내서 (영문)](docs/user/) | 설치, 데이터, 전략, 도구와 모의투자, 매일 업데이트, 문제 해결 |
 | [개발자 안내서 (영문)](docs/dev/) | 데이터 규칙, KRX 모델, LEAN 빌드, klean 내부, 테스트 |
 | [기여 방법](CONTRIBUTING.md) · [보안 정책](SECURITY.md) · [변경 내역](CHANGELOG.md) | 영문 |
 
@@ -53,5 +60,3 @@ klean research Top20
 krx-lean은 [Apache-2.0](LICENSE) 라이선스입니다. QuantConnect 및 한국거래소와 관련이 없습니다([NOTICE](NOTICE)).
 시장 데이터는 포함되어 있지 않습니다. 내려받은 데이터는 각 제공처(KRX Open API, 공공데이터포털 공공누리)의
 이용약관을 따르며 재배포하면 안 됩니다. 이 프로젝트의 어떤 내용도 투자 조언이 아닙니다.
-
-**연구와 모의투자 전용:** krx-lean은 실제 돈으로 주문하지 않습니다(라이브 트레이딩은 klean의 모의 브로커나 한국투자증권 모의투자 계좌에서만 실행). 투자 권유가 아닙니다.

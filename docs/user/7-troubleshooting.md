@@ -68,3 +68,22 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `klean research`: `port … is already in use` | another Jupyter is running: stop it, or `--port` another number |
 | GUI: `403` | open the full URL klean printed (it has the token) |
 | WSL: the browser doesn't open | `sudo apt install -y wslu`, or open the printed URL yourself |
+
+## Live paper trading
+
+`klean live status` shows each deployment's state; a failed day's console is in
+`<project>/live/<id>/runs/<day>/console.txt` (and under *Daily runs* on the Live dashboard).
+
+| Message | Fix |
+|---|---|
+| `…'s copy of the KRX models is … not krx-lean's current one` (at deploy) | `klean update models NAME`, then deploy again; `--models-as-is` only for a copy you edited on purpose |
+| `waiting for data` | normal for a new deployment: it trades after the next `klean update data` |
+| `… FAILED: the strategy got no data for this day` | the strategy subscribed to nothing at daily resolution, or its models copy is old: update the models and deploy again. The account was left as it was; the day is retried on the next run |
+| `… FAILED: …` (another error) | the strategy raised an error on that day (the message is the strategy's); fix it and deploy again. The day is retried, the account is unchanged |
+| edits to the strategy don't change a deployment | expected: a deployment keeps the code and parameters it was deployed with. Stop it and deploy again |
+| `KIS_PAPER_APP_KEY, … not set` | put the 모의투자 account's keys in `~/.config/krx-lean.env` ([5. Tools](5-tools.md#kis-paper-a-korea-investment-모의투자-paper-account)) |
+| `KIS_APP_KEY, …: klean now reads only KIS-PAPER keys` | rename the keys in `~/.config/krx-lean.env` to `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_ACCOUNT` and remove `KIS_MOCK` |
+| `KIS EGW…` / `KIS OPSQ…` / other `KIS` codes | KIS's own message follows the code; check the keys with `klean live kis-check`. They must be the **모의투자** account's keys (real-account keys don't work on the 모의투자 server) |
+| `… (KIS-PAPER): orders go out during the pre-open auction …: skipped` | not an error: the run was outside 08:30–08:59 KST or not on a trading day. `--now` runs anyway (orders then fill at once) |
+| `… already trades this KIS account` | one 모의투자 account serves one strategy: stop the other deployment, or use another account |
+| `a KIS-PAPER deployment can't be backdated` | leave out `--start`; backdated tests run on klean's own paper broker |
