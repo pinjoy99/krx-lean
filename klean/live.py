@@ -281,7 +281,7 @@ def summary(ws: Workspace, dep: Path) -> dict:
     return {**{k: v for k, v in record.items() if k != "runs"}, "state": state, "days": len(equity),
             "last_session": book.get("last_session", ""), "last_run": last_run,
             "equity": end, "net_profit": (end / start_cash - 1) * 100 if start_cash else 0.0,
-            "cash": book.get("cash"), "holdings": len(book.get("holdings", {})),
+            "start_cash": start_cash, "cash": book.get("cash"), "holdings": len(book.get("holdings", {})),
             "open_orders": len(book.get("open_orders", []))}
 
 

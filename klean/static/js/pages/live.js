@@ -136,7 +136,7 @@ async function drawRight(id) {
         ${d.status === "running" ? `<button class="secondary" id="lvrunbtn">${d.pending_days.length ? `Trade ${d.pending_days.length} new day(s)` : "Check for new days"}</button>
           <button class="secondary" id="lvstop">Stop</button>` : ""}</div>
       <p class="muted">Paper broker · trading from <b>${esc(d.first_session)}</b> with ${params}${d.source_run ? ` (from ${esc(d.source_run)})` : ""}.
-        Code frozen ${esc(d.created_utc.slice(0, 10))}, starting cash ${won(d.cash)}.
+        Code frozen ${esc(d.created_utc.slice(0, 10))}, starting cash ${won(d.start_cash)}.
         ${d.state === "waiting for data" ? `Waiting for the first trading day's data: <code>klean update data</code> runs it.` : ""}</p>
       <span id="lvmsg" class="muted"></span>
     </div>

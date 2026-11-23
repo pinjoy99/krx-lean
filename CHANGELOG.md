@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.19 — 2026-11-23
+
+- Live dashboard: "starting cash" showed the current cash; negative amounts read "−₩69,000"
+  (was "₩-69,000") everywhere in the GUI.
+
 ## 0.0.18 — 2026-11-23
 
 - `klean live deploy` refuses a project whose KRX models copy isn't current (live runs need

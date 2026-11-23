@@ -135,6 +135,7 @@ class LiveTest(unittest.TestCase):
         pos = d["positions"][0]
         self.assertEqual((pos["last"], pos["value"], pos["pnl"]), (110_000, 55_000_000, 5_000_000))
         self.assertEqual((round(d["net_profit"], 6), d["days"], d["state"]), (5.0, 2, "running"))
+        self.assertEqual((d["start_cash"], d["cash"]), (100_000_000, 50_000_000))    # starting vs current cash
         self.assertEqual([v for _, v in d["equity_curve"]], [100_000_000, 105_000_000])
         self.assertEqual([round(v) for _, v in d["benchmark"]], [100_000_000, 105_000_000])   # KOSPI 200 +5%
         row = next(p for p in gui.api_workspace(self.ws, {})["projects"] if p["name"] == "P")

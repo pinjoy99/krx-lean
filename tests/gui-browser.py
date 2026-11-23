@@ -219,10 +219,11 @@ with sync_playwright() as pw:
     expect(page.locator("#lv-left")).to_be_visible()
     if page.locator("#newlive").get_attribute("open") is None:     # folded once deployments exist
         page.locator("#newlive summary").click()
-    page.locator("#lvname").fill("from-gui")
+    live_name = f"gui-{int(time.time())}"                # unique, also in a reused workspace
+    page.locator("#lvname").fill(live_name)
     page.locator("#lvstart").fill("2026-09-28")
     page.get_by_role("button", name="Deploy").click()
-    expect(page.locator("#lv-left tr.sel")).to_contain_text("from-gui", timeout=600_000)
+    expect(page.locator("#lv-left tr.sel")).to_contain_text(live_name, timeout=600_000)
     expect(page.locator("#lv-left tr.sel")).to_contain_text("backdated")
     expect(page.locator("#lv-right .tile", has_text="Trading days")).to_contain_text("3")
     expect(page.locator("#lveq .uplot")).to_have_count(1)
@@ -234,7 +235,7 @@ with sync_playwright() as pw:
     page.screenshot(path=str(SHOTS / "live.png"), full_page=True)
     page.goto(BASE + "#/")
     row = page.locator("table.runs tr", has=page.locator("a.projlink", has_text=re.compile("^HoldPy$")))
-    expect(row.locator("a[href*='#/live/']")).to_contain_text("from-gui")      # Workspace: last live run
+    expect(row.locator("a[href*='#/live/']")).to_contain_text(live_name)       # Workspace: last live run
     print("ok  paper deployment from the Live page")
     browser.close()
 JOBS.stop_all()

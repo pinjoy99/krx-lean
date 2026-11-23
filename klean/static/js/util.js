@@ -29,7 +29,7 @@ export async function api(path, params = {}, body = null) {
 
 export const compact = new Intl.NumberFormat("en", {notation: "compact", maximumFractionDigits: 2});
 export const full = new Intl.NumberFormat("en", {maximumFractionDigits: 2});
-export function won(v) { return "₩" + full.format(Math.round(v)); }
+export function won(v) { const n = Math.round(v); return (n < 0 ? "−₩" : "₩") + full.format(Math.abs(n)); }
 export function day(t) { return new Date(t * 1000).toISOString().slice(0, 10); }
 export function signClass(s) {
   const n = parseFloat(String(s).replace(/[^0-9.\-]/g, ""));
