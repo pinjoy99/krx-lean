@@ -62,6 +62,12 @@ return the last close on or before the time asked, as a benchmark function. If t
 missing, both stop with a message naming the file and how to get it (`krx-lean krx-index`, or
 the demo data).
 
+## Period
+
+`set_period(algorithm, start, end=None)` / `KrxModels.SetPeriod(algorithm, start, end)`: the
+backtest period from "YYYY-MM-DD" strings, unless the run passes `start_date` / `end_date`
+parameters (forward tests do). Strings, not dates, so Python and C# parse the same text.
+
 ## Changing the models
 
 The two files must stay equivalent. Change both, then run the parity check below.

@@ -32,8 +32,7 @@ namespace QuantConnect.Algorithm.CSharp
         {
             SetTimeZone("Asia/Seoul");
             SetAccountCurrency("KRW");
-            SetStartDate(2011, 1, 1);
-            SetEndDate(2026, 9, 30);
+            KrxModels.SetPeriod(this, "2011-01-01", "2026-09-30");   // start_date / end_date parameters override it
             SetCash(1_000_000_000);
 
             _holdings = GetParameter("holdings", 20);

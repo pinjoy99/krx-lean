@@ -54,6 +54,13 @@ class CommandsTest(unittest.TestCase):
                    language="csharp", template="buy-hold")
         self.check(["delete-project", "P", "--yes"], "cmd_project_delete", name="P", yes=True)
 
+    def test_live(self):
+        self.check(["live", "start", "P", "--from-run", "P/r", "--start", "2026-10-01", "--parameter", "k", "v"],
+                   "cmd_live", live_cmd="start", project="P", from_run="P/r", start="2026-10-01", parameter=[["k", "v"]])
+        self.check(["live", "status"], "cmd_live", live_cmd="status", project=None)
+        self.check(["live", "refresh", "P", "ID"], "cmd_live", live_cmd="refresh", project="P", id="ID")
+        self.check(["live", "stop", "P", "ID"], "cmd_live", live_cmd="stop", id="ID")
+
     def test_old_names_still_work(self):
         self.check(["install-lean"], "cmd_install_lean", dir="~/Lean")
         self.check(["install-python"], "cmd_install_python")
@@ -77,7 +84,7 @@ class CommandsTest(unittest.TestCase):
         listed = text.split("positional arguments:")[1].split("options:")[0]
         commands = [line.split()[0] for line in listed.splitlines() if line.startswith("    ") and line[4] != " "]
         self.assertEqual(commands, ["install", "init", "update", "status", "create-project", "delete-project", "backtest", "optimize",
-                                    "report", "research", "logs", "compare", "config", "doctor", "gui"])
+                                    "report", "research", "logs", "compare", "config", "live", "doctor", "gui"])
         self.assertIn("klean update all", text)
 
     def test_noun_required(self):

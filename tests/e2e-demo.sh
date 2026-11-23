@@ -94,6 +94,23 @@ step "time limit"
 if klean backtest Py --timeout 2 >timeout.txt 2>&1; then fail "--timeout 2 didn't stop the run"; fi
 grep -q "timed out after 2 s" timeout.txt || fail "no timeout message"
 
+step "forward test (paper trading on daily data), backdated on the demo data"
+klean live start Py --name e2e --start 2026-06-01 --parameter holdings 10 | tee live.txt
+grep -q "BACKDATED" live.txt || fail "a backdated forward test isn't labeled so"
+grep -q "to 2026-09-30: end equity" live.txt || fail "the forward test didn't run to the latest data"
+"$PY_DIR/bin/python" - <<'EOF2' || fail "the forward test didn't start on its start date"
+import datetime as dt, glob, json
+run = glob.glob("Py/live/*_e2e/run")[0]
+full = [f for f in glob.glob(run + "/*.json") if not f.endswith(("-summary.json", "manifest.json", "config.json"))
+        and "order-events" not in f and "data-monitor" not in f][0]
+values = json.load(open(full))["charts"]["Strategy Equity"]["series"]["Equity"]["values"]
+first = dt.datetime.fromtimestamp(values[0][0], dt.timezone.utc) + dt.timedelta(hours=9)   # KST
+assert first.date() == dt.date(2026, 6, 1), first
+print("forward test starts", first.date())
+EOF2
+klean live status Py | grep -q "running (backdated)" || fail "live status"
+klean live stop Py "$(basename "$(ls -d Py/live/*_e2e)")" | grep -q "stopped" || fail "live stop"
+
 step "optimize"
 klean optimize Cs --parameter holdings 10 20 10 --max-concurrent-backtests 2 --name e2e
 grep -q '"best": "00' Cs/optimizations/*_e2e/optimization.json || fail "the optimization has no best run"

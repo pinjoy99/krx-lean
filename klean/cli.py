@@ -25,6 +25,14 @@ Projects and runs
     klean logs NAME|RUN [--console] [--tail N]          a run's algorithm log (or LEAN's console output)
     klean compare RUN RUN [...] [--all]                 statistics and equity curves side by side
     klean config list | get KEY | set KEY VALUE | unset KEY
+
+Live (forward tests: paper trading on daily data, no broker)
+    klean live start NAME [--from-run RUN] [--parameter K V] [--start DATE]   freeze the code, run from the next day
+    klean live status [NAME]                            forward tests and their results
+    klean live refresh [NAME [ID]]                      run them up to the latest data (update data does this)
+    klean live stop NAME ID                             stop one (its results stay)
+
+Other
     klean gui [--port N] [--no-browser]                 local web page: projects, runs, charts, compare
 """
 
@@ -540,7 +548,56 @@ def cmd_update(args) -> int:
     print(f"klean: workspace data now {st.get('first_date', '?')} → {st.get('last_date', '?')}, "
           f"{st['securities']} securities" + ("" if code == 0 else
           "  (the download stopped early: run `klean update data` again to continue)"))
+    from klean import forward
+    forward.refresh_all(Workspace.load(ws.root))           # forward tests take the new days
     return code
+
+
+def cmd_live(args) -> int:
+    """Forward tests (paper trading on daily data): start, status, refresh, stop."""
+    from klean import forward
+    ws = Workspace.load(Path.cwd())
+    if args.live_cmd == "start":
+        project = ws.root / args.project
+        params = dict(args.parameter or [])
+        if args.from_run:
+            run = results.resolve_run(ws, args.from_run)
+            manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8")) if (run / "manifest.json").exists() else {}
+            params = {**manifest.get("parameters", {}), **params}
+        test = forward.start(ws, project, args.name or "", params, args.start or "",
+                             source_run=args.from_run or "")
+        record = forward.load(test)
+        print(f"forward test {project.name}/{test.name}: from {record['start_date']}"
+              + (" (BACKDATED: starts on days the data already had)" if record["backdated"] else "")
+              + (f", parameters {record['parameters']}" if record["parameters"] else ""))
+        entry = forward.refresh(ws, test)
+        print(f"  {entry['skipped']}" if "skipped" in entry else
+              f"  to {entry['data_last_date']}: end equity {entry['end_equity']}" if entry["ok"] else
+              f"  FAILED: {entry['error']}")
+        return 0 if entry.get("ok", True) else 1
+    projects_ = [ws.root / args.project] if getattr(args, "project", None) else projects.list_projects(ws)
+    if args.live_cmd == "status":
+        rows = []
+        for project in projects_:
+            for test in forward.tests(project):
+                sm = forward.summary(ws, test)
+                rows.append([f"{project.name}/{test.name}", sm["state"] + (" (backdated)" if sm["backdated"] else ""),
+                             sm["start_date"], (sm["last_refresh"] or {}).get("data_last_date", "—"),
+                             sm["stats"]["Net Profit"] or "—", sm["stats"]["End Equity"] or "—"])
+        print(results.format_table(["forward test", "state", "from", "to", "net profit", "end equity"], rows)
+              if rows else "no forward tests (`klean live start PROJECT`)")
+        return 0
+    if args.live_cmd == "refresh":
+        if args.id:
+            entry = forward.refresh(ws, forward.find(ws.root / args.project, args.id))
+            print(entry)
+            return 0 if entry.get("ok", True) else 1
+        done = forward.refresh_all(ws)
+        return 0 if all(e.get("ok", True) for _, e in done) else 1
+    test = forward.find(ws.root / args.project, args.id)               # stop
+    forward.stop(test)
+    print(f"forward test {args.project}/{args.id} stopped (its results stay in {test})")
+    return 0
 
 
 def cmd_models(args) -> int:
@@ -833,6 +890,28 @@ def main(argv: list[str] | None = None) -> int:
     c = csub.add_parser("unset")
     c.add_argument("key")
     c.set_defaults(func=cmd_config)
+
+    s = sub.add_parser("live", help="forward tests: paper trading on daily data (start | status | refresh | stop)")
+    lsub = s.add_subparsers(dest="live_cmd", required=True, metavar="<action>")
+    l = lsub.add_parser("start", help="freeze a project's code and start a forward test from the next trading day")
+    l.add_argument("project")
+    l.add_argument("--name", help="name for the forward test (folder suffix)")
+    l.add_argument("--parameter", nargs=2, action="append", metavar=("KEY", "VALUE"), help="algorithm parameter, repeatable")
+    l.add_argument("--from-run", metavar="RUN", help="take the parameters of this backtest (PROJECT/RUN)")
+    l.add_argument("--start", metavar="YYYY-MM-DD", help="start date (default: the day after the latest data); "
+                   "an earlier date makes a BACKDATED test")
+    l.set_defaults(func=cmd_live)
+    l = lsub.add_parser("status", help="forward tests and their latest results")
+    l.add_argument("project", nargs="?")
+    l.set_defaults(func=cmd_live)
+    l = lsub.add_parser("refresh", help="run forward tests up to the latest data (`klean update data` does this)")
+    l.add_argument("project", nargs="?")
+    l.add_argument("id", nargs="?")
+    l.set_defaults(func=cmd_live)
+    l = lsub.add_parser("stop", help="stop a forward test (its results stay)")
+    l.add_argument("project")
+    l.add_argument("id")
+    l.set_defaults(func=cmd_live)
 
     s = sub.add_parser("doctor", help="check dotnet, the LEAN build, data and the Python env")
     s.set_defaults(func=cmd_doctor)

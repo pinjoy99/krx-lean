@@ -222,6 +222,21 @@ namespace QuantConnect.Algorithm.CSharp
             security.PriceVariationModel = new KrxPriceVariationModel(boards);
             if (slippageTicks > 0) security.SetSlippageModel(new KrxSlippageModel(boards, slippageTicks));
         }
+
+        /// <summary>The backtest period, as "yyyy-MM-dd": <paramref name="start"/> and
+        /// <paramref name="end"/> (null: up to the latest data), unless the run passes the parameters
+        /// start_date / end_date, as klean's forward tests do.</summary>
+        public static void SetPeriod(QCAlgorithm algorithm, string start, string end = null)
+        {
+            var s = algorithm.GetParameter("start_date");
+            var e = algorithm.GetParameter("end_date");
+            algorithm.SetStartDate(ParseDate(string.IsNullOrEmpty(s) ? start : s));
+            var last = string.IsNullOrEmpty(e) ? end : e;
+            if (!string.IsNullOrEmpty(last)) algorithm.SetEndDate(ParseDate(last));
+        }
+
+        private static DateTime ParseDate(string text) =>
+            DateTime.ParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
     /// <summary>

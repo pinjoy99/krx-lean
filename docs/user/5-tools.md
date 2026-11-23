@@ -145,7 +145,7 @@ Four dashboards; the Workspace is the landing page, and each project has the oth
 | **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live); right: KRX data, setup check, settings |
 | **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), opened on the project's `research.ipynb`; *Backtest* and *Live* in the title bar |
 | **Backtest** | left: *New backtest* and *New optimization* forms, the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
-| **Live** | forward tests (paper trading on daily data): coming in the next version |
+| **Live** | left: *Start a forward test* (parameters from one of the project's backtests, optional start date) and the forward tests; right: the selected one with its refresh history and results; *Run to the latest data*, *Stop* |
 
 Charts: drag across a chart to zoom into a period, double-click to zoom out; the legend under
 the chart shows the values at the cursor (the latest ones otherwise); *log scale* on equity
@@ -159,6 +159,33 @@ removes a run's folder for good, after asking; only runs in a project's `backtes
 be renamed or deleted, and never one that is still running. To edit a strategy, open its
 `main.py` in the Research tab (JupyterLab's editor; files save automatically) or use your own
 editor.
+
+## Forward tests (Live)
+
+A forward test is paper trading on daily data: no broker, no money. It freezes the project's
+code and parameters when it starts; after each `klean update data` it runs that frozen code
+from its start date to the latest data, with the same KRX fees, taxes and slippage as a
+backtest. The days after the start were unknown when the code was frozen, so the results are
+out of sample: the closest klean gets to live trading so far.
+
+```bash
+klean live start Top20 --from-run Top20/2026-11-20_10-12-03_holdings30   # its parameters
+klean live start Top20 --parameter holdings 30 --name h30
+klean live status                     # all forward tests: state, period, net profit, end equity
+klean live refresh                    # run them up to the latest data (update data does this)
+klean live stop Top20 <id>            # stops it; its results stay
+```
+
+- It starts on the day after the latest data (the next trading day), so the first results appear
+  after the next data update ("waiting for data" until then).
+- `--start YYYY-MM-DD` on or before the latest data makes a **backdated** test, labeled so
+  everywhere: the code may have been written knowing those days.
+- The strategy must use `set_period` ([4. Strategies](4-strategies.md#the-setup-every-krx-strategy-needs));
+  klean refuses to start one for code that sets its own dates.
+- Files: `<project>/live/<id>/` with `forward.json` (settings and every refresh), `code/` (the
+  frozen code) and `run/` (the latest results, shown like a backtest in the GUI).
+- Real-money trading needs a Korean brokerage connection, which LEAN doesn't have; not planned
+  for now.
 
 ## Other commands
 

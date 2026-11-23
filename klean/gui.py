@@ -26,7 +26,7 @@ from pathlib import Path
 import urllib.request
 from urllib.parse import parse_qs, urlparse
 
-from klean import __version__, projects, results
+from klean import __version__, forward, projects, results
 from klean.backtest import backtest, results_folder
 from klean.report import report
 from klean.workspace import KleanError, Workspace, check
@@ -129,8 +129,12 @@ def api_workspace(ws: Workspace, _q: dict) -> dict:
     rows = []
     for p in project_list(ws):
         runs = results.runs(p)
+        live = forward.tests(p)
+        last_live = forward.summary(ws, live[-1]) if live else None
         rows.append({"name": p.name, "language": projects.language_of(p), "runs": len(runs),
-                     "last": run_row(runs[-1]) if runs else None})
+                     "last": run_row(runs[-1]) if runs else None, "live_runs": len(live),
+                     "last_live": {"id": last_live["id"], "name": last_live["name"], "state": last_live["state"],
+                                   "status": last_live["state"]} if last_live else None})
     try:
         data = results.data_status(ws)
     except Exception as e:  # noqa: BLE001
@@ -163,6 +167,28 @@ def opt_row(opt: Path) -> dict:
             "parameters": [p["name"] for p in o["parameters"]], "seconds": o.get("seconds"),
             "best": {"parameters": best["parameters"], "target": best["stats"].get(o["target"]) or best["target_value"]}
             if best else None}
+
+
+def api_live(ws: Workspace, q: dict) -> dict:
+    """A project's forward tests, and its backtests to copy parameters from."""
+    p = inside(ws, ws.root / q["project"][0])
+    lang = projects.language_of(p)
+    return {"name": p.name, "language": lang, "uses_period": forward.uses_period(p),
+            "data_last_date": forward.iso(results.last_data_date(ws)),
+            "tests": [forward.summary(ws, t) for t in reversed(forward.tests(p))],
+            "runs": [{"ref": r["ref"], "name": r["name"], "parameters": r["parameters"]}
+                     for r in (run_row(x) for x in reversed(results.runs(p))) if r["ok"]][:50]}
+
+
+def api_live_test(ws: Workspace, q: dict) -> dict:
+    test = forward.find(inside(ws, ws.root / q["project"][0]), q["id"][0])
+    record = forward.load(test)
+    return {**forward.summary(ws, test), "history": list(reversed(record["refreshes"]))}
+
+
+def api_live_stop(ws: Workspace, body: dict) -> dict:
+    test = forward.find(inside(ws, ws.root / str(body.get("project", ""))), str(body.get("id", "")))
+    return forward.stop(test)
 
 
 def api_optimization(ws: Workspace, q: dict) -> dict:
@@ -327,6 +353,41 @@ class Jobs:
         threading.Thread(target=work, daemon=True).start()
         return job
 
+    def start_live(self, ws: Workspace, body: dict) -> dict:
+        """POST /api/live-start creates a forward test, then runs it (a job); /api/live-refresh
+        runs an existing one up to the latest data."""
+        project = inside(ws, ws.root / str(body.get("project", "")))
+        if body.get("id"):
+            test = forward.find(project, str(body["id"]))
+        else:
+            params = {str(k): str(v) for k, v in (body.get("parameters") or {}).items() if str(k)}
+            source = str(body.get("run") or "")
+            if source:
+                manifest_ = manifest(run_ref(ws, source))
+                params = {**manifest_.get("parameters", {}), **params}
+            test = forward.start(ws, project, str(body.get("name") or ""), params, str(body.get("start") or ""),
+                                 source_run=source)
+        job = {"id": secrets.token_hex(4), "kind": "live", "project": project.name, "test": test.name,
+               "folder": str(test / "run.new"), "status": "running", "error": "", "started": time.time()}
+        with self.lock:
+            if any(j.get("kind") == "live" and j["test"] == test.name and j["status"] == "running"
+                   for j in self.jobs.values()):
+                raise KleanError("this forward test is already running")
+            self.jobs[job["id"]] = job
+
+        def work():
+            try:
+                entry = forward.refresh(ws, test)
+                if entry.get("ok") is False:
+                    job["status"], job["error"] = "failed", entry["error"]
+                else:
+                    job["status"], job["note"] = "done", entry.get("skipped", "")
+            except Exception as e:  # noqa: BLE001 - reported to the page
+                job["status"], job["error"] = "failed", str(e)
+            job["finished"] = time.time()
+        threading.Thread(target=work, daemon=True).start()
+        return job
+
     def start_optimize(self, ws: Workspace, body: dict) -> dict:
         from klean import optimize
         project = inside(ws, ws.root / str(body.get("project", "")))
@@ -445,7 +506,7 @@ class Jobs:
 def make_handler(ws: Workspace, token: str, jobs: Jobs):
     gets = {"/api/workspace": api_workspace, "/api/project": api_project, "/api/run": api_run,
             "/api/compare": api_compare, "/api/log": api_log, "/api/optimization": api_optimization,
-            "/api/code-file": api_code_file}
+            "/api/code-file": api_code_file, "/api/live": api_live, "/api/live-test": api_live_test}
 
     class Handler(BaseHTTPRequestHandler):
         server_version = f"klean-gui/{__version__}"
@@ -530,6 +591,10 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                     self._json(jobs.start_optimize(Workspace.load(ws.root), body))
                 elif url.path == "/api/research":
                     self._json(jobs.research(Workspace.load(ws.root), body, self.server.server_address[1]))
+                elif url.path in ("/api/live-start", "/api/live-refresh"):
+                    self._json(jobs.start_live(Workspace.load(ws.root), body))
+                elif url.path == "/api/live-stop":
+                    self._json(api_live_stop(Workspace.load(ws.root), body))
                 elif url.path == "/api/run-delete":
                     self._json(api_run_delete(Workspace.load(ws.root), body))
                 elif url.path == "/api/run-rename":

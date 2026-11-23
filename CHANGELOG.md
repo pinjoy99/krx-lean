@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.15 — 2026-11-23
+
+- **Forward tests (Live dashboard, `klean live`)**: paper trading on daily data. A forward test
+  freezes the project's code and parameters; after each `klean update data` it runs that code
+  from its start date to the latest data with the same fees, taxes and slippage as a backtest,
+  so its results are out of sample. Start one from the Live dashboard (parameters from a
+  backtest) or `klean live start`; `status`, `refresh`, `stop`. A start date on days the data
+  already had is labeled *backdated*. No broker, no money.
+- **`set_period(self, "2011-01-01", "2026-09-30")`** (C#: `KrxModels.SetPeriod`) in the KRX
+  models: the backtest period, which the `start_date` / `end_date` parameters can move. The
+  templates and examples use it; forward tests need it. Existing projects: `klean update models
+  NAME`, then replace `set_start_date` / `set_end_date` with `set_period`.
+- Workspace dashboard: live runs per project and the last one. Live dashboard: start form,
+  forward tests, the selected one's refresh history and results.
+
 ## 0.0.14 — 2026-11-23
 
 `klean gui` is organized as four dashboards (Workspace, Research, Backtest, Live).

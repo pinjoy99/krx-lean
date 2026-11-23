@@ -1,7 +1,7 @@
 # region imports
 from AlgorithmImports import *
 from krx_models import (KOSPI, ETF, KONEX, KOSDAQ, KrxBoards, KrxUniverseData, krx_benchmark,
-                        krx_initialize, sell_tax_rate, tick_size)
+                        krx_initialize, sell_tax_rate, set_period, tick_size)
 # endregion
 
 
@@ -20,8 +20,7 @@ class KrxTopMarketCapAlgorithm(QCAlgorithm):
     def initialize(self):
         self.set_time_zone("Asia/Seoul")
         self.set_account_currency("KRW")
-        self.set_start_date(2011, 1, 1)
-        self.set_end_date(2026, 9, 30)
+        set_period(self, "2011-01-01", "2026-09-30")   # start_date / end_date parameters override it
         self.set_cash(1_000_000_000)
 
         self.holdings = int(self.get_parameter("holdings", str(self.HOLDINGS)))

@@ -20,7 +20,8 @@ LEAN_DIR=~/Lean PY_DIR=~/.klean/py311 tests/e2e-demo.sh      # reuses yours (~4 
 On the synthetic demo data, without keys: demo install and `doctor`; top-market-cap and
 buy-hold in C# and Python with `klean compare` required to print IDENTICAL, also with one tick
 of slippage (which must lower the end equity); a KOSDAQ strategy (its own tax and tick tables); the models check and update; a strategy that
-raises must exit 1 with `backtest FAILED`; `--timeout`; a small optimization; a report; the
+raises must exit 1 with `backtest FAILED`; `--timeout`; a backdated forward test (it must start
+on its start date, be labeled backdated, and stop); a small optimization; a report; the
 research notebook run headless with both charts.
 
 Then the GUI in a real browser, on the workspace the script left (needs `pip install
@@ -33,7 +34,8 @@ python tests/gui-browser.py ~/e2e/ws-<n> [screenshot folder]
 Every page in light and dark mode with no browser console errors; chart zoom, the legend
 following the cursor and the log scale; comparing two runs from the project page; a backtest
 started from the page finishing and appearing in the runs list; the Research tab opening a
-project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel.
+project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel. A forward test started
+from the Live dashboard runs, shows its results, and appears on the Workspace dashboard.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`, every pull request,
 weekly, and on demand: lint and both unit suites on Ubuntu 22.04 / Python 3.10, Ubuntu 24.04 /

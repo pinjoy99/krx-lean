@@ -200,6 +200,23 @@ with sync_playwright() as pw:
     expect(page.locator("#bt-right .runtitle")).to_contain_text("from-gui")      # the new run is shown
     expect(page.locator("#bt-right .uplot")).to_have_count(2)
     print("ok  backtest started from the page")
+
+    # Live: start a forward test from the page; it runs and is shown with its results
+    page.goto(BASE + "#/live/HoldPy")
+    expect(page.locator("#lv-left")).to_be_visible()
+    if page.locator("#newlive").get_attribute("open") is None:     # folded once tests exist
+        page.locator("#newlive summary").click()
+    page.locator("#lvname").fill("from-gui")
+    page.locator("#lvstart").fill("2026-08-03")
+    page.get_by_role("button", name="Start forward test").click()
+    expect(page.locator("#lv-left tr.sel")).to_contain_text("from-gui", timeout=300_000)
+    expect(page.locator("#lv-left tr.sel")).to_contain_text("backdated")
+    expect(page.locator("#lv-right .uplot")).to_have_count(2)
+    page.screenshot(path=str(SHOTS / "live.png"), full_page=True)
+    page.goto(BASE + "#/")
+    row = page.locator("table.runs tr", has=page.locator("a.projlink", has_text=re.compile("^HoldPy$")))
+    expect(row.locator("a[href*='#/live/']")).to_contain_text("from-gui")      # Workspace: last live run
+    print("ok  forward test started from the Live page")
     browser.close()
 JOBS.stop_all()
 print(f"GUI BROWSER CHECK OK (screenshots in {SHOTS})")

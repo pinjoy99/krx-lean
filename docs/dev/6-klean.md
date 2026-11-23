@@ -14,6 +14,7 @@ also runs under `lean backtest`.
 | `optimize.py` | grid search |
 | `report.py` | LEAN's Report |
 | `research.py` | Jupyter with LEAN's QuantBook |
+| `forward.py` | forward tests (`klean live`, Live dashboard): freeze the code into `<project>/live/<id>/code`, re-run it from `start_date` to the latest data (`start_date` / `end_date` parameters read by `set_period`), keep `forward.json` with every refresh; `refresh_all` after `update data` |
 | `gui.py`, `static/` | local web page: `index.html` (shell), `app.css`, `js/main.js` (router), `js/pages/*.js` (one module per dashboard: workspace, research, backtest, live; the backtest dashboard's right column draws `run.js`, `optimization.js` or `compare.js`), `js/chart.js` (uPlot charts), `js/util.js`; `vendor/uplot/` (MIT, copied in; no CDN, no npm build) |
 
 ## A run

@@ -19,7 +19,7 @@ TEMPLATES = ("buy-hold", "top-market-cap", "empty")
 
 PY_TEMPLATE = '''# region imports
 from AlgorithmImports import *
-from krx_models import KrxBoards, krx_benchmark, krx_initialize
+from krx_models import KrxBoards, krx_benchmark, krx_initialize, set_period
 # endregion
 
 
@@ -30,7 +30,7 @@ class {cls}(QCAlgorithm):
     def initialize(self):
         self.set_time_zone("Asia/Seoul")
         self.set_account_currency("KRW")
-        self.set_start_date(2024, 1, 2)
+        set_period(self, "2024-01-02")       # start_date / end_date parameters override it
         self.set_cash(100_000_000)
         boards = KrxBoards.load()
         slippage_ticks = int(self.get_parameter("slippage_ticks", "0"))   # KRX ticks lost per share on every fill
@@ -46,7 +46,7 @@ class {cls}(QCAlgorithm):
 
 PY_EMPTY = '''# region imports
 from AlgorithmImports import *
-from krx_models import KrxBoards, krx_benchmark, krx_initialize
+from krx_models import KrxBoards, krx_benchmark, krx_initialize, set_period
 # endregion
 
 
@@ -56,7 +56,7 @@ class {cls}(QCAlgorithm):
     def initialize(self):
         self.set_time_zone("Asia/Seoul")
         self.set_account_currency("KRW")
-        self.set_start_date(2024, 1, 2)
+        set_period(self, "2024-01-02")       # start_date / end_date parameters override it
         self.set_cash(100_000_000)
         boards = KrxBoards.load()
         slippage_ticks = int(self.get_parameter("slippage_ticks", "0"))   # KRX ticks lost per share on every fill
@@ -78,7 +78,7 @@ namespace QuantConnect.Algorithm.CSharp
         {{
             SetTimeZone("Asia/Seoul");
             SetAccountCurrency("KRW");
-            SetStartDate(2024, 1, 2);
+            KrxModels.SetPeriod(this, "2024-01-02");   // start_date / end_date parameters override it
             SetCash(100_000_000);
             var boards = KrxBoards.Load();
             var slippageTicks = GetParameter("slippage_ticks", 0);   // KRX ticks lost per share on every fill
@@ -107,7 +107,7 @@ namespace QuantConnect.Algorithm.CSharp
         {{
             SetTimeZone("Asia/Seoul");
             SetAccountCurrency("KRW");
-            SetStartDate(2024, 1, 2);
+            KrxModels.SetPeriod(this, "2024-01-02");   // start_date / end_date parameters override it
             SetCash(100_000_000);
             var boards = KrxBoards.Load();
             var slippageTicks = GetParameter("slippage_ticks", 0);   // KRX ticks lost per share on every fill

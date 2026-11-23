@@ -17,13 +17,12 @@ KRX. To look at the data before writing code (prices, indicators, charts), use a
 
 ```python
 from AlgorithmImports import *
-from krx_models import KOSPI, KrxBoards, KrxUniverseData, krx_benchmark, krx_initialize
+from krx_models import KOSPI, KrxBoards, KrxUniverseData, krx_benchmark, krx_initialize, set_period
 
 
 class MyStrategy(QCAlgorithm):
     def initialize(self):
-        self.set_start_date(2015, 1, 1)
-        self.set_end_date(2026, 9, 30)             # set one: without it, yearly figures change daily
+        set_period(self, "2015-01-01", "2026-09-30")   # the period; set an end, or yearly figures change daily
         self.set_cash(100_000_000)                 # won
         self.set_time_zone("Asia/Seoul")
         self.set_account_currency("KRW")
@@ -36,9 +35,17 @@ class MyStrategy(QCAlgorithm):
 `krx_initialize(security, boards, commission_rate=0.00015, slippage_ticks=0)`: set your broker's
 commission, and slippage (below).
 
+`set_period(self, start, end)` sets the backtest period like `set_start_date` / `set_end_date`,
+but a run can move it with the parameters `start_date` / `end_date`
+(`klean backtest Top20 --parameter start_date 2020-01-02`). Forward tests need that
+([5. Tools](5-tools.md#forward-tests-live)): use `set_period` instead of setting the dates
+directly. Projects created before klean 0.0.15 set the dates themselves; change those two lines
+(after `klean update models NAME`).
+
 ### C#
 
 ```csharp
+KrxModels.SetPeriod(this, "2015-01-01", "2026-09-30");   // start_date / end_date parameters override it
 SetTimeZone("Asia/Seoul");
 SetAccountCurrency("KRW");
 var boards = KrxBoards.Load();

@@ -177,6 +177,19 @@ def krx_initialize(security, boards: dict, commission_rate: float = 0.00015, sli
         security.set_slippage_model(KrxSlippageModel(boards, slippage_ticks))
 
 
+def set_period(algorithm, start: str, end: str = None) -> None:
+    """The backtest period, as "YYYY-MM-DD": ``start`` and ``end`` (no ``end``: up to the latest
+    data), unless the run passes the parameters ``start_date`` / ``end_date``, as klean's forward
+    tests do (and a backtest can: ``--parameter start_date 2020-01-02``)."""
+    start = algorithm.get_parameter("start_date") or start
+    end = algorithm.get_parameter("end_date") or end
+    y, m, d = (int(x) for x in start.split("-"))
+    algorithm.set_start_date(y, m, d)
+    if end:
+        y, m, d = (int(x) for x in end.split("-"))
+        algorithm.set_end_date(y, m, d)
+
+
 def load_index(ticker: str, data_folder: str = None) -> tuple:
     """(dates, closes) from data/index/krx/daily/{ticker}.zip."""
     path = os.path.join(data_folder or _data_folder(), "index", "krx", "daily", f"{ticker.lower()}.zip")
