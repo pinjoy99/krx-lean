@@ -66,7 +66,10 @@ the demo data).
 
 `set_period(algorithm, start, end=None)` / `KrxModels.SetPeriod(algorithm, start, end)`: the
 backtest period from "YYYY-MM-DD" strings, unless the run passes `start_date` / `end_date`
-parameters (forward tests do). Strings, not dates, so Python and C# parse the same text.
+parameters (`klean backtest … --parameter start_date 2020-01-02`). Strings, not dates, so Python and
+C# parse the same text. In live mode LEAN ignores the dates. `KrxUniverseData` reads the file of
+`KRX_SESSION_DATE` in klean's live runs (the trading day being processed) and stamps the rows
+so that LEAN's live feed releases them at once.
 
 ## Changing the models
 

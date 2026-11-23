@@ -55,10 +55,12 @@ class CommandsTest(unittest.TestCase):
         self.check(["delete-project", "P", "--yes"], "cmd_project_delete", name="P", yes=True)
 
     def test_live(self):
-        self.check(["live", "start", "P", "--from-run", "P/r", "--start", "2026-10-01", "--parameter", "k", "v"],
-                   "cmd_live", live_cmd="start", project="P", from_run="P/r", start="2026-10-01", parameter=[["k", "v"]])
+        self.check(["live", "deploy", "P", "--from-run", "P/r", "--start", "2026-10-01", "--parameter", "k", "v",
+                    "--cash", "5e7"], "cmd_live", live_cmd="deploy", project="P", from_run="P/r", start="2026-10-01",
+                   parameter=[["k", "v"]], cash=5e7, commission_rate=0.00015)
         self.check(["live", "status"], "cmd_live", live_cmd="status", project=None)
-        self.check(["live", "refresh", "P", "ID"], "cmd_live", live_cmd="refresh", project="P", id="ID")
+        self.check(["live", "run"], "cmd_live", live_cmd="run", project=None, id=None)
+        self.check(["live", "run", "P", "ID"], "cmd_live", live_cmd="run", project="P", id="ID")
         self.check(["live", "stop", "P", "ID"], "cmd_live", live_cmd="stop", id="ID")
 
     def test_old_names_still_work(self):

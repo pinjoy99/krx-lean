@@ -104,4 +104,4 @@ table.runs th, table.runs td.num { white-space: nowrap; }
 @media (max-width: 1000px) { .cols.wide-left { grid-template-columns: minmax(0, 1fr); } }
 .col-right table td:first-child { overflow-wrap: normal; word-break: normal; min-width: 9em; }
 .badge.paper { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
-#lvrun-view > .runtitle { display: none; }      /* the forward test's own title is above */
+#lvrun-view > .runtitle { display: none; }      /* the deployment's own title is above */

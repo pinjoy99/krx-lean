@@ -1,5 +1,5 @@
 // Workspace dashboard (the landing page). Left: projects, with their backtests and live
-// (forward test) runs. Right: KRX data, setup check, settings.
+// paper trading deployments. Right: KRX data, setup check, settings.
 import {api, app, backtestHash, esc, liveHash, researchHash, runHash, setTitle, signClass, statVal} from "../util.js";
 
 function shortName(name) {
@@ -21,7 +21,8 @@ export async function pageWorkspace() {
           ${p.last.ok ? `<span class="${signClass(cagr)}">${esc(statVal(p.last.stats, "Compounding Annual Return"))}</span>` : '<span class="badge no">failed</span>'}`
         : `<a href="${backtestHash(p.name)}" class="muted">none yet</a>`}</td>
       <td class="num">${p.live_runs ?? 0}</td>
-      <td>${p.last_live ? `<a href="${liveHash(p.name, p.last_live.id)}">${esc(p.last_live.name)}</a> <span class="muted">${esc(p.last_live.status)}</span>`
+      <td>${p.last_live ? `<a href="${liveHash(p.name, p.last_live.id)}">${esc(p.last_live.name)}</a> <span class="muted">${esc(p.last_live.status)}</span>
+          <span class="${p.last_live.net_profit > 0 ? "pos" : p.last_live.net_profit < 0 ? "neg" : ""}">${(p.last_live.net_profit > 0 ? "+" : "") + p.last_live.net_profit.toFixed(2)}%</span>`
         : `<a href="${liveHash(p.name)}" class="muted">none yet</a>`}</td></tr>`;
   }).join("");
   const doctor = w.doctor.map(r => `<tr><td>${r.ok ? '<span class="badge ok">OK</span>' : '<span class="badge no">NO</span>'}</td><td style="overflow-wrap:normal;min-width:9em">${esc(r.item)}</td><td class="muted">${esc(r.detail)}</td></tr>`).join("");

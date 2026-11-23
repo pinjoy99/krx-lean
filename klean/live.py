@@ -186,7 +186,8 @@ def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, lo
     log(f"klean: live {record['project']}/{dep.name}: trading day {session}")
     started = time.monotonic()
     with open(out / "console.txt", "w", encoding="utf-8") as console:
-        proc = subprocess.Popen(args, cwd=ws.launcher_dir, env={**os.environ, **env}, stdout=console,
+        proc = subprocess.Popen(args, cwd=ws.launcher_dir, env={**os.environ, **env, "KRX_SESSION_DATE": session},
+                                stdout=console,
                                 stderr=subprocess.STDOUT)
         try:
             code_ = proc.wait(timeout=timeout)
@@ -265,3 +266,58 @@ def summary(ws: Workspace, dep: Path) -> dict:
             "equity": end, "net_profit": (end / start_cash - 1) * 100 if start_cash else 0.0,
             "cash": book.get("cash"), "holdings": len(book.get("holdings", {})),
             "open_orders": len(book.get("open_orders", []))}
+
+
+# ---------------------------------------------------------------- for the GUI
+
+def _daily_rows(path: Path) -> list[tuple[str, list[str]]]:
+    if not path.exists():
+        return []
+    with zipfile.ZipFile(path) as z:
+        lines = z.read(z.namelist()[0]).decode().splitlines()
+    return [(f"{x[:4]}-{x[4:6]}-{x[6:8]}", x.split(",")) for x in lines if len(x) >= 8]
+
+
+def last_close(ws: Workspace, code: str, session: str) -> float | None:
+    """The stock's close on ``session`` or the last trading day before it, in won."""
+    rows = [r for d, r in _daily_rows(ws.data / "equity" / "krx" / "daily" / f"{code.lower()}.zip") if d <= session]
+    return float(rows[-1][4]) / 10000 if rows else None
+
+
+def detail(ws: Workspace, dep: Path) -> dict:
+    """Everything the Live dashboard shows for one deployment."""
+    sm, book, record = summary(ws, dep), ledger(dep), load(dep)
+    session = book.get("last_session") or ""
+    positions = []
+    for code, h in book.get("holdings", {}).items():
+        close = last_close(ws, code, session) if session else None
+        value = h["quantity"] * close if close is not None else None
+        positions.append({"symbol": code, "quantity": h["quantity"], "average_price": h["average_price"],
+                          "last": close, "value": value,
+                          "pnl": value - h["quantity"] * h["average_price"] if value is not None else None})
+    total = sm["equity"] or 1
+    for p in positions:
+        p["weight"] = (p["value"] or 0) / total * 100
+    equity = book.get("equity", [])
+    bench = {d: float(r[4]) for d, r in _daily_rows(ws.data / "index" / "krx" / "daily" / "kospi200.zip")}
+    first = next((bench[e["session"]] for e in equity if e["session"] in bench), None)
+    start_cash = book.get("start_cash") or record["cash"]
+
+    def ts(day: str) -> int:
+        return int(dt.datetime.fromisoformat(day).replace(tzinfo=dt.timezone.utc).timestamp())
+
+    return {**sm, "positions": sorted(positions, key=lambda p: -(p["value"] or 0)),
+            "waiting": book.get("open_orders", []), "fills": list(reversed(book.get("fills", [])))[:500],
+            "events": list(reversed(book.get("events", [])))[:200],
+            "runs": list(reversed(record.get("runs", []))),
+            "equity_curve": [[ts(e["session"]), e["equity"]] for e in equity],
+            "benchmark": [[ts(e["session"]), bench[e["session"]] / first * start_cash] for e in equity
+                          if first and e["session"] in bench],
+            "pending_days": pending_sessions(ws, dep) if record["status"] == "running" else []}
+
+
+def console_tail(dep: Path, session: str, lines: int = 300) -> list[str]:
+    path = dep / "runs" / session / "console.txt"
+    if path.parent.parent != dep / "runs" or not path.exists():
+        raise KleanError(f"no run for {session}")
+    return path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]

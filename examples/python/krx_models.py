@@ -219,17 +219,30 @@ def krx_benchmark(ticker: str = "kospi200", data_folder: str = None):
     return level
 
 
+def _live_day(date):
+    """In klean's live runs (one LEAN process per trading day) the day being traded, which is
+    not today: KRX publishes a day's data the next day. klean sets KRX_SESSION_DATE. Live
+    universe rows are stamped with LEAN's dates, ending as the run's day starts (live mode
+    drops older data and holds back data that ends later)."""
+    day = os.environ.get("KRX_SESSION_DATE")
+    return datetime.strptime(day, "%Y-%m-%d") if day else date
+
+
 class KrxUniverseData(PythonData):
     """One row of data/equity/krx/universe/yyyyMMdd.zip: a security that traded that day.
     Properties: board, close, volume, trading_value, market_cap, shares (raw KRW)."""
 
     def get_source(self, config, date, is_live):
+        if is_live:
+            date = _live_day(date)
         path = os.path.join(_data_folder(), "equity", "krx", "universe", f"{date:%Y%m%d}.zip")
         return SubscriptionDataSource(path, SubscriptionTransportMedium.LOCAL_FILE, FileFormat.CSV)
 
     def reader(self, config, line, date, is_live):
         if not line or line.startswith("code"):
             return None
+        if is_live:                   # live mode releases data once its end time has passed
+            date = date - timedelta(days=1)
         c = line.split(",")
 
         def num(s):

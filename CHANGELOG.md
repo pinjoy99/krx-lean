@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.17 — 2026-11-23
+
+- **Live paper trading in LEAN's live mode** replaces 0.0.15's forward tests:
+  `klean live deploy | run | status | stop`, and `klean update data` lets every running
+  deployment trade the new days. The strategy runs unchanged (live mode ignores its dates);
+  orders fill at the next trading day's open through klean's paper broker. Universe
+  strategies work (the KRX universe reader takes the run's day from `KRX_SESSION_DATE`).
+- **Live dashboard**: new paper deployment (parameters from a backtest, starting cash), the
+  deployments, and for the selected one its account, equity vs KOSPI 200, positions, waiting
+  orders, fills and daily runs with LEAN's console output; *Trade new days*, *Stop*.
+- `set_period` stays, optional: it lets `start_date` / `end_date` parameters move a backtest.
+- C# projects: `live/` is kept out of the build and klean's plugin isn't referenced (older
+  project files are updated automatically).
+- Checked: buy-and-hold fills match a backtest of the same days; the top-market-cap universe
+  trades identically in C# and Python in live mode.
+
 ## 0.0.16 — 2026-11-23
 
 Groundwork for live paper trading in LEAN's own live mode (commands and GUI follow).

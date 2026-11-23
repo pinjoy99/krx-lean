@@ -14,7 +14,7 @@ also runs under `lean backtest`.
 | `optimize.py` | grid search |
 | `report.py` | LEAN's Report |
 | `research.py` | Jupyter with LEAN's QuantBook |
-| `forward.py` | forward tests (`klean live`, Live dashboard): freeze the code into `<project>/live/<id>/code`, re-run it from `start_date` to the latest data (`start_date` / `end_date` parameters read by `set_period`), keep `forward.json` with every refresh; `refresh_all` after `update data` |
+| `live.py`, `plugin/` | live paper trading: deployments (`<project>/live/<id>/`: frozen `code/`, `ledger.json`, `runs/<day>/`), one LEAN live-mode process per trading day with klean's plugin (`QuantConnect.Krx.dll`, built into the LEAN build by `ensure_plugin`): `KrxDailyDataQueue` serves the session day's bars, `KrxPaperBrokerage` fills the previous day's orders at the open before LEAN reads the account, records new orders, and stops the run when it's quiet; `KRX_SESSION_DATE` tells the universe reader which day's file to read |
 | `gui.py`, `static/` | local web page: `index.html` (shell), `app.css`, `js/main.js` (router), `js/pages/*.js` (one module per dashboard: workspace, research, backtest, live; the backtest dashboard's right column draws `run.js`, `optimization.js` or `compare.js`), `js/chart.js` (uPlot charts), `js/util.js`; `vendor/uplot/` (MIT, copied in; no CDN, no npm build) |
 
 ## A run

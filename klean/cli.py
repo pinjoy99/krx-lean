@@ -26,11 +26,11 @@ Projects and runs
     klean compare RUN RUN [...] [--all]                 statistics and equity curves side by side
     klean config list | get KEY | set KEY VALUE | unset KEY
 
-Live (forward tests: paper trading on daily data, no broker)
-    klean live start NAME [--from-run RUN] [--parameter K V] [--start DATE]   freeze the code, run from the next day
-    klean live status [NAME]                            forward tests and their results
-    klean live refresh [NAME [ID]]                      run them up to the latest data (update data does this)
-    klean live stop NAME ID                             stop one (its results stay)
+Live paper trading (LEAN live mode on daily KRX data, klean's paper broker; no real money)
+    klean live deploy NAME [--from-run RUN] [--parameter K V] [--cash W]   freeze the code, trade from the next day
+    klean live run [NAME [ID]]                          trade the new days (update data does this)
+    klean live status [NAME]                            deployments: days, equity, profit
+    klean live stop NAME ID                             stop one (its account stays)
 
 Other
     klean gui [--port N] [--no-browser]                 local web page: projects, runs, charts, compare
@@ -548,55 +548,59 @@ def cmd_update(args) -> int:
     print(f"klean: workspace data now {st.get('first_date', '?')} → {st.get('last_date', '?')}, "
           f"{st['securities']} securities" + ("" if code == 0 else
           "  (the download stopped early: run `klean update data` again to continue)"))
-    from klean import forward
-    forward.refresh_all(Workspace.load(ws.root))           # forward tests take the new days
+    from klean import live
+    live.run_all(Workspace.load(ws.root))                  # live paper deployments trade the new days
     return code
 
 
 def cmd_live(args) -> int:
-    """Forward tests (paper trading on daily data): start, status, refresh, stop."""
-    from klean import forward
+    """Live paper trading in LEAN's live mode on daily KRX data: deploy, run, status, stop."""
+    from klean import live
     ws = Workspace.load(Path.cwd())
-    if args.live_cmd == "start":
+    if args.live_cmd == "deploy":
         project = ws.root / args.project
         params = dict(args.parameter or [])
         if args.from_run:
-            run = results.resolve_run(ws, args.from_run)
-            manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8")) if (run / "manifest.json").exists() else {}
-            params = {**manifest.get("parameters", {}), **params}
-        test = forward.start(ws, project, args.name or "", params, args.start or "",
-                             source_run=args.from_run or "")
-        record = forward.load(test)
-        print(f"forward test {project.name}/{test.name}: from {record['start_date']}"
-              + (" (BACKDATED: starts on days the data already had)" if record["backdated"] else "")
+            run_dir = results.resolve_run(ws, args.from_run)
+            m = run_dir / "manifest.json"
+            params = {**(json.loads(m.read_text(encoding="utf-8")).get("parameters", {}) if m.exists() else {}), **params}
+        dep = live.deploy(ws, project, args.name or "", params, cash=args.cash, commission_rate=args.commission_rate,
+                          start=args.start or "", source_run=args.from_run or "")
+        record = live.load(dep)
+        print(f"live paper deployment {project.name}/{dep.name}: ₩{record['cash']:,.0f}, trading from "
+              f"{record['first_session']}" + (" (BACKDATED: days the data already had)" if record["backdated"] else "")
               + (f", parameters {record['parameters']}" if record["parameters"] else ""))
-        entry = forward.refresh(ws, test)
-        print(f"  {entry['skipped']}" if "skipped" in entry else
-              f"  to {entry['data_last_date']}: end equity {entry['end_equity']}" if entry["ok"] else
-              f"  FAILED: {entry['error']}")
-        return 0 if entry.get("ok", True) else 1
-    projects_ = [ws.root / args.project] if getattr(args, "project", None) else projects.list_projects(ws)
+        runs = live.run(ws, dep)
+        if not runs:
+            print("  waiting for the next trading day's data: `klean update data` runs it")
+        return 0 if all(r["ok"] for r in runs) else 1
     if args.live_cmd == "status":
         rows = []
-        for project in projects_:
-            for test in forward.tests(project):
-                sm = forward.summary(ws, test)
-                rows.append([f"{project.name}/{test.name}", sm["state"] + (" (backdated)" if sm["backdated"] else ""),
-                             sm["start_date"], (sm["last_refresh"] or {}).get("data_last_date", "—"),
-                             sm["stats"]["Net Profit"] or "—", sm["stats"]["End Equity"] or "—"])
-        print(results.format_table(["forward test", "state", "from", "to", "net profit", "end equity"], rows)
-              if rows else "no forward tests (`klean live start PROJECT`)")
+        for project in ([ws.root / args.project] if args.project else projects.list_projects(ws)):
+            for dep in live.deployments(project):
+                sm = live.summary(ws, dep)
+                rows.append([f"{project.name}/{dep.name}", sm["state"] + (" (backdated)" if sm["backdated"] else ""),
+                             sm["first_session"], sm["last_session"] or "—", f"{sm['days']}",
+                             f"₩{sm['equity']:,.0f}", f"{sm['net_profit']:+.2f}%", f"{sm['open_orders']}"])
+        print(results.format_table(["deployment", "state", "from", "to", "days", "equity", "net", "waiting orders"], rows)
+              if rows else "no live deployments (`klean live deploy PROJECT`)")
         return 0
-    if args.live_cmd == "refresh":
+    if args.live_cmd == "run":
         if args.id:
-            entry = forward.refresh(ws, forward.find(ws.root / args.project, args.id))
-            print(entry)
-            return 0 if entry.get("ok", True) else 1
-        done = forward.refresh_all(ws)
-        return 0 if all(e.get("ok", True) for _, e in done) else 1
-    test = forward.find(ws.root / args.project, args.id)               # stop
-    forward.stop(test)
-    print(f"forward test {args.project}/{args.id} stopped (its results stay in {test})")
+            runs = live.run(ws, live.find(ws.root / args.project, args.id))
+            print(f"{len(runs)} trading day(s) processed" if runs else "nothing new to run")
+            return 0 if all(r["ok"] for r in runs) else 1
+        if args.project:
+            done = [(d.name, live.run(ws, d)) for d in live.deployments(ws.root / args.project)
+                    if live.load(d)["status"] == "running"]
+        else:
+            done = live.run_all(ws)
+        if not any(runs for _, runs in done):
+            print("nothing new to run (no trading days after the last one processed)")
+        return 0 if all(r["ok"] for _, runs in done for r in runs) else 1
+    dep = live.find(ws.root / args.project, args.id)                 # stop
+    live.stop(dep)
+    print(f"live deployment {args.project}/{args.id} stopped; its account and history stay in {dep}")
     return 0
 
 
@@ -891,24 +895,26 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("key")
     c.set_defaults(func=cmd_config)
 
-    s = sub.add_parser("live", help="forward tests: paper trading on daily data (start | status | refresh | stop)")
+    s = sub.add_parser("live", help="live paper trading on daily KRX data, in LEAN's live mode (deploy | run | status | stop)")
     lsub = s.add_subparsers(dest="live_cmd", required=True, metavar="<action>")
-    l = lsub.add_parser("start", help="freeze a project's code and start a forward test from the next trading day")
+    l = lsub.add_parser("deploy", help="freeze a project's code, open a paper account, trade from the next trading day")
     l.add_argument("project")
-    l.add_argument("--name", help="name for the forward test (folder suffix)")
+    l.add_argument("--name", help="name for the deployment (folder suffix)")
     l.add_argument("--parameter", nargs=2, action="append", metavar=("KEY", "VALUE"), help="algorithm parameter, repeatable")
     l.add_argument("--from-run", metavar="RUN", help="take the parameters of this backtest (PROJECT/RUN)")
-    l.add_argument("--start", metavar="YYYY-MM-DD", help="start date (default: the day after the latest data); "
-                   "an earlier date makes a BACKDATED test")
+    l.add_argument("--cash", type=float, default=100_000_000, help="starting cash in won (default: 100,000,000)")
+    l.add_argument("--commission-rate", type=float, default=0.00015, help="broker commission per side (default: 0.00015)")
+    l.add_argument("--start", metavar="YYYY-MM-DD", help="first trading day (default: the one after the latest data); "
+                   "an earlier day makes a BACKDATED deployment")
     l.set_defaults(func=cmd_live)
-    l = lsub.add_parser("status", help="forward tests and their latest results")
-    l.add_argument("project", nargs="?")
-    l.set_defaults(func=cmd_live)
-    l = lsub.add_parser("refresh", help="run forward tests up to the latest data (`klean update data` does this)")
+    l = lsub.add_parser("run", help="trade the new trading days (`klean update data` does this)")
     l.add_argument("project", nargs="?")
     l.add_argument("id", nargs="?")
     l.set_defaults(func=cmd_live)
-    l = lsub.add_parser("stop", help="stop a forward test (its results stay)")
+    l = lsub.add_parser("status", help="deployments: state, days, equity, profit")
+    l.add_argument("project", nargs="?")
+    l.set_defaults(func=cmd_live)
+    l = lsub.add_parser("stop", help="stop a deployment (its account and history stay)")
     l.add_argument("project")
     l.add_argument("id")
     l.set_defaults(func=cmd_live)

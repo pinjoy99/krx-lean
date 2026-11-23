@@ -145,7 +145,7 @@ Four dashboards; the Workspace is the landing page, and each project has the oth
 | **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live); right: KRX data, setup check, settings |
 | **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), opened on the project's `research.ipynb`; *Backtest* and *Live* in the title bar |
 | **Backtest** | left: *New backtest* and *New optimization* forms, the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
-| **Live** | left: *Start a forward test* (parameters from one of the project's backtests, optional start date) and the forward tests; right: the selected one with its refresh history and results; *Run to the latest data*, *Stop* |
+| **Live** | left: *New paper deployment* (parameters from one of the project's backtests, starting cash, optional first day) and the deployments; right: the selected one's account, equity vs KOSPI 200, positions, waiting orders, fills, daily runs (with LEAN's console output); *Trade new days*, *Stop* |
 
 Charts: drag across a chart to zoom into a period, double-click to zoom out; the legend under
 the chart shows the values at the cursor (the latest ones otherwise); *log scale* on equity
@@ -160,32 +160,50 @@ be renamed or deleted, and never one that is still running. To edit a strategy, 
 `main.py` in the Research tab (JupyterLab's editor; files save automatically) or use your own
 editor.
 
-## Forward tests (Live)
+## Live paper trading (Live)
 
-A forward test is paper trading on daily data: no broker, no money. It freezes the project's
-code and parameters when it starts; after each `klean update data` it runs that frozen code
-from its start date to the latest data, with the same KRX fees, taxes and slippage as a
-backtest. The days after the start were unknown when the code was frozen, so the results are
-out of sample: the closest klean gets to live trading so far.
+Your strategy, unchanged, runs in LEAN's own live mode on the daily KRX data, with klean's
+paper broker: no real broker, no real money. LEAN ignores the strategy's start and end dates
+in live mode (as `lean live` does).
 
 ```bash
-klean live start Top20 --from-run Top20/2026-11-20_10-12-03_holdings30   # its parameters
-klean live start Top20 --parameter holdings 30 --name h30
-klean live status                     # all forward tests: state, period, net profit, end equity
-klean live refresh                    # run them up to the latest data (update data does this)
-klean live stop Top20 <id>            # stops it; its results stay
+klean live deploy Top20 --from-run Top20/2026-11-20_10-12-03_holdings30   # that backtest's parameters
+klean live deploy Top20 --parameter holdings 30 --cash 50000000 --name h30
+klean live status                    # deployments: days, equity, profit, waiting orders
+klean live run                       # trade the new trading days (`klean update data` does this)
+klean live stop Top20 <id>           # stops it; its account and history stay
 ```
 
-- It starts on the day after the latest data (the next trading day), so the first results appear
-  after the next data update ("waiting for data" until then).
-- `--start YYYY-MM-DD` on or before the latest data makes a **backdated** test, labeled so
-  everywhere: the code may have been written knowing those days.
-- The strategy must use `set_period` ([4. Strategies](4-strategies.md#the-setup-every-krx-strategy-needs));
-  klean refuses to start one for code that sets its own dates.
-- Files: `<project>/live/<id>/` with `forward.json` (settings and every refresh), `code/` (the
-  frozen code) and `run/` (the latest results, shown like a backtest in the GUI).
-- Real-money trading needs a Korean brokerage connection, which LEAN doesn't have; not planned
-  for now.
+How a day works: after `klean update data` brings in day T, klean starts LEAN in live mode
+for T. The paper broker first fills the orders placed on the previous trading day at T's open
+(KRX commission, sell tax by settlement date, `slippage_ticks`), then the strategy sees T's
+prices (and its universe, for universe strategies), places orders, and the run ends. Those
+orders fill at the next trading day's open, on the next run. Missed days are caught up one
+by one, in order.
+
+- A deployment freezes the project's code and parameters; editing the project later doesn't
+  change it. It starts on the trading day after the latest data, so it trades after the next
+  `klean update data` ("waiting for data" until then).
+- `--start YYYY-MM-DD` on or before the latest data makes a **backdated** deployment, to try it
+  on days the data already has; it's labeled so everywhere.
+- Cash comes from the deployment (`--cash`, default ₩100,000,000), not from `set_cash`.
+- The strategy's clock (`self.time`) is when the run happens, not the day of the data (KRX
+  publishes a day's prices the next day). Code that acts in `on_data` is unaffected;
+  scheduled events and "first trading day of the month" rules follow the run's date.
+- Compared with a backtest: orders fill at the same next-day open, at the same price. Universe
+  strategies trade one day earlier than in a backtest (LEAN's backtests apply a daily universe
+  a day after its date; live mode uses it the same day). The commission is on the traded
+  value (the backtest's KRX fee model uses the previous close: a few hundred won apart).
+- Supported orders: market (filled at the next open), market-on-open, market-on-close (next
+  day's close), limit (at the open if better, else at the limit if the day's range reaches
+  it; otherwise it keeps waiting). No short selling; a buy larger than the cash is reduced.
+  Not yet: splits and dividends on holdings, the ±30% daily price limits.
+- Files: `<project>/live/<id>/` with `deployment.json`, `code/` (the frozen code),
+  `ledger.json` (cash, holdings, waiting orders, fills, daily equity) and `runs/<day>/` (LEAN's
+  output for each day).
+- How it works: klean's LEAN plugin (`klean/plugin`, built into your LEAN build the first time)
+  is a daily data feed and a paper brokerage. A real brokerage (Korea Investment's Open API) is
+  planned on the same plugin.
 
 ## Other commands
 

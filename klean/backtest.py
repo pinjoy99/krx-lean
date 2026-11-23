@@ -126,6 +126,7 @@ def prepare(ws: Workspace, project: Path, language: str, build_config: str = "Re
             run([py, "-m", "pip", "install", "-q", "-r", str(project / "requirements.txt")])
         return project / "main.py", projects.python_algorithm_class(project / "main.py"), env
     csproj = sorted(project.glob("*.csproj"))[0]
+    projects.upgrade_csproj(csproj)
     out = project / "bin" / build_config
     run([dotnet(), "build", str(csproj), "-c", build_config, "-nologo", "-v", "q",
          f"-p:LeanBin={ws.launcher_dir}", "-o", str(out)])

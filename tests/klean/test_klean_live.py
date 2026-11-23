@@ -81,6 +81,49 @@ class LiveTest(unittest.TestCase):
         build.assert_not_called()
         self.assertEqual(live.summary(self.ws, dep)["state"], "stopped")
 
+    def test_gui_shows_the_account(self):
+        from klean import gui
+        daily = self.ws.data / "equity" / "krx" / "daily"
+        daily.mkdir(parents=True)
+        with zipfile.ZipFile(daily / "d00010.zip", "w") as z:
+            z.writestr("d00010.csv", "20260928 00:00,1000000000,1010000000,990000000,1050000000,10\n"
+                                     "20260929 00:00,1050000000,1100000000,1040000000,1100000000,10\n")
+        index = self.ws.data / "index" / "krx" / "daily"
+        with zipfile.ZipFile(index / "kospi200.zip", "w") as z:
+            z.writestr("kospi200.csv", "20260928 00:00,1,1,1,400,0\n20260929 00:00,1,1,1,420,0\n")
+        dep = live.deploy(self.ws, self.project, "g", start="2026-09-28")
+        book = live.ledger(dep)
+        book.update(cash=50_000_000, holdings={"D00010": {"quantity": 500, "average_price": 100_000}},
+                    last_session="2026-09-29",
+                    fills=[{"order_id": 1, "session": "2026-09-29", "symbol": "D00010", "quantity": 500, "price": 100_000,
+                            "commission": 7500, "tax": 0, "type": "MarketOnOpen", "tag": ""}],
+                    equity=[{"session": "2026-09-28", "cash": 100_000_000, "holdings_value": 0, "equity": 100_000_000},
+                            {"session": "2026-09-29", "cash": 50_000_000, "holdings_value": 55_000_000, "equity": 105_000_000}])
+        (dep / live.LEDGER).write_text(json.dumps(book))
+        d = gui.api_live_deployment(self.ws, {"project": ["P"], "id": [dep.name]})
+        pos = d["positions"][0]
+        self.assertEqual((pos["last"], pos["value"], pos["pnl"]), (110_000, 55_000_000, 5_000_000))
+        self.assertEqual((round(d["net_profit"], 6), d["days"], d["state"]), (5.0, 2, "running"))
+        self.assertEqual([v for _, v in d["equity_curve"]], [100_000_000, 105_000_000])
+        self.assertEqual([round(v) for _, v in d["benchmark"]], [100_000_000, 105_000_000])   # KOSPI 200 +5%
+        row = next(p for p in gui.api_workspace(self.ws, {})["projects"] if p["name"] == "P")
+        self.assertEqual((row["live_runs"], row["last_live"]["id"]), (1, dep.name))
+        self.assertEqual(gui.api_live(self.ws, {"project": ["P"]})["deployments"][0]["id"], dep.name)
+
+    def test_older_csharp_projects_are_upgraded(self):
+        cs = projects.create(self.ws, "C", "csharp", "buy-hold")
+        csproj = next(cs.glob("*.csproj"))
+        new = csproj.read_text()
+        self.assertIn("live/**", new)
+        self.assertIn("QuantConnect.Krx.dll", new)
+        old = new.replace(";live/**", "").replace(";$(LeanBin)/QuantConnect.Krx.dll", "")
+        csproj.write_text(old)
+        projects.upgrade_csproj(csproj)
+        self.assertEqual(csproj.read_text(), new)
+        (cs / "live" / "x" / "code").mkdir(parents=True)                       # frozen copies don't count
+        (cs / "live" / "x" / "code" / "Main.cs").write_text("class Other : QCAlgorithm {}")
+        self.assertEqual(projects.csharp_algorithm_class(cs), "C")
+
     def test_live_config_uses_the_plugin(self):
         self.assertEqual(live.LIVE_CONFIG["live-mode-brokerage"], "KrxPaperBrokerage")
         self.assertEqual(live.LIVE_CONFIG["data-queue-handler"], ["QuantConnect.Krx.KrxDailyDataQueue"])

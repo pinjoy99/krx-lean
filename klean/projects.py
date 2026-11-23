@@ -139,9 +139,9 @@ CSPROJ_TEMPLATE = '''<Project Sdk="Microsoft.NET.Sdk">
     <LeanBin Condition="'$(LeanBin)' == ''">{lean_bin}</LeanBin>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="backtests/**;optimizations/**" />
-    <!-- LEAN's own example algorithms are not a dependency of a user project -->
-    <Reference Include="$(LeanBin)/QuantConnect.*.dll" Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll" Private="false" />
+    <Compile Remove="backtests/**;optimizations/**;live/**" />
+    <!-- LEAN's own example algorithms and klean's live plugin are not dependencies of a user project -->
+    <Reference Include="$(LeanBin)/QuantConnect.*.dll" Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll;$(LeanBin)/QuantConnect.Krx.dll" Private="false" />
     <Reference Include="$(LeanBin)/NodaTime.dll" Private="false" />
     <Reference Include="$(LeanBin)/Newtonsoft.Json.dll" Private="false" />
     <Reference Include="$(LeanBin)/Python.Runtime.dll" Private="false" />
@@ -269,11 +269,23 @@ def python_algorithm_class(main_py: Path) -> str:
     raise KleanError(f"no class deriving from QCAlgorithm in {main_py}")
 
 
+def upgrade_csproj(csproj: Path) -> None:
+    """Projects created before klean 0.0.17: keep live/ (frozen copies of the code) out of the
+    build and don't reference klean's live plugin (it has its own copy of the KRX models)."""
+    text = csproj.read_text(encoding="utf-8")
+    new = text.replace('<Compile Remove="backtests/**;optimizations/**" />',
+                       '<Compile Remove="backtests/**;optimizations/**;live/**" />')
+    new = new.replace('Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll"',
+                      'Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll;$(LeanBin)/QuantConnect.Krx.dll"')
+    if new != text:
+        csproj.write_text(new, encoding="utf-8")
+
+
 def csharp_algorithm_class(project: Path) -> str:
     pattern = re.compile(r"class\s+(\w+)\s*:\s*QCAlgorithm\b")
     found = []
     for path in sorted(project.rglob("*.cs")):
-        if path.relative_to(project).parts[0] in ("backtests", "optimizations", "obj", "bin"):
+        if path.relative_to(project).parts[0] in ("backtests", "optimizations", "live", "obj", "bin"):
             continue
         found += pattern.findall(path.read_text(encoding="utf-8"))
     if len(found) != 1:

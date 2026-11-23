@@ -37,10 +37,8 @@ commission, and slippage (below).
 
 `set_period(self, start, end)` sets the backtest period like `set_start_date` / `set_end_date`,
 but a run can move it with the parameters `start_date` / `end_date`
-(`klean backtest Top20 --parameter start_date 2020-01-02`). Forward tests need that
-([5. Tools](5-tools.md#forward-tests-live)): use `set_period` instead of setting the dates
-directly. Projects created before klean 0.0.15 set the dates themselves; change those two lines
-(after `klean update models NAME`).
+(`klean backtest Top20 --parameter start_date 2020-01-02`). Optional: either way works, and
+live paper trading ignores the dates ([5. Tools](5-tools.md#live-paper-trading-live)).
 
 ### C#
 

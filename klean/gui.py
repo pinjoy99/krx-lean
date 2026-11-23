@@ -26,7 +26,7 @@ from pathlib import Path
 import urllib.request
 from urllib.parse import parse_qs, urlparse
 
-from klean import __version__, forward, projects, results
+from klean import __version__, live, projects, results
 from klean.backtest import backtest, results_folder
 from klean.report import report
 from klean.workspace import KleanError, Workspace, check
@@ -129,12 +129,13 @@ def api_workspace(ws: Workspace, _q: dict) -> dict:
     rows = []
     for p in project_list(ws):
         runs = results.runs(p)
-        live = forward.tests(p)
-        last_live = forward.summary(ws, live[-1]) if live else None
+        deps = live.deployments(p)
+        last_live = live.summary(ws, deps[-1]) if deps else None
         rows.append({"name": p.name, "language": projects.language_of(p), "runs": len(runs),
-                     "last": run_row(runs[-1]) if runs else None, "live_runs": len(live),
+                     "last": run_row(runs[-1]) if runs else None, "live_runs": len(deps),
                      "last_live": {"id": last_live["id"], "name": last_live["name"], "state": last_live["state"],
-                                   "status": last_live["state"]} if last_live else None})
+                                   "status": last_live["state"], "net_profit": last_live["net_profit"]}
+                     if last_live else None})
     try:
         data = results.data_status(ws)
     except Exception as e:  # noqa: BLE001
@@ -170,25 +171,32 @@ def opt_row(opt: Path) -> dict:
 
 
 def api_live(ws: Workspace, q: dict) -> dict:
-    """A project's forward tests, and its backtests to copy parameters from."""
+    """A project's live paper deployments, and its backtests to copy parameters from."""
     p = inside(ws, ws.root / q["project"][0])
     lang = projects.language_of(p)
-    return {"name": p.name, "language": lang, "uses_period": forward.uses_period(p),
-            "data_last_date": forward.iso(results.last_data_date(ws)),
-            "tests": [forward.summary(ws, t) for t in reversed(forward.tests(p))],
+    try:
+        days = live.trading_days(ws)
+    except KleanError:
+        days = []
+    return {"name": p.name, "language": lang, "data_last_date": days[-1] if days else "",
+            "deployments": [live.summary(ws, d) for d in reversed(live.deployments(p))],
             "runs": [{"ref": r["ref"], "name": r["name"], "parameters": r["parameters"]}
                      for r in (run_row(x) for x in reversed(results.runs(p))) if r["ok"]][:50]}
 
 
-def api_live_test(ws: Workspace, q: dict) -> dict:
-    test = forward.find(inside(ws, ws.root / q["project"][0]), q["id"][0])
-    record = forward.load(test)
-    return {**forward.summary(ws, test), "history": list(reversed(record["refreshes"]))}
+def api_live_deployment(ws: Workspace, q: dict) -> dict:
+    dep = live.find(inside(ws, ws.root / q["project"][0]), q["id"][0])
+    return live.detail(ws, dep)
+
+
+def api_live_console(ws: Workspace, q: dict) -> dict:
+    dep = live.find(inside(ws, ws.root / q["project"][0]), q["id"][0])
+    return {"lines": live.console_tail(dep, q["session"][0])}
 
 
 def api_live_stop(ws: Workspace, body: dict) -> dict:
-    test = forward.find(inside(ws, ws.root / str(body.get("project", ""))), str(body.get("id", "")))
-    return forward.stop(test)
+    dep = live.find(inside(ws, ws.root / str(body.get("project", ""))), str(body.get("id", "")))
+    return live.stop(dep)
 
 
 def api_optimization(ws: Workspace, q: dict) -> dict:
@@ -354,39 +362,45 @@ class Jobs:
         return job
 
     def start_live(self, ws: Workspace, body: dict) -> dict:
-        """POST /api/live-start creates a forward test, then runs it (a job); /api/live-refresh
-        runs an existing one up to the latest data."""
+        """POST /api/live-deploy opens a paper deployment and runs the days it can; /api/live-run
+        runs an existing one up to the latest data. Both are jobs (LEAN runs once per day)."""
         project = inside(ws, ws.root / str(body.get("project", "")))
         if body.get("id"):
-            test = forward.find(project, str(body["id"]))
+            dep = live.find(project, str(body["id"]))
         else:
             params = {str(k): str(v) for k, v in (body.get("parameters") or {}).items() if str(k)}
             source = str(body.get("run") or "")
             if source:
-                manifest_ = manifest(run_ref(ws, source))
-                params = {**manifest_.get("parameters", {}), **params}
-            test = forward.start(ws, project, str(body.get("name") or ""), params, str(body.get("start") or ""),
-                                 source_run=source)
-        job = {"id": secrets.token_hex(4), "kind": "live", "project": project.name, "test": test.name,
-               "folder": str(test / "run.new"), "status": "running", "error": "", "started": time.time()}
+                params = {**manifest(run_ref(ws, source)).get("parameters", {}), **params}
+            try:
+                cash = float(str(body.get("cash") or "100000000").replace(",", ""))
+            except ValueError:
+                raise KleanError("cash must be a number of won") from None
+            dep = live.deploy(ws, project, str(body.get("name") or ""), params, cash=cash,
+                              start=str(body.get("start") or ""), source_run=source)
+        job = {"id": secrets.token_hex(4), "kind": "live", "project": project.name, "deployment": dep.name,
+               "folder": str(dep), "console_file": "none", "status": "running", "error": "", "started": time.time(),
+               "lines": []}
         with self.lock:
-            if any(j.get("kind") == "live" and j["test"] == test.name and j["status"] == "running"
+            if any(j.get("kind") == "live" and j["deployment"] == dep.name and j["status"] == "running"
                    for j in self.jobs.values()):
-                raise KleanError("this forward test is already running")
+                raise KleanError("this deployment is already running")
             self.jobs[job["id"]] = job
 
         def work():
             try:
-                entry = forward.refresh(ws, test)
-                if entry.get("ok") is False:
-                    job["status"], job["error"] = "failed", entry["error"]
+                runs = live.run(ws, dep, log=lambda *a: job["lines"].append(" ".join(map(str, a))))
+                failed = [r for r in runs if not r["ok"]]
+                if failed:
+                    job["status"], job["error"] = "failed", f"{failed[0]['session']}: {failed[0].get('error', '')}"
                 else:
-                    job["status"], job["note"] = "done", entry.get("skipped", "")
+                    job["status"] = "done"
+                    job["note"] = f"{len(runs)} trading day(s) processed" if runs else "nothing new to run"
             except Exception as e:  # noqa: BLE001 - reported to the page
                 job["status"], job["error"] = "failed", str(e)
             job["finished"] = time.time()
         threading.Thread(target=work, daemon=True).start()
-        return job
+        return {k: v for k, v in job.items() if k != "lines"}
 
     def start_optimize(self, ws: Workspace, body: dict) -> dict:
         from klean import optimize
@@ -490,7 +504,7 @@ class Jobs:
         job = self.jobs.get(job_id)
         if job is None:
             raise KleanError("unknown job")
-        if job.get("kind") == "optimize":
+        if job.get("kind") in ("optimize", "live"):
             return {**{k: v for k, v in job.items() if k != "lines"}, "console": job["lines"][-40:]}
         console = Path(job["folder"]) / job.get("console_file", "console.txt")
         tail = console.read_text(encoding="utf-8", errors="replace").splitlines()[-40:] if console.exists() else []
@@ -506,7 +520,8 @@ class Jobs:
 def make_handler(ws: Workspace, token: str, jobs: Jobs):
     gets = {"/api/workspace": api_workspace, "/api/project": api_project, "/api/run": api_run,
             "/api/compare": api_compare, "/api/log": api_log, "/api/optimization": api_optimization,
-            "/api/code-file": api_code_file, "/api/live": api_live, "/api/live-test": api_live_test}
+            "/api/code-file": api_code_file, "/api/live": api_live, "/api/live-deployment": api_live_deployment,
+            "/api/live-console": api_live_console}
 
     class Handler(BaseHTTPRequestHandler):
         server_version = f"klean-gui/{__version__}"
@@ -591,7 +606,7 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                     self._json(jobs.start_optimize(Workspace.load(ws.root), body))
                 elif url.path == "/api/research":
                     self._json(jobs.research(Workspace.load(ws.root), body, self.server.server_address[1]))
-                elif url.path in ("/api/live-start", "/api/live-refresh"):
+                elif url.path in ("/api/live-deploy", "/api/live-run"):
                     self._json(jobs.start_live(Workspace.load(ws.root), body))
                 elif url.path == "/api/live-stop":
                     self._json(api_live_stop(Workspace.load(ws.root), body))

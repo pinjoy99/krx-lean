@@ -70,7 +70,7 @@ class KleanTest(unittest.TestCase):
         self.assertEqual(projects.language_of(cs), "csharp")
         csproj = (cs / "Top20.csproj").read_text()
         self.assertIn(str(ws.launcher_dir), csproj)
-        self.assertIn('Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll"', csproj)
+        self.assertIn('Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll;$(LeanBin)/QuantConnect.Krx.dll"', csproj)
         with self.assertRaises(KleanError):
             projects.create(ws, "Top 20", "csharp")   # exists
 

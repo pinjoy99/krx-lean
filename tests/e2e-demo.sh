@@ -94,41 +94,19 @@ step "time limit"
 if klean backtest Py --timeout 2 >timeout.txt 2>&1; then fail "--timeout 2 didn't stop the run"; fi
 grep -q "timed out after 2 s" timeout.txt || fail "no timeout message"
 
-step "forward test (paper trading on daily data), backdated on the demo data"
-klean live start Py --name e2e --start 2026-06-01 --parameter holdings 10 | tee live.txt
-grep -q "BACKDATED" live.txt || fail "a backdated forward test isn't labeled so"
-grep -q "to 2026-09-30: end equity" live.txt || fail "the forward test didn't run to the latest data"
-"$PY_DIR/bin/python" - <<'EOF2' || fail "the forward test didn't start on its start date"
-import datetime as dt, glob, json
-run = glob.glob("Py/live/*_e2e/run")[0]
-full = [f for f in glob.glob(run + "/*.json") if not f.endswith(("-summary.json", "manifest.json", "config.json"))
-        and "order-events" not in f and "data-monitor" not in f][0]
-values = json.load(open(full))["charts"]["Strategy Equity"]["series"]["Equity"]["values"]
-first = dt.datetime.fromtimestamp(values[0][0], dt.timezone.utc) + dt.timedelta(hours=9)   # KST
-assert first.date() == dt.date(2026, 6, 1), first
-print("forward test starts", first.date())
-EOF2
-klean live status Py | grep -q "running (backdated)" || fail "live status"
-klean live stop Py "$(basename "$(ls -d Py/live/*_e2e)")" | grep -q "stopped" || fail "live stop"
-
-step "live paper trading through klean's LEAN plugin: three trading days, then the same days as a backtest"
+step "live paper trading (klean's LEAN plugin): buy-hold, same fill as a backtest of the same days"
+klean live deploy HoldPy --name e2e --start 2026-09-23 | tee live.txt
+grep -q "BACKDATED" live.txt || fail "a backdated deployment isn't labeled so"
 python - <<'EOF2' || fail "live paper trading"
 import glob, json
-from pathlib import Path
-from klean import live
-from klean.workspace import Workspace
-ws = Workspace.load(Path("."))
-dep = live.deploy(ws, Path("HoldPy"), "e2e", start="2026-09-23")
-runs = live.run(ws, dep, max_sessions=3)
-assert [r["ok"] for r in runs] == [True] * 3, runs
-book = live.ledger(dep)
+book = json.load(open(glob.glob("HoldPy/live/*_e2e/ledger.json")[0]))
 fills = book["fills"]
 assert len(fills) == 1 and fills[0]["session"] == "2026-09-28", fills          # ordered on 09-23, filled at the next open
-assert book["open_orders"] == [] and book["last_session"] == "2026-09-29", book
+assert book["open_orders"] == [] and book["last_session"] == "2026-09-30", book
 json.dump(fills[0], open("live-fill.json", "w"))
 print("live fill", fills[0])
 EOF2
-klean backtest HoldPy --parameter start_date 2026-09-23 --parameter end_date 2026-09-29 --backtest-name livecheck >/dev/null
+klean backtest HoldPy --parameter start_date 2026-09-23 --parameter end_date 2026-09-30 --backtest-name livecheck >/dev/null
 python - <<'EOF2' || fail "the live fill differs from the backtest's"
 import glob, json
 live_fill = json.load(open("live-fill.json"))
@@ -138,6 +116,23 @@ assert len(fills) == 1, fills
 assert (fills[0]["fillQuantity"], fills[0]["fillPrice"]) == (live_fill["quantity"], live_fill["price"]), (fills[0], live_fill)
 print("backtest fill", fills[0]["fillQuantity"], fills[0]["fillPrice"], "= live")
 EOF2
+klean live status HoldPy | grep -q "running (backdated)" || fail "live status"
+klean live run HoldPy | grep -q "nothing new" || fail "a second run should find no new days"
+
+step "live paper trading: the top-market-cap universe, identical in C# and Python"
+klean live deploy Py --name uni --start 2026-09-28 --parameter holdings 5 >/dev/null
+klean live deploy Cs --name uni --start 2026-09-28 --parameter holdings 5 >/dev/null
+python - <<'EOF2' || fail "the universe strategy in live mode"
+import glob, json
+books = {lang: json.load(open(glob.glob(f"{lang}/live/*_uni/ledger.json")[0])) for lang in ("Py", "Cs")}
+fills = {lang: [(f["session"], f["symbol"], f["quantity"], f["price"], f["commission"], f["tax"]) for f in b["fills"]]
+         for lang, b in books.items()}
+assert len({f[1] for f in fills["Py"] if f[0] == "2026-09-29"}) == 5, fills["Py"]       # 5 stocks bought at the next open
+assert fills["Py"] == fills["Cs"], fills
+assert books["Py"]["equity"] == books["Cs"]["equity"], (books["Py"]["equity"], books["Cs"]["equity"])
+print("universe live: identical in C# and Python,", len(fills["Py"]), "fills")
+EOF2
+klean live stop Py "$(basename "$(ls -d Py/live/*_uni)")" | grep -q "stopped" || fail "live stop"
 
 step "optimize"
 klean optimize Cs --parameter holdings 10 20 10 --max-concurrent-backtests 2 --name e2e

@@ -9,7 +9,7 @@ cd ~/krx-workspace
 klean update data            # prints the new date range when done
 ```
 
-`klean update data` does the whole routine (and then runs the forward tests on the new days): it reads your keys from `~/.config/krx-lean.env` (if
+`klean update data` does the whole routine (and then lets your live paper deployments trade the new days): it reads your keys from `~/.config/krx-lean.env` (if
 they aren't already in the environment; another file with `--env-file`), runs
 `krx-lean --root <data root> all`, and installs the result into the workspace. It uses the data
 root you last installed from (`klean install data --root ~/krx-data`); name it once with

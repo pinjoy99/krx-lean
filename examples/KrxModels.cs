@@ -304,8 +304,19 @@ namespace QuantConnect.Algorithm.CSharp
             set { Time = value - QuantConnect.Time.OneDay; }
         }
 
+        /// <summary>In klean's live runs (one LEAN process per trading day) the day being traded, which is
+        /// not today: KRX publishes a day's data the next day. klean sets KRX_SESSION_DATE. Live universe
+        /// rows are stamped with LEAN's dates, ending as the run's day starts (live mode drops older data
+        /// and holds back data that ends later).</summary>
+        public static DateTime LiveDay(DateTime date)
+        {
+            var day = Environment.GetEnvironmentVariable("KRX_SESSION_DATE");
+            return string.IsNullOrEmpty(day) ? date : DateTime.ParseExact(day, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+
         public override SubscriptionDataSource GetSource(SubscriptionDataConfig config, DateTime date, bool isLiveMode)
         {
+            if (isLiveMode) date = LiveDay(date);
             var path = Path.Combine(Globals.DataFolder, "equity", "krx", "universe", $"{date:yyyyMMdd}.zip");
             return new SubscriptionDataSource(path, SubscriptionTransportMedium.LocalFile, FileFormat.Csv);
         }
@@ -313,6 +324,7 @@ namespace QuantConnect.Algorithm.CSharp
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith("code", StringComparison.Ordinal)) return null;
+            if (isLiveMode) date = date.AddDays(-1);      // live mode releases data once its end time has passed
             var c = line.Split(',');
             decimal D(string s) => decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m;
             return new KrxUniverseData

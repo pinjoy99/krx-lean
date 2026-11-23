@@ -18,7 +18,8 @@ data yourself with your own free API keys.
 KRX Open API ─┐                                 ┌─▶ Python strategies
 data.go.kr  ──┴─▶ krx-lean (download → build) ──▶ LEAN (built from source)
                                                 └─▶ C# strategies
-        klean: workspace, projects, backtests, optimization, reports, notebooks, GUI
+        klean: workspace, projects, backtests, optimization, reports, notebooks, GUI,
+               live paper trading (LEAN live mode, daily)
 ```
 
 **Scope (0.0.x):** KOSPI stocks, ETFs and (new, needs its own KRX service approvals) KOSDAQ
@@ -55,6 +56,7 @@ klean report Top20
 klean gui
 klean research Top20                           # Jupyter notebook with LEAN's QuantBook
 klean update all                               # later: new krx-lean, LEAN if needed, new KRX days
+klean live deploy Top20                        # paper trading from the next trading day (no real money)
 ```
 
 Most commands read `klean <verb> <noun>` (`klean install lean`, `klean update data`, `klean status all`);
