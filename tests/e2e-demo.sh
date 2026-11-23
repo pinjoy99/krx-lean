@@ -9,6 +9,7 @@
 # Needs `klean` (pip install -e .), dotnet 10 and uv on the PATH.
 set -euo pipefail
 
+REPO=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${E2E_DIR:-$(mktemp -d)}
 LEAN_DIR=${LEAN_DIR:-$WORK/Lean}
 PY_DIR=${PY_DIR:-$WORK/py311}
@@ -133,6 +134,48 @@ assert books["Py"]["equity"] == books["Cs"]["equity"], (books["Py"]["equity"], b
 print("universe live: identical in C# and Python,", len(fills["Py"]), "fills")
 EOF2
 klean live stop Py "$(basename "$(ls -d Py/live/*_uni)")" | grep -q "stopped" || fail "live stop"
+
+step "KIS-PAPER broker (simulated KIS 모의투자 server): pre-open orders, day T's prices from KIS, fills read back"
+KIS_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+python "$REPO/tests/fake_kis.py" --port "$KIS_PORT" --data "$WS/data" > fake-kis.log 2>&1 &
+FAKE_KIS=$!
+trap 'kill $FAKE_KIS 2>/dev/null || true' EXIT
+for _ in $(seq 1 60); do curl -s "http://127.0.0.1:$KIS_PORT/fake/state" >/dev/null && break; sleep 0.5; done
+curl -s "http://127.0.0.1:$KIS_PORT/fake/state" >/dev/null || fail "the simulated KIS server didn't start"
+export KIS_PAPER_APP_KEY=e2e-key KIS_PAPER_APP_SECRET=e2e-secret KIS_PAPER_ACCOUNT=12345678-01 KIS_PAPER_BASE_URL="http://127.0.0.1:$KIS_PORT"
+KLEAN_KIS_NOW=2026-10-01T20:00 klean live deploy Py --broker kis-paper --name kis --parameter holdings 5 > kis-deploy.txt
+grep -q "KIS-PAPER" kis-deploy.txt || fail "KIS-PAPER deploy"
+if KLEAN_KIS_NOW=2026-10-01T20:00 klean live deploy HoldPy --broker kis-paper --name kis2 > kis-second.txt 2>&1; then
+  fail "a second deployment on the same KIS account must be refused"
+fi
+grep -q "already trades this KIS account" kis-second.txt || fail "no reason given for refusing the second KIS deployment"
+KLEAN_KIS_NOW=2026-10-02T21:30 klean live run > kis-skip.txt
+grep -q "pre-open auction" kis-skip.txt || fail "a KIS run outside the window should be skipped"
+KLEAN_KIS_NOW=2026-10-02T08:35 klean live run >/dev/null            # trading day 10-01: prices from KIS, orders sent
+curl -s -X POST -d '{"date": "2026-10-02"}' "http://127.0.0.1:$KIS_PORT/fake/open" >/dev/null
+KLEAN_KIS_NOW=2026-10-06T08:35 klean live run >/dev/null            # trading day 10-02 (10-05 is a holiday): fills read
+curl -s "http://127.0.0.1:$KIS_PORT/fake/state" > fake-kis-state.json
+python - <<'EOF2' || fail "the KIS-PAPER broker"
+import glob, json
+state = json.load(open("fake-kis-state.json"))
+orders = state["orders"]
+assert all(o["tr_id"] == "VTTC0012U" and o["body"]["ORD_DVSN"] == "01" and o["body"]["ORD_UNPR"] == "0" for o in orders), orders
+first = [o for o in orders if o["status"] == "filled"]
+assert len(first) == 5 and len({o["code"] for o in first}) == 5, first      # the 5 picks, bought at the open
+assert any(c["tr_id"] == "FHKST03010100" for c in state["calls"]), "no prices from KIS"
+assert state["tokens"] == 1, state["tokens"]                           # one token, cached across runs
+book = json.load(open(glob.glob("Py/live/*_kis/ledger.json")[0]))
+assert book["broker"] == "kis-paper" and book["last_session"] == "2026-10-02", book["last_session"]
+fills = {f["symbol"]: f for f in book["fills"]}
+assert set(fills) == {o["code"] for o in first} and all(f["session"] == "2026-10-02" for f in fills.values()), book["fills"]
+assert all(fills[o["code"]]["quantity"] == o["quantity"] and fills[o["code"]]["price"] == o["fill_price"] for o in first)
+assert set(book["holdings"]) == set(fills), book["holdings"]              # the account, as KIS reports it
+later = [o for o in orders if o["status"] == "waiting"]                  # day 2: small rebalancing orders only
+assert all(o["quantity"] < 10 for o in later), later
+print("KIS-PAPER:", len(first), "orders sent at the pre-open, filled at the open and read back;", len(later), "rebalancing")
+EOF2
+kill $FAKE_KIS; trap - EXIT
+unset KIS_PAPER_APP_KEY KIS_PAPER_APP_SECRET KIS_PAPER_ACCOUNT KIS_PAPER_BASE_URL
 
 step "optimize"
 klean optimize Cs --parameter holdings 10 20 10 --max-concurrent-backtests 2 --name e2e

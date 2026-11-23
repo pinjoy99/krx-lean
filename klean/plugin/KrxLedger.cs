@@ -30,6 +30,9 @@ namespace QuantConnect.Krx
         [JsonPropertyName("placed_session")] public string PlacedSession { get; set; }   // the data day it was placed on
         [JsonPropertyName("placed_utc")] public string PlacedUtc { get; set; }
         [JsonPropertyName("tag")] public string Tag { get; set; }
+        [JsonPropertyName("kis_order_no")] public string KisOrderNo { get; set; }      // KIS deployments
+        [JsonPropertyName("kis_branch_no")] public string KisBranchNo { get; set; }
+        [JsonPropertyName("sent_date")] public string SentDate { get; set; }           // yyyyMMdd (KST) it went to KIS
     }
 
     public class LedgerFill
@@ -75,6 +78,7 @@ namespace QuantConnect.Krx
         [JsonPropertyName("events")] public List<LedgerEvent> Events { get; set; } = new();
         [JsonPropertyName("equity")] public List<LedgerEquity> Equity { get; set; } = new();
         [JsonPropertyName("last_session")] public string LastSession { get; set; } = "";
+        [JsonPropertyName("broker")] public string Broker { get; set; } = "paper";
         // anything klean adds that this version doesn't know about is kept as it is
         [JsonExtensionData] public Dictionary<string, JsonElement> Extra { get; set; }
 

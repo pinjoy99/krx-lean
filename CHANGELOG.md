@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.21 — 2026-11-23
+
+- **KIS-PAPER broker** for live deployments: `klean live deploy NAME --broker kis-paper` sends
+  the strategy's orders to a **Korea Investment 모의투자 (paper trading) account**; klean
+  connects only to KIS's 모의투자 server and has no real-money mode. Keys in
+  `~/.config/krx-lean.env`: `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_ACCOUNT`;
+  `klean live kis-check` tests them. Runs happen in KRX's pre-open auction (08:30–08:59 KST): the
+  strategy sees the previous trading day's prices from KIS (universe strategies: the latest KRX
+  universe file), its market orders fill at the open, and the next run reads the fills back.
+  Tokens are cached in `~/.klean/`. `klean live run --now` for trying it in market hours.
+- One 모의투자 account, one strategy: a second running deployment on the same account is refused
+  (a strategy treats the whole account as its own).
+- Live dashboard: a broker choice when deploying, and a broker badge on every deployment.
+- `tests/fake_kis.py`: a simulated KIS 모의투자 server; the end-to-end check runs the
+  top-market-cap universe through it. A test fails if klean's code ever contains a KIS
+  real-trading server address or real-account order id.
+- `klean … | head` or `| grep -q` no longer ends with a broken-pipe error.
+- Docs: klean and krx-lean place no real-money orders and are not investment advice.
+- Not yet checked against KIS itself: the API facts come from KIS's official sample code
+  (github.com/koreainvestment/open-trading-api); `klean live kis-check` is the first real test.
+
 ## 0.0.19 — 2026-11-23
 
 - Live dashboard: "starting cash" showed the current cash; negative amounts read "−₩69,000"

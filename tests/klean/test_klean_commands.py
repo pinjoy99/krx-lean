@@ -58,6 +58,9 @@ class CommandsTest(unittest.TestCase):
         self.check(["live", "deploy", "P", "--from-run", "P/r", "--start", "2026-10-01", "--parameter", "k", "v",
                     "--cash", "5e7"], "cmd_live", live_cmd="deploy", project="P", from_run="P/r", start="2026-10-01",
                    parameter=[["k", "v"]], cash=5e7, commission_rate=0.00015)
+        self.check(["live", "deploy", "P", "--broker", "kis-paper"], "cmd_live", broker="kis-paper")
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            cli.main(["live", "deploy", "P", "--broker", "kis"])                # only KIS-PAPER exists
         self.check(["live", "status"], "cmd_live", live_cmd="status", project=None)
         self.check(["live", "run"], "cmd_live", live_cmd="run", project=None, id=None)
         self.check(["live", "run", "P", "ID"], "cmd_live", live_cmd="run", project="P", id="ID")

@@ -84,10 +84,48 @@ def trading_days(ws: Workspace) -> list[str]:
     return [f"{x[:4]}-{x[4:6]}-{x[6:8]}" for x in (line[:8] for line in lines if len(line) >= 8)]
 
 
+def krx_holidays(ws: Workspace) -> set[str]:
+    """KRX holidays (YYYY-MM-DD) from LEAN's market-hours database in the workspace."""
+    path = ws.data / "market-hours" / "market-hours-database.json"
+    try:
+        entries = json.loads(path.read_text(encoding="utf-8"))["entries"]
+    except (OSError, ValueError, KeyError):
+        return set()
+    entry = next((v for k, v in entries.items() if k.lower().startswith("equity-krx")), {})
+    out = set()
+    for h in entry.get("holidays", []):
+        try:
+            out.add(dt.datetime.strptime(h, "%m/%d/%Y").date().isoformat())
+        except ValueError:
+            pass
+    return out
+
+
+def is_trading_day(ws: Workspace, day: dt.date, holidays: set[str] | None = None) -> bool:
+    holidays = krx_holidays(ws) if holidays is None else holidays
+    return day.weekday() < 5 and day.isoformat() not in holidays
+
+
+def previous_trading_day(ws: Workspace, day: dt.date) -> str:
+    holidays = krx_holidays(ws)
+    d = day - dt.timedelta(days=1)
+    while not is_trading_day(ws, d, holidays):
+        d -= dt.timedelta(days=1)
+    return d.isoformat()
+
+
 # ---------------------------------------------------------------- deployments
 
 def live_dir(project: Path) -> Path:
     return project / "live"
+
+
+BROKERS = ("paper", "kis-paper")
+
+
+def is_kis(record: dict) -> bool:
+    """A KIS-PAPER deployment (named "kis" in 0.0.20)."""
+    return record.get("broker") in ("kis-paper", "kis")
 
 
 def deployments(project: Path) -> list[Path]:
@@ -118,7 +156,7 @@ def find(project: Path, dep_id: str) -> Path:
 
 def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, str] | None = None,
            cash: float = 100_000_000, commission_rate: float = 0.00015, start: str = "",
-           source_run: str = "", models_as_is: bool = False) -> Path:
+           source_run: str = "", models_as_is: bool = False, broker: str = "paper") -> Path:
     """Freeze the project's code and open a paper account. Trading starts on the first trading
     day after the latest data (``start``, YYYY-MM-DD, can set an earlier day: a *backdated*
     deployment, labeled so, for trying it on days the data already has)."""
@@ -134,6 +172,26 @@ def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, s
     days = trading_days(ws)
     last = days[-1]
     first = start or (dt.date.fromisoformat(last) + dt.timedelta(days=1)).isoformat()
+    account_id = ""
+    if broker == "kis-paper":
+        from klean import kis
+        if start:
+            raise KleanError("a KIS-PAPER deployment can't be backdated: it trades from the next pre-open auction")
+        client = kis.Kis()
+        account_id = client.account_id()
+        for other_project in projects.list_projects(ws):
+            for other in deployments(other_project):
+                o = load(other)
+                if is_kis(o) and o["status"] == "running" and o.get("kis_account") == account_id:
+                    raise KleanError(
+                        f"{other_project.name}/{other.name} already trades this KIS account: a strategy sees the whole "
+                        "account (cash and every holding) as its own, so two can't share one. Stop it first, or use "
+                        "another account")
+        account = client.balance()               # also checks the credentials
+        cash = account["total"] or account["cash"]
+        first = previous_trading_day(ws, kis.now_kst().date() + dt.timedelta(days=1))
+    elif broker != "paper":
+        raise KleanError(f"unknown broker {broker!r} (paper, kis-paper)")
     params = {str(k): str(v) for k, v in (parameters or {}).items()}
     stamp = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
@@ -150,12 +208,14 @@ def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, s
             "slippage_ticks": int(params.get("slippage_ticks", "0") or 0),
             "holdings": {}, "open_orders": [], "next_order_id": 1, "fills": [], "events": [],
             "equity": [], "last_session": before[-1] if before else "", "start_cash": cash,
+            "broker": broker,
         }, indent=2) + "\n", encoding="utf-8")
         save(dep, {"id": dep.name, "name": name or dep.name, "project": project.name, "language": language,
                    "parameters": params, "source_run": source_run, "cash": cash, "commission_rate": commission_rate,
                    "first_session": first, "backdated": first <= last, "data_last_date_at_start": last,
                    "created_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                   "synthetic_demo_data": results.is_demo_data(ws), "broker": "paper",
+                   "synthetic_demo_data": results.is_demo_data(ws), "broker": broker,
+                   **({"kis_account": account_id} if broker == "kis-paper" else {}),
                    "status": "running", "runs": []})
     except BaseException:
         shutil.rmtree(dep, ignore_errors=True)
@@ -164,13 +224,18 @@ def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, s
 
 
 def pending_sessions(ws: Workspace, dep: Path) -> list[str]:
-    """Trading days in the data the deployment hasn't processed yet, in order."""
+    """Trading days the deployment hasn't processed yet, in order. Paper: every day in the data.
+    KIS-PAPER: the previous trading day (prices from KIS), once; a broker can't trade past days."""
     record, book = load(dep), ledger(dep)
     done = book.get("last_session") or ""
+    if is_kis(record):
+        from klean import kis
+        day = previous_trading_day(ws, kis.now_kst().date())
+        return [day] if day > done and day >= record["first_session"] else []
     return [d for d in trading_days(ws) if d >= record["first_session"] and d > done]
 
 
-def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, log=print) -> dict:
+def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, log=print, now: bool = False) -> dict:
     """One trading day: LEAN in live mode with klean's plugin. Returns the run's entry."""
     from klean.backtest import launcher_args, prepare, write_run_config
     record = load(dep)
@@ -184,6 +249,8 @@ def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, lo
     shutil.copy2(dep / LEDGER, backup)
     config = write_run_config(ws, out, {
         **ws.lean_config, **LIVE_CONFIG,
+        **({"live-mode-brokerage": "KisPaperBrokerage", "krx-kis-prices": True, "krx-kis-any-time": now}
+           if is_kis(record) else {}),
         "krx-ledger": str(dep / LEDGER), "krx-session-date": session,
         "live-cash-balance": "", "live-holdings": "[]",
         "algorithm-id": f"klean-{record['project']}-{dep.name}",
@@ -230,15 +297,26 @@ def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, lo
     return entry
 
 
-def run(ws: Workspace, dep: Path, log=print, max_sessions: int = 0) -> list[dict]:
+def run(ws: Workspace, dep: Path, log=print, max_sessions: int = 0, now: bool = False) -> list[dict]:
     """Process every trading day the deployment hasn't seen yet, oldest first; stops at the
-    first failure (the next run retries it)."""
-    if load(dep)["status"] != "running":
+    first failure (the next run retries it). A KIS deployment runs only during KRX's pre-open
+    auction (08:30-08:59 KST) on a trading day, unless ``now`` (testing a 모의투자 account during
+    market hours: market orders then fill at once)."""
+    record = load(dep)
+    if record["status"] != "running":
         return []
+    if is_kis(record):
+        from klean import kis
+        t = kis.now_kst()
+        if not now and not (kis.in_pre_open(t) and is_trading_day(ws, t.date())):
+            log(f"klean: live {record['project']}/{dep.name} (KIS-PAPER): orders go out during the pre-open auction, "
+                f"08:30-08:59 KST on trading days; it's {t:%a %H:%M} KST: skipped")
+            return []
+        kis.Kis()                    # checks the KIS-PAPER keys (and says to rename keys from klean 0.0.20)
     ensure_plugin(ws, log)
     done = []
     for session in pending_sessions(ws, dep)[: max_sessions or None]:
-        entry = run_session(ws, dep, session, log=log)
+        entry = run_session(ws, dep, session, log=log, now=now)
         done.append(entry)
         if not entry["ok"]:
             log(f"klean: live {dep.name}: {session} FAILED: {entry.get('error')}")
@@ -246,13 +324,14 @@ def run(ws: Workspace, dep: Path, log=print, max_sessions: int = 0) -> list[dict
     return done
 
 
-def run_all(ws: Workspace, log=print) -> list[tuple[str, list[dict]]]:
-    """Every running deployment in the workspace (after a data update)."""
+def run_all(ws: Workspace, log=print, now: bool = False) -> list[tuple[str, list[dict]]]:
+    """Every running deployment in the workspace (after a data update). KIS deployments outside
+    their pre-open window are skipped with a note."""
     out = []
     for project in projects.list_projects(ws):
         for dep in deployments(project):
             if load(dep)["status"] == "running":
-                out.append((f"{project.name}/{dep.name}", run(ws, dep, log)))
+                out.append((f"{project.name}/{dep.name}", run(ws, dep, log, now=now)))
     return out
 
 

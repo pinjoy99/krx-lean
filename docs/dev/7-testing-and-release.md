@@ -22,7 +22,8 @@ buy-hold in C# and Python with `klean compare` required to print IDENTICAL, also
 of slippage (which must lower the end equity); a KOSDAQ strategy (its own tax and tick tables); the models check and update; a strategy that
 raises must exit 1 with `backtest FAILED`; `--timeout`; live paper trading through klean's LEAN plugin
 (buy-and-hold: the same fill as a backtest of the same days; the top-market-cap universe:
-identical fills and equity in C# and Python); a small optimization; a report; the
+identical fills and equity in C# and Python); the KIS-PAPER broker against `tests/fake_kis.py` (orders at the
+pre-open with the 모의투자 order ids, day T's prices from KIS, fills read back on the next run); a small optimization; a report; the
 research notebook run headless with both charts.
 
 Then the GUI in a real browser, on the workspace the script left (needs `pip install

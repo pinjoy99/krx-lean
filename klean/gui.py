@@ -178,10 +178,20 @@ def api_live(ws: Workspace, q: dict) -> dict:
         days = live.trading_days(ws)
     except KleanError:
         days = []
+    from klean import kis
     return {"name": p.name, "language": lang, "data_last_date": days[-1] if days else "",
+            "kis": {"configured": kis.configured() or _env_has_kis()},
             "deployments": [live.summary(ws, d) for d in reversed(live.deployments(p))],
             "runs": [{"ref": r["ref"], "name": r["name"], "parameters": r["parameters"]}
                      for r in (run_row(x) for x in reversed(results.runs(p))) if r["ok"]][:50]}
+
+
+def _env_has_kis() -> bool:
+    path = Path("~/.config/krx-lean.env").expanduser()
+    try:
+        return path.is_file() and "KIS_PAPER_APP_KEY=" in path.read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 def api_live_deployment(ws: Workspace, q: dict) -> dict:
@@ -376,8 +386,14 @@ class Jobs:
                 cash = float(str(body.get("cash") or "100000000").replace(",", ""))
             except ValueError:
                 raise KleanError("cash must be a number of won") from None
+            broker = str(body.get("broker") or "paper")
+            if broker == "kis-paper":
+                cli_env = Path("~/.config/krx-lean.env").expanduser()
+                if cli_env.is_file():
+                    from klean.cli import load_env_file
+                    load_env_file(cli_env)
             dep = live.deploy(ws, project, str(body.get("name") or ""), params, cash=cash,
-                              start=str(body.get("start") or ""), source_run=source)
+                              start=str(body.get("start") or ""), source_run=source, broker=broker)
         job = {"id": secrets.token_hex(4), "kind": "live", "project": project.name, "deployment": dep.name,
                "folder": str(dep), "console_file": "none", "status": "running", "error": "", "started": time.time(),
                "lines": []}

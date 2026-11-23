@@ -31,6 +31,8 @@ Live paper trading (LEAN live mode on daily KRX data, klean's paper broker; no r
     klean live run [NAME [ID]]                          trade the new days (update data does this)
     klean live status [NAME]                            deployments: days, equity, profit
     klean live stop NAME ID                             stop one (its account stays)
+    klean live deploy NAME --broker kis-paper           KIS-PAPER: a Korea Investment 모의투자 account
+    klean live kis-check                                check the KIS-PAPER keys in ~/.config/krx-lean.env
 
 Other
     klean gui [--port N] [--no-browser]                 local web page: projects, runs, charts, compare
@@ -556,6 +558,11 @@ def cmd_update(args) -> int:
 def cmd_live(args) -> int:
     """Live paper trading in LEAN's live mode on daily KRX data: deploy, run, status, stop."""
     from klean import live
+    env_file = Path(getattr(args, "env_file", None) or "~/.config/krx-lean.env").expanduser()
+    if env_file.is_file():
+        load_env_file(env_file)                     # KIS_* keys, as `update data` does for KRX_API_KEY
+    if args.live_cmd == "kis-check":
+        return cmd_kis_check(args)
     ws = Workspace.load(Path.cwd())
     if args.live_cmd == "deploy":
         project = ws.root / args.project
@@ -565,8 +572,16 @@ def cmd_live(args) -> int:
             m = run_dir / "manifest.json"
             params = {**(json.loads(m.read_text(encoding="utf-8")).get("parameters", {}) if m.exists() else {}), **params}
         dep = live.deploy(ws, project, args.name or "", params, cash=args.cash, commission_rate=args.commission_rate,
-                          start=args.start or "", source_run=args.from_run or "", models_as_is=args.models_as_is)
+                          start=args.start or "", source_run=args.from_run or "", models_as_is=args.models_as_is,
+                          broker=args.broker)
         record = live.load(dep)
+        if live.is_kis(record):
+            print(f"live KIS-PAPER deployment {project.name}/{dep.name}: Korea Investment 모의투자 (paper) account "
+                  f"worth ₩{record['cash']:,.0f}; "
+                  "it trades at the pre-open auction (08:30-08:59 KST) of each trading day, from the next one"
+                  + (f", parameters {record['parameters']}" if record["parameters"] else ""))
+            print("  schedule `klean live run` inside that window (docs/user/5-tools.md, KIS-PAPER)")
+            return 0
         print(f"live paper deployment {project.name}/{dep.name}: ₩{record['cash']:,.0f}, trading from "
               f"{record['first_session']}" + (" (BACKDATED: days the data already had)" if record["backdated"] else "")
               + (f", parameters {record['parameters']}" if record["parameters"] else ""))
@@ -587,20 +602,43 @@ def cmd_live(args) -> int:
         return 0
     if args.live_cmd == "run":
         if args.id:
-            runs = live.run(ws, live.find(ws.root / args.project, args.id))
+            runs = live.run(ws, live.find(ws.root / args.project, args.id), now=args.now)
             print(f"{len(runs)} trading day(s) processed" if runs else "nothing new to run")
             return 0 if all(r["ok"] for r in runs) else 1
         if args.project:
-            done = [(d.name, live.run(ws, d)) for d in live.deployments(ws.root / args.project)
+            done = [(d.name, live.run(ws, d, now=args.now)) for d in live.deployments(ws.root / args.project)
                     if live.load(d)["status"] == "running"]
         else:
-            done = live.run_all(ws)
+            done = live.run_all(ws, now=args.now)
         if not any(runs for _, runs in done):
             print("nothing new to run (no trading days after the last one processed)")
         return 0 if all(r["ok"] for _, runs in done for r in runs) else 1
     dep = live.find(ws.root / args.project, args.id)                 # stop
     live.stop(dep)
     print(f"live deployment {args.project}/{args.id} stopped; its account and history stay in {dep}")
+    return 0
+
+
+def cmd_kis_check(args) -> int:
+    """Check the KIS-PAPER credentials: a token, the 모의투자 account, and one day's prices."""
+    from klean import kis
+    k = kis.Kis()
+    print(f"KIS-PAPER (Korea Investment 모의투자) at {k.base}, account {k.cano[:2]}******-{k.product}")
+    b = k.balance()
+    print(f"  account: cash (D+2) ₩{b['cash']:,.0f}, total ₩{b['total']:,.0f}, {len(b['holdings'])} holdings")
+    for h in b["holdings"][:10]:
+        print(f"    {h['code']} {h['name']}: {h['quantity']:,.0f} @ ₩{h['average_price']:,.0f} (now ₩{h['price']:,.0f})")
+    import datetime as dt
+    day = kis.now_kst().date() - dt.timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= dt.timedelta(days=1)
+    bar = k.daily_bar(args.code, day.isoformat())
+    print(f"  prices of {args.code} on {day}: " + (f"open ₩{bar['open']:,.0f}, close ₩{bar['close']:,.0f}, "
+                                                    f"volume {bar['volume']:,.0f}" if bar else "none (holiday?)"))
+    t = kis.now_kst()
+    print(f"  now {t:%Y-%m-%d %H:%M} KST; orders go out at the pre-open auction, 08:30-08:59 KST"
+          + (" (open now)" if kis.in_pre_open(t) else ""))
+    print("KIS-PAPER OK")
     return 0
 
 
@@ -906,12 +944,20 @@ def main(argv: list[str] | None = None) -> int:
     l.add_argument("--commission-rate", type=float, default=0.00015, help="broker commission per side (default: 0.00015)")
     l.add_argument("--start", metavar="YYYY-MM-DD", help="first trading day (default: the one after the latest data); "
                    "an earlier day makes a BACKDATED deployment")
+    l.add_argument("--broker", choices=["paper", "kis-paper"], default="paper",
+                   help="paper: klean's paper broker (default); kis-paper: a Korea Investment 모의투자 (paper) "
+                        "account (KIS_* in ~/.config/krx-lean.env); klean never trades real money")
     l.add_argument("--models-as-is", action="store_true",
                    help="deploy even if the project's krx_models copy isn't krx-lean's current one (edited on purpose)")
     l.set_defaults(func=cmd_live)
     l = lsub.add_parser("run", help="trade the new trading days (`klean update data` does this)")
     l.add_argument("project", nargs="?")
     l.add_argument("id", nargs="?")
+    l.add_argument("--now", action="store_true",
+                   help="KIS-PAPER: run outside the pre-open auction (market orders then fill at once)")
+    l.set_defaults(func=cmd_live)
+    l = lsub.add_parser("kis-check", help="check the KIS-PAPER (모의투자) credentials: token, account, one day's prices")
+    l.add_argument("--code", default="005930", help="stock for the price check (default: 005930)")
     l.set_defaults(func=cmd_live)
     l = lsub.add_parser("status", help="deployments: state, days, equity, profit")
     l.add_argument("project", nargs="?")
@@ -957,6 +1003,9 @@ def main(argv: list[str] | None = None) -> int:
     except KleanError as e:
         print(f"klean: {e}", file=sys.stderr)
         return 1
+    except BrokenPipeError:            # `klean ... | head`, `| grep -q`: the reader stopped early
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        return 0
 
 
 if __name__ == "__main__":

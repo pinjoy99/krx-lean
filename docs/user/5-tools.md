@@ -204,8 +204,57 @@ the account as it was and is retried on the next run.
   `ledger.json` (cash, holdings, waiting orders, fills, daily equity) and `runs/<day>/` (LEAN's
   output for each day).
 - How it works: klean's LEAN plugin (`klean/plugin`, built into your LEAN build the first time)
-  is a daily data feed and a paper brokerage. A real brokerage (Korea Investment's Open API) is
-  planned on the same plugin.
+  is a daily data feed and a paper brokerage; KIS-PAPER (below) is a second brokerage in it, for
+  a Korea Investment 모의투자 account.
+
+### KIS-PAPER: a Korea Investment 모의투자 (paper) account
+
+The same deployment can send its orders to a **KIS 모의투자 (paper trading) account** instead of
+klean's own paper broker: broker `kis-paper`. klean only ever connects to KIS's 모의투자 server
+(`openapivts.koreainvestment.com`); it has no real-money mode. The keys' names say so: `KIS_PAPER_…`.
+
+1. Get Open API keys for your KIS 모의투자 account at apiportal.koreainvestment.com (모의투자 has
+   its own app key and account number). Put them in `~/.config/krx-lean.env`, next to the KRX
+   key, and keep that file private (`chmod 600 ~/.config/krx-lean.env`):
+
+   ```
+   KIS_PAPER_APP_KEY=...
+   KIS_PAPER_APP_SECRET=...
+   KIS_PAPER_ACCOUNT=12345678-01
+   ```
+
+2. Check them: `klean live kis-check` (logs in, shows the 모의투자 account and one day's prices).
+3. Deploy: `klean live deploy Top20 --broker kis-paper`. The account's cash and every holding
+   are the strategy's, so one account serves one strategy: klean refuses a second running
+   deployment on the same account.
+4. Schedule `klean live run` inside KRX's **pre-open auction, 08:30–08:59 KST**, on trading
+   days. At that time the strategy gets the previous trading day's prices from KIS (the KRX
+   files have them only later that day; universe strategies use the latest KRX universe file),
+   and its market orders join the opening auction: they fill at the open, as in a backtest.
+   Runs outside the window are skipped, so two schedules are fine:
+
+   | You are in | Run `klean live run` at (local) |
+   |---|---|
+   | Korea | 08:35 |
+   | US Eastern | 18:35 in winter (EST), 19:35 in summer (EDT): schedule both |
+
+   Windows Task Scheduler (PowerShell; a script like `~/bin/krx-update` that runs
+   `cd ~/krx-workspace && klean live run`):
+
+   ```powershell
+   schtasks /Create /TN "klean-kis-paper-est" /SC DAILY /ST 18:35 /TR "wsl.exe -d Ubuntu -e /home/<you>/bin/klean-kis-paper"
+   schtasks /Create /TN "klean-kis-paper-edt" /SC DAILY /ST 19:35 /TR "wsl.exe -d Ubuntu -e /home/<you>/bin/klean-kis-paper"
+   ```
+
+- The next run reads the fills from KIS (prices KIS reports; its fees and taxes are in the
+  account's cash). Orders are day orders: what didn't fill is listed under *Notices*.
+- `klean live run --now` runs outside the window (market orders then fill at once, at the
+  current price): for trying the 모의투자 account during market hours.
+- Supported orders: market, market-on-open, limit. A KIS-PAPER deployment can't be backdated.
+- Tokens are cached in `~/.klean/kis-token-paper-*.json` (KIS issues one a day, at most one a
+  minute). klean never writes the keys anywhere else and never shows them.
+- klean and krx-lean are for research and paper trading. They place no real-money orders and
+  are not investment advice.
 
 ## Other commands
 

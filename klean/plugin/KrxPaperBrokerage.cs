@@ -34,8 +34,6 @@ namespace QuantConnect.Krx
     {
         private readonly IAlgorithm _algorithm;
         private readonly string _ledgerPath = Config.Get("krx-ledger");
-        private readonly double _quietSeconds = Config.GetDouble("krx-quiet-seconds", 5);
-        private readonly double _maxSeconds = Config.GetDouble("krx-max-seconds", 180);
         private readonly object _lock = new();
         private Ledger _ledger;
         private DateTime _session;
@@ -43,7 +41,6 @@ namespace QuantConnect.Krx
         private Dictionary<string, string> _boards;
         private List<DateTime> _days;
         private bool _connected;
-        private Thread _watcher;
 
         public KrxPaperBrokerage(IAlgorithm algorithm) : base("KrxPaperBrokerage")
         {
@@ -75,8 +72,7 @@ namespace QuantConnect.Krx
             }
             _connected = true;
             KrxSession.Touch();
-            _watcher = new Thread(Watch) { IsBackground = true, Name = "KrxPaperBrokerage watcher" };
-            _watcher.Start();
+            KrxSession.StopWhenDone(_algorithm, () => _connected, "KrxPaperBrokerage");
             Log.Trace($"KrxPaperBrokerage: session {_sessionKey}, cash {_ledger.Cash:N0}, {_ledger.Holdings.Count} holdings, {_ledger.OpenOrders.Count} waiting orders");
         }
 
@@ -294,26 +290,6 @@ namespace QuantConnect.Krx
             return null;
         }
 
-        // ------------------------------------------------------------ ending the run
-
-        private void Watch()
-        {
-            var started = DateTime.UtcNow;
-            while (_connected)
-            {
-                Thread.Sleep(500);
-                var quiet = (DateTime.UtcNow - KrxSession.LastActivityUtc).TotalSeconds;
-                var elapsed = (DateTime.UtcNow - started).TotalSeconds;
-                var delivered = !KrxSession.Delivered.IsEmpty;
-                if ((delivered && quiet >= _quietSeconds) || elapsed >= _maxSeconds)
-                {
-                    Log.Trace($"KrxPaperBrokerage: session {_sessionKey} done ({(delivered ? "data processed" : "no data within the time limit")}), stopping");
-                    _algorithm.Debug($"klean: KRX session {_sessionKey} done");
-                    _algorithm.SetStatus(AlgorithmStatus.Stopped);
-                    return;
-                }
-            }
-        }
     }
 
     public class KrxPaperBrokerageFactory : BrokerageFactory

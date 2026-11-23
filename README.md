@@ -22,6 +22,9 @@ data.go.kr  ──┴─▶ krx-lean (download → build) ──▶ LEAN (built 
                live paper trading (LEAN live mode, daily)
 ```
 
+**Research and paper trading only:** krx-lean places no real-money orders (live trading runs on
+klean's paper broker or a Korea Investment 모의투자 account) and is not investment advice.
+
 **Scope (0.0.x):** KOSPI stocks, ETFs and (new, needs its own KRX service approvals) KOSDAQ
 stocks, daily bars. Not covered: KONEX, NXT, minute
 data, live trading.
@@ -57,6 +60,7 @@ klean gui
 klean research Top20                           # Jupyter notebook with LEAN's QuantBook
 klean update all                               # later: new krx-lean, LEAN if needed, new KRX days
 klean live deploy Top20                        # paper trading from the next trading day (no real money)
+                                               # (--broker kis-paper: a Korea Investment 모의투자 account)
 ```
 
 Most commands read `klean <verb> <noun>` (`klean install lean`, `klean update data`, `klean status all`);

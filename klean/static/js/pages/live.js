@@ -20,7 +20,7 @@ async function drawDashboard(project) {
   app.innerHTML = `<div class="dashhead">
       <a href="#/" class="back">‹ Workspace</a>
       <h1>${esc(p.name)} <span class="badge run">${esc(p.language)}</span></h1>
-      <span class="muted">Live</span> <span class="badge paper">PAPER TRADING</span>
+      <span class="muted">Live</span>
       <span class="spacer"></span>
       <a class="button secondary" href="${researchHash(p.name)}">Research</a>
       <a class="button secondary" href="${backtestHash(p.name)}">Backtest</a>
@@ -32,9 +32,14 @@ async function drawDashboard(project) {
   drawLeft();
 }
 
+function brokerBadge(d) {
+  return d.broker === "kis-paper" || d.broker === "kis" ? '<span class="badge paper">KIS-PAPER</span>'
+    : '<span class="badge paper">paper</span>';
+}
+
 function stateBadge(d) {
   const cls = {running: "ok", stopped: "", failed: "no", "waiting for data": "run"}[d.state] ?? "";
-  return `<span class="badge ${cls}">${esc(d.state)}</span>${d.backdated ? ' <span class="badge demo">backdated</span>' : ""}`;
+  return `${brokerBadge(d)} <span class="badge ${cls}">${esc(d.state)}</span>${d.backdated ? ' <span class="badge demo">backdated</span>' : ""}`;
 }
 
 const pct = v => (v > 0 ? "+" : "") + v.toFixed(2) + "%";
@@ -47,6 +52,13 @@ function drawLeft() {
       <p class="muted">Freezes ${esc(p.name)}'s code now and gives it a paper account. Each trading day (after
         <code>klean update data</code>) LEAN runs it in live mode: it sees that day's prices, places orders, and the
         orders fill at the next trading day's open with KRX fees, tax and slippage. No broker, no real money.</p>
+      <label class="field">Broker
+        <select id="lvbroker"><option value="paper">klean's paper broker (fills at the next open, from the KRX data)</option>
+          <option value="kis-paper" ${p.kis.configured ? "" : "disabled"}>KIS-PAPER: a Korea Investment 모의투자 (paper) account${p.kis.configured ? "" : " (set KIS_* in ~/.config/krx-lean.env)"}</option>
+        </select></label>
+      <p class="muted small2" id="lvkisnote" style="display:none">KIS-PAPER: the 모의투자 account and its cash come from KIS; orders go out at the
+        pre-open auction (08:30–08:59 KST) of each trading day, from the next one, using that day's prices from KIS.
+        Schedule <code>klean live run</code> in that window.</p>
       <label class="field">Parameters from
         <select id="lvrun"><option value="">the code's defaults</option>
           ${p.runs.map(r => `<option value="${esc(r.ref)}">${esc(r.name)}${Object.keys(r.parameters).length ? " · " + esc(Object.entries(r.parameters).map(([k, v]) => k + "=" + v).join(", ")) : ""}</option>`).join("")}
@@ -68,12 +80,19 @@ function drawLeft() {
         : '<p class="muted">None yet.</p>'}
     </div>`;
   const $ = id => document.getElementById(id);
+  $("lvbroker").onchange = () => {
+    const k = $("lvbroker").value === "kis-paper";
+    $("lvkisnote").style.display = k ? "block" : "none";
+    $("lvcash").closest("label").style.display = k ? "none" : "";
+    $("lvstart").closest("label").style.display = k ? "none" : "";
+  };
   $("lvgo").onclick = async () => {
     const btn = $("lvgo"), state = $("lvstate");
     btn.disabled = true; state.textContent = "deploying…";
     try {
       const job = await api("/api/live-deploy", {}, {project: p.name, run: $("lvrun").value, name: $("lvname").value.trim(),
-                                                     cash: $("lvcash").value.trim(), start: $("lvstart").value.trim()});
+                                                     cash: $("lvcash").value.trim(), start: $("lvstart").value.trim(),
+                                                     broker: $("lvbroker").value});
       const j = await waitFor(job, state);
       shown.data = await api("/api/live", {project: p.name});
       drawLeft();
@@ -135,7 +154,7 @@ async function drawRight(id) {
         <span class="spacer" style="flex:1"></span>
         ${d.status === "running" ? `<button class="secondary" id="lvrunbtn">${d.pending_days.length ? `Trade ${d.pending_days.length} new day(s)` : "Check for new days"}</button>
           <button class="secondary" id="lvstop">Stop</button>` : ""}</div>
-      <p class="muted">Paper broker · trading from <b>${esc(d.first_session)}</b> with ${params}${d.source_run ? ` (from ${esc(d.source_run)})` : ""}.
+      <p class="muted">${d.broker === "kis-paper" || d.broker === "kis" ? "KIS-PAPER (Korea Investment 모의투자) · orders at the pre-open auction (08:30–08:59 KST) · " : "Paper broker · "}trading from <b>${esc(d.first_session)}</b> with ${params}${d.source_run ? ` (from ${esc(d.source_run)})` : ""}.
         Code frozen ${esc(d.created_utc.slice(0, 10))}, starting cash ${won(d.start_cash)}.
         ${d.state === "waiting for data" ? `Waiting for the first trading day's data: <code>klean update data</code> runs it.` : ""}</p>
       <span id="lvmsg" class="muted"></span>

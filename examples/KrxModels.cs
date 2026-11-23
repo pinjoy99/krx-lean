@@ -316,8 +316,17 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override SubscriptionDataSource GetSource(SubscriptionDataConfig config, DateTime date, bool isLiveMode)
         {
-            if (isLiveMode) date = LiveDay(date);
-            var path = Path.Combine(Globals.DataFolder, "equity", "krx", "universe", $"{date:yyyyMMdd}.zip");
+            var folder = Path.Combine(Globals.DataFolder, "equity", "krx", "universe");
+            if (isLiveMode)
+            {
+                date = LiveDay(date);
+                for (var back = 0; back < 10; back++)    // day T's file may not exist yet (prices from KIS): the latest before it
+                {
+                    var day = date.AddDays(-back);
+                    if (File.Exists(Path.Combine(folder, $"{day:yyyyMMdd}.zip"))) { date = day; break; }
+                }
+            }
+            var path = Path.Combine(folder, $"{date:yyyyMMdd}.zip");
             return new SubscriptionDataSource(path, SubscriptionTransportMedium.LocalFile, FileFormat.Csv);
         }
 

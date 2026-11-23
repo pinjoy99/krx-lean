@@ -233,9 +233,15 @@ class KrxUniverseData(PythonData):
     Properties: board, close, volume, trading_value, market_cap, shares (raw KRW)."""
 
     def get_source(self, config, date, is_live):
+        folder = os.path.join(_data_folder(), "equity", "krx", "universe")
         if is_live:
             date = _live_day(date)
-        path = os.path.join(_data_folder(), "equity", "krx", "universe", f"{date:%Y%m%d}.zip")
+            for back in range(10):     # day T's file may not exist yet (prices from KIS): the latest before it
+                day = date - timedelta(days=back)
+                if os.path.exists(os.path.join(folder, f"{day:%Y%m%d}.zip")):
+                    date = day
+                    break
+        path = os.path.join(folder, f"{date:%Y%m%d}.zip")
         return SubscriptionDataSource(path, SubscriptionTransportMedium.LOCAL_FILE, FileFormat.CSV)
 
     def reader(self, config, line, date, is_live):

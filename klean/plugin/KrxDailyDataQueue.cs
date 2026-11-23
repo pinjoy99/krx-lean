@@ -26,6 +26,37 @@ namespace QuantConnect.Krx
         private static long _lastActivityTicks = DateTime.UtcNow.Ticks;
         public static DateTime LastActivityUtc => new(System.Threading.Interlocked.Read(ref _lastActivityTicks), DateTimeKind.Utc);
         public static void Touch() => System.Threading.Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
+
+        /// <summary>Day bars the KRX files don't have yet come from KIS (config "krx-kis-prices").</summary>
+        public static bool KisPrices => Config.GetBool("krx-kis-prices", false);
+        private static readonly Lazy<KisClient> _kis = new(() => new KisClient());
+        public static KisClient Kis => _kis.Value;
+        public static readonly ConcurrentDictionary<string, string> PriceSource = new();   // code -> "krx" | "kis"
+
+        /// <summary>Ends the run once the day's data was processed and nothing happened for a few
+        /// seconds (config krx-quiet-seconds, default 5), or after krx-max-seconds (default 180).</summary>
+        public static void StopWhenDone(IAlgorithm algorithm, Func<bool> running, string label)
+        {
+            var quietSeconds = Config.GetDouble("krx-quiet-seconds", 5);
+            var maxSeconds = Config.GetDouble("krx-max-seconds", 180);
+            new System.Threading.Thread(() =>
+            {
+                var started = DateTime.UtcNow;
+                while (running())
+                {
+                    System.Threading.Thread.Sleep(500);
+                    var quiet = (DateTime.UtcNow - LastActivityUtc).TotalSeconds;
+                    var delivered = !Delivered.IsEmpty;
+                    if ((delivered && quiet >= quietSeconds) || (DateTime.UtcNow - started).TotalSeconds >= maxSeconds)
+                    {
+                        Log.Trace($"{label}: session {Date:yyyy-MM-dd} done ({(delivered ? "data processed" : "no data within the time limit")}), stopping");
+                        algorithm.Debug($"klean: KRX session {Date:yyyy-MM-dd} done");
+                        algorithm.SetStatus(AlgorithmStatus.Stopped);
+                        return;
+                    }
+                }
+            }) { IsBackground = true, Name = label + " watcher" }.Start();
+        }
     }
 
     public class KrxDailyDataQueue : IDataQueueHandler
@@ -44,6 +75,19 @@ namespace QuantConnect.Krx
             }
             var day = KrxSession.Date;
             var bar = KrxDailyFiles.Read(KrxSession.DataFolder, config.Symbol.Value, day);
+            KrxSession.PriceSource[config.Symbol.Value] = "krx";
+            if (bar == null && KrxSession.KisPrices)
+            {
+                try
+                {
+                    bar = KrxSession.Kis.GetDailyBar(config.Symbol.Value, day);
+                    KrxSession.PriceSource[config.Symbol.Value] = "kis";
+                }
+                catch (Exception e)
+                {
+                    Log.Error($"KrxDailyDataQueue: KIS prices for {config.Symbol} on {day:yyyy-MM-dd}: {e.Message}");
+                }
+            }
             if (bar == null)
             {
                 Log.Trace($"KrxDailyDataQueue: no {day:yyyy-MM-dd} bar for {config.Symbol} (not traded that day)");

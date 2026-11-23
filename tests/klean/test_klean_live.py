@@ -54,7 +54,7 @@ class LiveTest(unittest.TestCase):
         self.assertEqual(live.pending_sessions(self.ws, dep), DAYS[1:])
         calls = []
 
-        def fake_session(ws, d, session, log=print, timeout=900):
+        def fake_session(ws, d, session, log=print, timeout=900, now=False):
             calls.append(session)
             book = live.ledger(d)
             book["last_session"] = session
