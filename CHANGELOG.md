@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.18 — 2026-11-23
+
+- `klean live deploy` refuses a project whose KRX models copy isn't current (live runs need
+  the universe reader of 0.0.17): `klean update models NAME` first, or `--models-as-is`.
+- A live day counts as done only when the strategy got that day's data; otherwise (an error, or
+  no data within 3 minutes, down from 10) the account is restored and the day is retried on the
+  next run. Before, a project with old models waited 10 minutes per day and recorded the days as
+  done without trading.
+- Docs: running the daily update from Windows Task Scheduler; times for KST, US Eastern, UTC.
+
 ## 0.0.17 — 2026-11-23
 
 - **Live paper trading in LEAN's live mode** replaces 0.0.15's forward tests:

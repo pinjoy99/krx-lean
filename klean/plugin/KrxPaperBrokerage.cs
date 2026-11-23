@@ -35,7 +35,7 @@ namespace QuantConnect.Krx
         private readonly IAlgorithm _algorithm;
         private readonly string _ledgerPath = Config.Get("krx-ledger");
         private readonly double _quietSeconds = Config.GetDouble("krx-quiet-seconds", 5);
-        private readonly double _maxSeconds = Config.GetDouble("krx-max-seconds", 600);
+        private readonly double _maxSeconds = Config.GetDouble("krx-max-seconds", 180);
         private readonly object _lock = new();
         private Ledger _ledger;
         private DateTime _session;

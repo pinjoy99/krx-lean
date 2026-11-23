@@ -118,12 +118,19 @@ def find(project: Path, dep_id: str) -> Path:
 
 def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, str] | None = None,
            cash: float = 100_000_000, commission_rate: float = 0.00015, start: str = "",
-           source_run: str = "") -> Path:
+           source_run: str = "", models_as_is: bool = False) -> Path:
     """Freeze the project's code and open a paper account. Trading starts on the first trading
     day after the latest data (``start``, YYYY-MM-DD, can set an earlier day: a *backdated*
     deployment, labeled so, for trying it on days the data already has)."""
     project = project.resolve()
     language = projects.language_of(project)
+    state = projects.models_state(project)
+    if state != "current" and not models_as_is:
+        what = "missing" if state == "missing" else "not krx-lean's current one (older, or edited)"
+        raise KleanError(
+            f"{project.name}'s copy of the KRX models is {what}; live runs need the current one (it reads the "
+            f"KRX universe in live mode). Run `klean update models {project.name}` (your copy is kept as .bak), "
+            "or deploy with --models-as-is if you edited it on purpose")
     days = trading_days(ws)
     last = days[-1]
     first = start or (dt.date.fromisoformat(last) + dt.timedelta(days=1)).isoformat()
@@ -173,6 +180,8 @@ def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, lo
     out = dep / "runs" / session
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
+    backup = dep / (LEDGER + ".before")          # the account as it was, restored if the day fails
+    shutil.copy2(dep / LEDGER, backup)
     config = write_run_config(ws, out, {
         **ws.lean_config, **LIVE_CONFIG,
         "krx-ledger": str(dep / LEDGER), "krx-session-date": session,
@@ -195,13 +204,21 @@ def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, lo
             proc.kill()
             proc.wait()
             code_ = -9
-    book = ledger(dep)
-    ok = book.get("last_session") == session
     text = (out / "console.txt").read_text(encoding="utf-8", errors="replace")
+    # done only if the plugin saw the day's data processed; anything else: the day failed, the
+    # account goes back to how it was, and the next run retries the day
+    ok = f"session {session} done (data processed)" in text and ledger(dep).get("last_session") == session
     error = ""
     if not ok:
-        match = re.findall(r"(?:ERROR::|Runtime Error:|Exception:)\s*(.+)", text)
-        error = (match[-1] if match else f"LEAN exited ({code_}) before the day was processed").strip()[:400]
+        if f"session {session} done (no data within the time limit)" in text:
+            error = ("the strategy got no data for this day (no stock subscribed at daily resolution, or a universe "
+                     "it couldn't read: `klean update models` and redeploy if its KRX models are old)")
+        else:
+            match = re.findall(r"(?:ERROR::|Runtime Error:|Exception:)\s*(.+)", text)
+            error = (match[-1] if match else f"LEAN exited ({code_}) before the day was processed").strip()[:400]
+        shutil.copy2(backup, dep / LEDGER)
+    backup.unlink(missing_ok=True)
+    book = ledger(dep)
     equity = next((e["equity"] for e in reversed(book.get("equity", [])) if e["session"] == session), None)
     entry = {"session": session, "ok": ok, "seconds": round(time.monotonic() - started, 1), "exit_code": code_,
              "equity": equity, "orders": sum(1 for o in book.get("open_orders", []) if o.get("placed_session") == session),

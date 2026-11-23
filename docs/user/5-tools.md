@@ -179,10 +179,12 @@ for T. The paper broker first fills the orders placed on the previous trading da
 (KRX commission, sell tax by settlement date, `slippage_ticks`), then the strategy sees T's
 prices (and its universe, for universe strategies), places orders, and the run ends. Those
 orders fill at the next trading day's open, on the next run. Missed days are caught up one
-by one, in order.
+by one, in order. A day that fails (an error, or the strategy got no data within 3 minutes) leaves
+the account as it was and is retried on the next run.
 
 - A deployment freezes the project's code and parameters; editing the project later doesn't
-  change it. It starts on the trading day after the latest data, so it trades after the next
+  change it. It needs the project's KRX models to be current (`klean update models
+  NAME` first; `--models-as-is` for a copy you edited on purpose). It starts on the trading day after the latest data, so it trades after the next
   `klean update data` ("waiting for data" until then).
 - `--start YYYY-MM-DD` on or before the latest data makes a **backdated** deployment, to try it
   on days the data already has; it's labeled so everywhere.

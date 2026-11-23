@@ -70,6 +70,37 @@ class LiveTest(unittest.TestCase):
         sm = live.summary(self.ws, dep)
         self.assertEqual((sm["days"], round(sm["net_profit"], 6)), (3, 1.0))
 
+    def test_old_models_are_refused(self):
+        models = self.project / "krx_models.py"
+        models.write_text(models.read_text() + "\n# an older copy\n")
+        with self.assertRaisesRegex(KleanError, "klean update models P"):
+            live.deploy(self.ws, self.project)
+        self.assertEqual(live.deployments(self.project), [])
+        dep = live.deploy(self.ws, self.project, models_as_is=True)          # edited on purpose
+        self.assertIn("an older copy", (dep / "code" / "krx_models.py").read_text())
+
+    def test_a_failed_day_restores_the_account(self):
+        dep = live.deploy(self.ws, self.project, start="2026-09-23")
+        before = (dep / live.LEDGER).read_text()
+
+        def fake_lean(args, cwd, env, stdout, stderr):
+            book = json.loads((dep / live.LEDGER).read_text())                # the plugin saved the day...
+            book["last_session"] = "2026-09-23"
+            book["cash"] = 1
+            (dep / live.LEDGER).write_text(json.dumps(book))
+            stdout.write("KrxPaperBrokerage: session 2026-09-23 done (no data within the time limit), stopping\n")
+            return mock.Mock(wait=lambda timeout=None: 0)                     # ...but the strategy got no data
+
+        with mock.patch.object(live.subprocess, "Popen", side_effect=fake_lean), \
+             mock.patch("klean.backtest.prepare", return_value=(Path("main.py"), "P", {})), \
+             mock.patch("klean.backtest.write_run_config", side_effect=lambda ws, out, extra: ((out / "config.json").write_text("{}"), out / "config.json")[1]), \
+             mock.patch("klean.backtest.launcher_args", return_value=["lean"]):
+            entry = live.run_session(self.ws, dep, "2026-09-23", log=lambda *a: None)
+        self.assertFalse(entry["ok"])
+        self.assertIn("got no data", entry["error"])
+        self.assertEqual((dep / live.LEDGER).read_text(), before)            # retried on the next run
+        self.assertEqual(live.pending_sessions(self.ws, dep)[0], "2026-09-23")
+
     def test_stop_and_find(self):
         dep = live.deploy(self.ws, self.project)
         self.assertEqual(live.find(self.project, dep.name), dep)

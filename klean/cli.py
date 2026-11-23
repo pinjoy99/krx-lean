@@ -565,7 +565,7 @@ def cmd_live(args) -> int:
             m = run_dir / "manifest.json"
             params = {**(json.loads(m.read_text(encoding="utf-8")).get("parameters", {}) if m.exists() else {}), **params}
         dep = live.deploy(ws, project, args.name or "", params, cash=args.cash, commission_rate=args.commission_rate,
-                          start=args.start or "", source_run=args.from_run or "")
+                          start=args.start or "", source_run=args.from_run or "", models_as_is=args.models_as_is)
         record = live.load(dep)
         print(f"live paper deployment {project.name}/{dep.name}: ₩{record['cash']:,.0f}, trading from "
               f"{record['first_session']}" + (" (BACKDATED: days the data already had)" if record["backdated"] else "")
@@ -906,6 +906,8 @@ def main(argv: list[str] | None = None) -> int:
     l.add_argument("--commission-rate", type=float, default=0.00015, help="broker commission per side (default: 0.00015)")
     l.add_argument("--start", metavar="YYYY-MM-DD", help="first trading day (default: the one after the latest data); "
                    "an earlier day makes a BACKDATED deployment")
+    l.add_argument("--models-as-is", action="store_true",
+                   help="deploy even if the project's krx_models copy isn't krx-lean's current one (edited on purpose)")
     l.set_defaults(func=cmd_live)
     l = lsub.add_parser("run", help="trade the new trading days (`klean update data` does this)")
     l.add_argument("project", nargs="?")
