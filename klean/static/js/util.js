@@ -47,7 +47,16 @@ export function setTitle(t) { document.title = t ? `${t} · klean` : "klean"; }
 export function showError(e) {
   app.innerHTML = `<div class="panel"><h2>Error</h2><div class="err">${esc(e.message || e)}</div></div>`;
 }
-export function compareHash(refs) { return "#/compare?" + refs.map(r => "ref=" + encodeURIComponent(r)).join("&"); }
+// Dashboard addresses: #/backtest/P[?run=REF | ?opt=NAME | ?cmp=REF&cmp=REF], #/research/P, #/live/P[?test=ID]
+const projectOf = ref => ref.split("/")[0];
+export function backtestHash(project) { return href("backtest", project); }
+export function runHash(ref) { return `${backtestHash(projectOf(ref))}?run=${encodeURIComponent(ref)}`; }
+export function optHash(project, name) { return `${backtestHash(project)}?opt=${encodeURIComponent(name)}`; }
+export function compareHash(refs) {
+  return `${backtestHash(projectOf(refs[0]))}?` + refs.map(r => "cmp=" + encodeURIComponent(r)).join("&");
+}
+export function researchHash(project) { return href("research", project); }
+export function liveHash(project, test = "") { return href("live", project) + (test ? `?test=${encodeURIComponent(test)}` : ""); }
 // Checkbox lists with a "Compare selected" button.
 export function wireCompare(root, button) {
   const boxes = () => [...root.querySelectorAll("input[type=checkbox]:checked")].map(b => b.value);

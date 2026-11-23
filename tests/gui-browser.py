@@ -72,7 +72,10 @@ def start_gui() -> str:
 
 def check(page: Page, errors: list[str], name: str, hash_: str, charts: int) -> None:
     page.goto(BASE + hash_)
-    expect(page.locator("h1").first).to_be_visible()
+    try:
+        expect(page.locator("h1").first).to_be_visible(timeout=20_000)
+    except AssertionError:
+        raise SystemExit(f"{name}: page didn't render; browser errors: {errors}") from None
     expect(page.locator(".uplot")).to_have_count(charts)
     page.screenshot(path=str(SHOTS / f"{name}.png"), full_page=True)
     if errors:
@@ -91,26 +94,28 @@ with sync_playwright() as pw:
         page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         page.on("pageerror", lambda e: errors.append(str(e)))
 
+        # Workspace dashboard: projects on the left, data / setup / settings on the right
         check(page, errors, f"{scheme}-workspace", "#/", 0)
         expect(page.locator("#demobar")).to_be_visible()             # the demo workspace says so
-        page.get_by_role("link", name="Cs", exact=True).first.click()
-        expect(page.locator("h1")).to_contain_text("Cs")
-        check(page, errors, f"{scheme}-project", "#/project/Cs", 0)
+        expect(page.locator(".col-right h2", has_text="Setup check")).to_be_visible()
 
-        # compare two runs from the project page
-        boxes = page.locator("table input[type=checkbox]")
-        boxes.nth(0).check()
-        boxes.nth(1).check()
-        page.get_by_role("button", name="Compare selected").click()
-        expect(page.locator("h1")).to_contain_text("Comparison")
-        expect(page.locator(".uplot")).to_have_count(1)
-        print(f"ok  {scheme}-compare from the project page")
+        # Backtest dashboard from the project's "last backtest" cell: the latest run on the right
+        row = page.locator("table.runs tr", has=page.locator("a.projlink", has_text=re.compile("^Cs$")))
+        row.locator("a[href*='?run=']").click()
+        expect(page.locator(".dashhead h1")).to_contain_text("Cs")
+        expect(page.locator("#bt-right .uplot")).to_have_count(2)
+        expect(page.locator("#bt-left tr.sel")).to_have_count(1)
+        check(page, errors, f"{scheme}-backtest", "#" + page.url.split("#", 1)[1], 2)
 
-        # a run: equity + drawdown charts, legend follows the cursor, zoom, log scale
-        page.goto(BASE + "#/project/Cs")
-        page.locator("table a[href^='#/run/']").first.click()
-        expect(page.locator(".uplot")).to_have_count(2)
-        check(page, errors, f"{scheme}-run", "#" + page.url.split("#", 1)[1], 2)
+        # choosing another run redraws only the right column (the form keeps what was typed)
+        page.locator("#bname").fill("kept")
+        first_title = page.locator("#bt-right .runtitle").inner_text()
+        page.locator("#bt-left tr[data-ref] a").nth(1).click()
+        expect(page.locator("#bt-right .runtitle")).not_to_have_text(first_title)
+        expect(page.locator("#bname")).to_have_value("kept")
+        expect(page.locator("#bt-left tr.sel")).to_have_count(1)
+
+        # the run's charts: legend follows the cursor, zoom, log scale; its tabs
         eq = page.locator("#eq .u-over")
         legend_date = page.locator("#eq .u-legend .u-series").first.locator(".u-value")
         last = legend_date.inner_text()
@@ -127,20 +132,50 @@ with sync_playwright() as pw:
         page.locator("#eq .chartopt input").check()                   # log scale redraws
         expect(page.locator("#eq .uplot")).to_have_count(1)
         for tab in ("Orders", "Log", "Code", "Run record", "Statistics"):
-            page.locator(".tabs a", has_text=tab).click()
+            page.locator("#bt-right .tabs a", has_text=tab).click()
         print(f"ok  {scheme}-run interactions")
 
-        opt = next((WS / "Cs" / "optimizations").iterdir()).name
-        check(page, errors, f"{scheme}-optimization", f"#/optimization/Cs/{opt}", 1)
+        # compare: tick two runs, the comparison takes the right column
+        boxes = page.locator("#bt-left input[type=checkbox]")
+        boxes.nth(0).check()
+        boxes.nth(1).check()
+        page.get_by_role("button", name="Compare selected").click()
+        expect(page.locator("#bt-right .runtitle")).to_contain_text("Comparison of 2 runs")
+        expect(page.locator("#bt-right .uplot")).to_have_count(1)
+        print(f"ok  {scheme}-compare in the right column")
+
+        # an optimization from the left column
+        page.locator("#bt-left tr[data-opt] a").first.click()
+        expect(page.locator("#bt-right .runtitle")).to_contain_text("Optimization")
+        expect(page.locator("#bt-right .uplot")).to_have_count(1)
+        page.screenshot(path=str(SHOTS / f"{scheme}-optimization.png"), full_page=True)
+        print(f"ok  {scheme}-optimization in the right column")
+
+        # Live dashboard is reachable from the title bar
+        page.locator(".dashhead a", has_text="Live").click()
+        expect(page.locator(".dashhead")).to_contain_text("Live")
+        if errors:
+            raise SystemExit(f"{scheme}: browser errors: {errors}")
         page.close()
+
+    # old addresses (bookmarks, earlier versions) lead to the new dashboards
+    page = browser.new_page(viewport={"width": 1300, "height": 900})
+    some_run = sorted((WS / "Cs" / "backtests").iterdir())[0].name
+    page.goto(BASE + f"#/run/Cs/{some_run}")
+    expect(page.locator("#bt-right .runtitle")).to_contain_text(some_run)
+    page.goto(BASE + "#/project/Cs")
+    expect(page.locator("#bt-left")).to_be_visible()
+    print("ok  old addresses")
+    page.close()
 
     # Research: the workspace's JupyterLab inside the page, the project's notebook on the LEAN kernel
     page = browser.new_page(viewport={"width": 1400, "height": 950})
     errors = []
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: errors.append(str(e)))
-    page.goto(BASE + "#/project/Py")
-    page.get_by_role("link", name=re.compile("in Research")).click()
+    page.goto(BASE + "#/")
+    page.locator("a.projlink", has_text=re.compile("^Py$")).click()
+    expect(page.locator(".dashhead a.button", has_text="Backtest")).to_be_visible()
     expect(page.locator("iframe.lab")).to_be_visible(timeout=300_000)    # may install JupyterLab first
     lab = page.frame_locator("iframe.lab")
     expect(lab.locator(".jp-Notebook")).to_be_visible(timeout=120_000)
@@ -155,14 +190,15 @@ with sync_playwright() as pw:
 
     # a backtest started from the page finishes and shows up in the runs list
     page = browser.new_page(viewport={"width": 1300, "height": 900})
-    page.goto(BASE + "#/project/HoldPy")
-    runs_before = page.locator("table a[href^='#/run/']").count()
+    page.goto(BASE + "#/backtest/HoldPy")
+    expect(page.locator("#bt-left")).to_be_visible()
+    runs_before = page.locator("#bt-left tr[data-ref]").count()
     page.locator("#bname").fill("from-gui")
     page.get_by_role("button", name="Start backtest").click()
     expect(page.locator("#jobstate")).to_contain_text("done", timeout=300_000)
-    expect(page.locator("table a[href^='#/run/']")).to_have_count(runs_before + 1)
-    page.get_by_role("link", name="open results").click()
-    expect(page.locator(".uplot")).to_have_count(2)
+    expect(page.locator("#bt-left tr[data-ref]")).to_have_count(runs_before + 1)
+    expect(page.locator("#bt-right .runtitle")).to_contain_text("from-gui")      # the new run is shown
+    expect(page.locator("#bt-right .uplot")).to_have_count(2)
     print("ok  backtest started from the page")
     browser.close()
 JOBS.stop_all()

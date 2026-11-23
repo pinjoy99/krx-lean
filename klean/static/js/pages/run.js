@@ -1,11 +1,11 @@
-import {COLORS, MAIN, TOKEN, api, app, compact, esc, fmtStat, full, href, setTitle, signClass, statVal, pageState, won} from "../util.js";
+import {COLORS, MAIN, TOKEN, api, backtestHash, compact, esc, fmtStat, full, optHash, pageState, runHash, signClass, statVal, won} from "../util.js";
 import {lineChart} from "../chart.js";
 
-export async function pageRun(ref) {
-  setTitle(ref);
+// One run's results, in the Backtest dashboard's right column.
+export async function renderRun(el, ref) {
   const r = await api("/api/run", {ref});
   const parts = r.ref.split("/"), project = parts[0];
-  const optCrumb = parts[1] === "optimizations" ? ` <a href="${href("optimization", project, parts[2])}">optimization ${esc(parts[2])}</a> /` : "";
+  const optCrumb = parts[1] === "optimizations" ? `<div class="crumbs">from <a href="${optHash(project, parts[2])}">optimization ${esc(parts[2])}</a></div>` : "";
   const st = r.statistics, m = r.manifest || {};
   const tiles = MAIN.map(k => `<div class="tile"><div class="k">${esc(k)}</div><div class="v ${k === "Compounding Annual Return" || k === "Net Profit" ? signClass(st[k]) : ""}">${esc(statVal(st, k) || "—")}</div></div>`).join("");
   const statsRows = Object.entries(st).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${esc(fmtStat(k, v))}</td></tr>`).join("");
@@ -13,8 +13,8 @@ export async function pageRun(ref) {
   const orders = r.orders.map(o => `<tr><td class="num">${o.id}</td><td>${esc((o.time || "").replace("T", " ").replace("Z", ""))}</td><td>${esc(o.symbol)}</td>
       <td>${esc(o.type)}</td><td class="num ${o.quantity < 0 ? "neg" : "pos"}">${full.format(o.quantity)}</td><td class="num">${full.format(o.price)}</td>
       <td class="num">${won(o.value)}</td><td>${esc(o.status)}</td><td class="muted">${esc(o.tag)}</td></tr>`).join("");
-  app.innerHTML = `<div class="crumbs"><a href="#/">Workspace</a> / <a href="${href("project", project)}">${esc(project)}</a> /${optCrumb}</div>
-    <h1>${esc(parts.at(-1))} ${r.demo ? '<span class="badge demo">SYNTHETIC DEMO DATA</span>' : ""}</h1>
+  el.innerHTML = `${optCrumb}
+    <h2 class="runtitle">${esc(parts.at(-1))} ${r.demo ? '<span class="badge demo">SYNTHETIC DEMO DATA</span>' : ""}</h2>
     ${r.error ? `<div class="failbox"><span class="badge no">failed</span> This run did not complete: <pre class="err">${esc(r.error)}</pre>See the Log tab (LEAN console output) for details.</div>` : ""}
     <div class="row" style="margin-bottom:12px"><button class="secondary" id="mkreport">${r.report ? "Remake report" : "Make LEAN report"}</button>
       <a id="openreport" target="_blank" rel="noopener noreferrer" href="/report?${new URLSearchParams({ref: r.ref, token: TOKEN})}" style="${r.report ? "" : "display:none"}">Open report</a>
@@ -34,43 +34,43 @@ export async function pageRun(ref) {
       <div data-p="manifest" style="display:none">${Object.keys(m).length ? `<table>${Object.entries(m).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${typeof v === "object" ? `<pre>${esc(JSON.stringify(v, null, 2))}</pre>` : esc(v)}</td></tr>`).join("")}</table>` : '<p class="muted">No manifest (run made before klean 0.2).</p>'}
         <p class="muted">Folder: ${esc(r.folder)}</p></div>
     </div>`;
-  lineChart(document.getElementById("eq"), [{label: "Strategy", points: r.equity}, {label: "KOSPI 200", points: r.benchmark, color: COLORS[1], dashed: true}], {yFmt: v => "₩" + compact.format(v), log: true});
-  lineChart(document.getElementById("dd"), [{label: "Drawdown", points: r.drawdown.map(([t, v]) => [t, -Math.abs(v)]), color: COLORS[5]}], {height: 160, yFmt: v => v.toFixed(1) + "%", area: true, zero: true});
-  app.querySelectorAll(".tabs a").forEach(a => a.onclick = () => {
-    app.querySelectorAll(".tabs a").forEach(x => x.classList.toggle("on", x === a));
-    app.querySelectorAll("[data-p]").forEach(p => p.style.display = p.dataset.p === a.dataset.t ? (p.classList.contains("grid") ? "grid" : "block") : "none");
+  lineChart(el.querySelector("#eq"), [{label: "Strategy", points: r.equity}, {label: "KOSPI 200", points: r.benchmark, color: COLORS[1], dashed: true}], {yFmt: v => "₩" + compact.format(v), log: true});
+  lineChart(el.querySelector("#dd"), [{label: "Drawdown", points: r.drawdown.map(([t, v]) => [t, -Math.abs(v)]), color: COLORS[5]}], {height: 160, yFmt: v => v.toFixed(1) + "%", area: true, zero: true});
+  el.querySelectorAll(".tabs a").forEach(a => a.onclick = () => {
+    el.querySelectorAll(".tabs a").forEach(x => x.classList.toggle("on", x === a));
+    el.querySelectorAll("[data-p]").forEach(p => p.style.display = p.dataset.p === a.dataset.t ? (p.classList.contains("grid") ? "grid" : "block") : "none");
   });
-  document.getElementById("console").onclick = async () => {
-    const c = await api("/api/log", {ref, console: 1, tail: 400}); app.querySelector('[data-p="log"] pre').textContent = c.lines.join("\n"); };
+  el.querySelector("#console").onclick = async () => {
+    const c = await api("/api/log", {ref, console: 1, tail: 400}); el.querySelector('[data-p="log"] pre').textContent = c.lines.join("\n"); };
   const showCode = async f => {
     const c = await api("/api/code-file", {ref: r.ref, path: f});
-    app.querySelectorAll("#codefiles a").forEach(a => a.style.fontWeight = a.dataset.f === f ? "600" : "");
-    document.getElementById("codetext").textContent = c.text ?? `(binary or large file, ${c.bytes} bytes)`;
+    el.querySelectorAll("#codefiles a").forEach(a => a.style.fontWeight = a.dataset.f === f ? "600" : "");
+    el.querySelector("#codetext").textContent = c.text ?? `(binary or large file, ${c.bytes} bytes)`;
   };
-  app.querySelectorAll("#codefiles a").forEach(a => a.onclick = () => showCode(a.dataset.f));
+  el.querySelectorAll("#codefiles a").forEach(a => a.onclick = () => showCode(a.dataset.f));
   if (r.code.length) showCode(r.code.find(f => /^(main\.py|Main\.cs)$/.test(f)) || r.code[0]);
-  const renameBtn = document.getElementById("rename");
+  const renameBtn = el.querySelector("#rename");
   if (renameBtn) {
     renameBtn.onclick = async () => {
       const current = parts.at(-1).replace(/^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_?/, "");
       const name = prompt("Name for this run (the date and time stay in front):", current);
       if (name === null) return;
-      try { const x = await api("/api/run-rename", {}, {ref: r.ref, name}); location.hash = href("run", x.ref).slice(1); }
+      try { const x = await api("/api/run-rename", {}, {ref: r.ref, name}); location.hash = runHash(x.ref); }
       catch (e) { alert(e.message); }
     };
-    document.getElementById("delete").onclick = async () => {
+    el.querySelector("#delete").onclick = async () => {
       if (!confirm(`Delete the run ${parts.at(-1)} and all its files? This can't be undone.`)) return;
-      try { await api("/api/run-delete", {}, {ref: r.ref}); location.hash = href("project", project).slice(1); }
+      try { await api("/api/run-delete", {}, {ref: r.ref}); location.hash = backtestHash(project); }
       catch (e) { alert(e.message); }
     };
   }
-  document.getElementById("mkreport").onclick = async () => {
-    const btn = document.getElementById("mkreport"), state = document.getElementById("repstate");
+  el.querySelector("#mkreport").onclick = async () => {
+    const btn = el.querySelector("#mkreport"), state = el.querySelector("#repstate");
     btn.disabled = true; state.innerHTML = '<span class="badge run">making report</span> (about 40 s; LEAN replays the orders)';
     try {
       const job = await api("/api/report", {}, {ref: r.ref});
       const poll = async () => {
-        if (!document.body.contains(btn)) return;   // left the page
+        if (!document.body.contains(btn)) return;   // another run was opened
         const j = await api("/api/job", {id: job.id});
         if (j.status === "running") {
           state.innerHTML = `<span class="badge run">making report</span> ${Math.round(Date.now() / 1000 - j.started)} s`;
@@ -78,7 +78,7 @@ export async function pageRun(ref) {
         }
         btn.disabled = false;
         if (j.status === "done") {
-          btn.textContent = "Remake report"; document.getElementById("openreport").style.display = "";
+          btn.textContent = "Remake report"; el.querySelector("#openreport").style.display = "";
           state.innerHTML = '<span class="badge ok">report ready</span>';
         } else state.innerHTML = `<span class="badge no">failed</span> <span class="err">${esc(j.error.split("\n")[0])}</span>`;
       };

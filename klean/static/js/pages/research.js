@@ -1,6 +1,6 @@
 // Research: the workspace's JupyterLab inside the page. LEAN's QuantBook is loaded in every
 // notebook; a project's notebook runs in the project folder (its krx_models etc. import).
-import {api, app, esc, href, setTitle, pageState} from "../util.js";
+import {api, app, backtestHash, esc, href, liveHash, pageState, setTitle} from "../util.js";
 
 const STATUS = {
   installing: "Installing JupyterLab into the workspace's Python environment (first time only, a few minutes)…",
@@ -12,15 +12,21 @@ export async function pageResearch(project) {
   document.body.classList.add("wide");
   const w = await api("/api/workspace");
   const names = w.projects.map(p => p.name);
+  const lang = w.projects.find(p => p.name === project)?.language;
   app.innerHTML = `<div class="research">
-    <div class="row researchbar">
-      <h1>Research</h1>
+    <div class="dashhead researchbar">
+      <a href="#/" class="back">‹ Workspace</a>
+      <h1>${project ? esc(project) + (lang ? ` <span class="badge run">${esc(lang)}</span>` : "") : "Research"}</h1>
+      <span class="muted">Research</span>
       <select id="rproj" aria-label="Notebook">
         <option value="">Workspace (all projects)</option>
         ${names.map(n => `<option value="${esc(n)}" ${n === project ? "selected" : ""}>${esc(n)} / research.ipynb</option>`).join("")}
       </select>
       <span id="rstate" class="muted"></span>
+      <span class="spacer"></span>
       <a id="rtab" target="_blank" rel="noopener noreferrer" hidden>Open in a new tab</a>
+      ${project ? `<a class="button" href="${backtestHash(project)}">Backtest</a>
+      <a class="button secondary" href="${liveHash(project)}">Live</a>` : ""}
     </div>
     <div id="rbody"><p class="muted">LEAN's QuantBook on this workspace's data, in JupyterLab. Notebooks, code files and a
       terminal: everything in the workspace folder. JupyterLab keeps running while klean gui runs.</p></div>

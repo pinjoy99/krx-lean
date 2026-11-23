@@ -467,7 +467,10 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):   # the page moved on before the answer
+                pass
 
         def _json(self, obj, status: int = 200) -> None:
             self._send(status, json.dumps(obj, ensure_ascii=False).encode(), "application/json; charset=utf-8")

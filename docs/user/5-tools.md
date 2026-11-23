@@ -138,14 +138,14 @@ klean gui                         # opens http://127.0.0.1:<port>/?token=… in 
 klean gui --port 8765 --no-browser
 ```
 
-| Page | Shows |
+Four dashboards; the Workspace is the landing page, and each project has the other three.
+
+| Dashboard | Shows |
 |---|---|
-| Workspace | projects with their last run, data status, setup check, settings |
-| Project | runs (tick two or more → Compare), optimizations; forms to start a backtest and an optimization (grid search); *Open … in Research* |
-| Research | JupyterLab inside the page, over the whole workspace (notebooks, code files, a terminal), LEAN loaded in every notebook; *Open in a new tab* |
-| Run | figures, equity vs KOSPI 200, drawdown, statistics, orders, log, **code**, run record; *Make LEAN report* / *Open report*; *Rename* and *Delete* |
-| Optimization | target by parameter, ranked runs, Compare |
-| Compare | equity curves overlaid, statistics side by side |
+| **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live); right: KRX data, setup check, settings |
+| **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), opened on the project's `research.ipynb`; *Backtest* and *Live* in the title bar |
+| **Backtest** | left: *New backtest* and *New optimization* forms, the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
+| **Live** | forward tests (paper trading on daily data): coming in the next version |
 
 Charts: drag across a chart to zoom into a period, double-click to zoom out; the legend under
 the chart shows the values at the cursor (the latest ones otherwise); *log scale* on equity

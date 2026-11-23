@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.14 — 2026-11-23
+
+`klean gui` is organized as four dashboards (Workspace, Research, Backtest, Live).
+
+- **Workspace** (landing page): projects with their backtests and live runs on the left; KRX
+  data, setup check and settings on the right. A project's name opens its Research.
+- **Backtest**: forms, runs and optimizations on the left; the selected run (the latest by
+  default), an optimization or a comparison of the ticked runs on the right. Choosing another
+  run redraws only the right column, so a running backtest and the forms stay as they are; a
+  finished backtest is selected automatically.
+- **Research** and **Backtest** have a title bar with the project and links between the
+  dashboards. **Live** is a placeholder until forward tests arrive.
+- Addresses from earlier versions (`#/project/…`, `#/run/…`, `#/optimization/…`, `#/compare?…`)
+  lead to the new dashboards.
+
 ## 0.0.13 — 2026-11-22
 
 - **Research tab in `klean gui`:** JupyterLab for the whole workspace inside the page, with LEAN

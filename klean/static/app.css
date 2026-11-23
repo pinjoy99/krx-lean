@@ -69,11 +69,37 @@ input[type=text], textarea, select { font: inherit; padding: 5px 8px; border: 1p
 
 /* Research: JupyterLab fills the window below the header */
 body.wide main { max-width: none; padding: 8px 12px 0; }
-.researchbar { gap: 14px; margin-bottom: 8px; }
-.researchbar h1 { margin: 0; font-size: 18px; }
-.researchbar select { width: auto; min-width: 16em; }
-.researchbar #rtab { margin-left: auto; }
+.researchbar { margin-bottom: 8px; }
+.researchbar select { width: auto; min-width: 14em; }
 iframe.lab { display: block; width: 100%; height: calc(100vh - 120px); border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 a.button { display: inline-block; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; }
 a.button.secondary { background: transparent; color: var(--accent); }
 a.button:hover { text-decoration: none; filter: brightness(1.05); }
+
+/* Dashboards: a title bar and two columns (one column on narrow windows) */
+.dashhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 14px; }
+.dashhead h1 { margin: 0; font-size: 20px; }
+.dashhead .back { font-size: 13px; }
+.dashhead .spacer { flex: 1; }
+.cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+body:has(.cols) main { max-width: 1600px; }
+details.panel > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.panel > summary::-webkit-details-marker { display: none; }
+details.panel > summary::before { content: "▸"; color: var(--muted); }
+details.panel[open] > summary::before { content: "▾"; }
+details.panel > summary h2 { margin: 0; }
+details.panel[open] > summary { margin-bottom: 10px; }
+.field { display: block; color: var(--muted); margin-bottom: 8px; }
+.field input, .field select, .field textarea { margin-top: 3px; color: var(--text); }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+table.runs tr.sel td { background: var(--accent-soft); }
+table.runs td { vertical-align: top; }
+.small2 { font-size: 12px; }
+.runtitle { font-size: 17px; margin: 2px 0 12px; }
+.col-right .crumbs { margin-bottom: 2px; }
+table.runs th, table.runs td { overflow-wrap: normal; word-break: normal; }
+table.runs th, table.runs td.num { white-space: nowrap; }
+.cols.wide-left { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+@media (max-width: 1000px) { .cols.wide-left { grid-template-columns: minmax(0, 1fr); } }
+.col-right table td:first-child { overflow-wrap: normal; word-break: normal; min-width: 9em; }
