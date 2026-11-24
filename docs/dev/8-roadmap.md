@@ -18,6 +18,20 @@ KRX-specific additions: `live kis-check`, `doctor`, `install data` / `status dat
 status, `compare`; planned `check-models` (run the `CHECK` cases in both languages and compare).
 `research`: C# notebooks (.NET Interactive) later, if wanted.
 
+## Research (JupyterLab)
+
+- **One JupyterLab layout per project, kept in the project:** `<project>/.jupyter/layout.json`,
+  with paths relative to the project (a renamed project keeps working; hidden, so run snapshots
+  and live deployments don't copy it). klean loads it into JupyterLab through its workspaces API
+  when the project opens (the two-file layout if there's none yet), and saves it back when
+  switching projects, when the GUI stops and every minute; `klean research P` does the same.
+  JupyterLab keeps layouts in one folder per server, hence the copy in and out. It travels with
+  the project (copy, duplicate, delete, another klean workspace) and replaces the shared
+  `default` layout that projects use after their first opening today. With it: *Reset layout* and
+  *Shut down this project's kernels* in the Research bar, idle-kernel shutdown in JupyterLab
+  (kernels are per server, not per layout, and each holds LEAN in memory), and the file left out
+  of git by default.
+
 ## Data
 
 - Thresholds for `verify` (fail a build on unexpected differences).
