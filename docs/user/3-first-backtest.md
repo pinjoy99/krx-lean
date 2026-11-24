@@ -20,7 +20,7 @@ krx-workspace/
   data/                      market hours, symbol properties, equity/krx, index/krx
   Top20/                     a project
     main.py  krx_models.py
-    research.ipynb           notebook (made by `klean research`)
+    research.ipynb           research notebook (made by `klean create-project`)
     backtests/2026-11-02_10-15-00/    one folder per run
     optimizations/…          one folder per optimization
   storage/                   LEAN's object store (if a strategy or notebook uses it)
@@ -38,6 +38,9 @@ Templates: `buy-hold` (default: buys Samsung Electronics; another stock with
 `--parameter code 000660`), `top-market-cap` (the example
 strategy: the 20 largest KOSPI common stocks, equal weight, rebalanced monthly), `empty`.
 For C#: `klean create-project Top20CS --language csharp --template top-market-cap`.
+Every project also gets a starter research notebook, `research.ipynb` ([5. Tools](5-tools.md#research-notebooks)).
+In the GUI (`klean gui`), the Workspace dashboard's *New project* box does the same and opens
+the new project with `main.py` and `research.ipynb` side by side.
 
 What `backtest` does: checks (Python) or compiles (C#) the project, runs LEAN with the
 workspace's data, and prints the main statistics. If the algorithm fails (an exception in

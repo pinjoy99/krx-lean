@@ -1,5 +1,5 @@
 """`klean create-project`: a Python or C# project folder in the LEAN CLI's layout, with the KRX
-models next to the algorithm."""
+models next to the algorithm and a starter research notebook (research.ipynb)."""
 
 from __future__ import annotations
 
@@ -157,12 +157,27 @@ def class_name(name: str) -> str:
     return cls if not cls[0].isdigit() else "Krx" + cls
 
 
+def check_name(ws: Workspace, name: str) -> Path:
+    """The project's folder for a new project name, which must stay inside the workspace (a
+    nested name such as \"Ideas/P\" is fine) and not use a hidden or reserved folder."""
+    name = name.strip()
+    parts = Path(name).parts
+    if not name or Path(name).is_absolute() or any(p in ("..", ".") or p.startswith(".") for p in parts):
+        raise KleanError(f"{name!r} isn't a valid project name (a folder name inside the workspace)")
+    if parts[0] in ("data", "storage"):
+        raise KleanError(f"{parts[0]!r} is a workspace folder, not a project name")
+    project = (ws.root / name).resolve()
+    if ws.root.resolve() not in project.parents:
+        raise KleanError(f"{name!r} would be outside the workspace")
+    return project
+
+
 def create(ws: Workspace, name: str, language: str, template: str = "buy-hold") -> Path:
     if language not in ("python", "csharp"):
         raise KleanError(f"unknown language {language!r} (python or csharp)")
     if template not in TEMPLATES:
         raise KleanError(f"unknown template {template!r} ({', '.join(TEMPLATES)})")
-    project = ws.root / name
+    project = check_name(ws, name)
     if project.exists():
         raise KleanError(f"{project} already exists")
     cls = class_name(Path(name).name)
@@ -181,7 +196,17 @@ def create(ws: Workspace, name: str, language: str, template: str = "buy-hold") 
         (project / "Main.cs").write_text(main, encoding="utf-8")
         shutil.copy(CS_MODELS, project / "KrxModels.cs")
         (project / f"{cls}.csproj").write_text(CSPROJ_TEMPLATE.format(lean_bin=ws.launcher_dir), encoding="utf-8")
+    from klean import research          # (research imports this module)
+    research.ensure_notebook(ws, project)
     return project
+
+
+def main_file(project: Path) -> Path:
+    """The strategy's file: main.py, or Main.cs (else the first .cs file) for C#."""
+    if (project / "main.py").exists():
+        return project / "main.py"
+    cs = project / "Main.cs"
+    return cs if cs.exists() else next(iter(sorted(project.glob("*.cs"))), cs)
 
 
 def delete(ws: Workspace, name: str) -> Path:

@@ -8,7 +8,7 @@ also runs under `lean backtest`.
 |---|---|
 | `workspace.py` | `klean.json` (load/save, found upwards from the current folder), tested LEAN commit, Python package pins, `dotnet` and libpython lookup, `doctor` checks |
 | `cli.py` | commands; the `<verb> <noun>` commands (`install lean/python/data` (incl. `--demo`), `update data/lean/models/klean/all`, `status …`, `create-project` / `delete-project`) plus the old names as hidden aliases; `init`, `config` |
-| `projects.py` | templates (Python, C#), algorithm class detection, `.csproj` (references the launcher DLLs; excludes `backtests/**`, `optimizations/**`) |
+| `projects.py` | templates (Python, C#) plus the starter `research.ipynb` (`research.notebook_template`), project names (`check_name`: inside the workspace, no hidden or reserved folder), algorithm class detection, `.csproj` (references the launcher DLLs; excludes `backtests/**`, `optimizations/**`) |
 | `backtest.py` | `prepare` (py_compile + requirements, or `dotnet build`), `run_once` (code snapshot, per-run config, launcher, manifest), `backtest` |
 | `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `status data` |
 | `optimize.py` | grid search |
@@ -152,12 +152,21 @@ Paper only: klean has two brokerages, both paper, and no real-money one (see the
 
 POST endpoints (all need the token header): `/api/backtest`, `/api/report`, `/api/optimize`
 (validated with `optimize(estimate=True)` first; progress lines kept in the job),
-`/api/live-deploy`, `/api/live-run`, `/api/live-stop`, `/api/research` (one JupyterLab for the whole workspace, `research.start_workspace_server`, started in
+`/api/create-project` (`projects.create`; one folder name, no `/`, since the dashboard lists the
+workspace's top folders), `/api/live-deploy`, `/api/live-run`, `/api/live-stop`, `/api/research` (one JupyterLab for the whole workspace, `research.start_workspace_server`, started in
 a thread after installing the packages if needed; GET reports `off | installing | starting | ready |
 failed | stopped`; JupyterLab's CSP lets only the GUI's origin frame it; terminated when the GUI stops,
 also on SIGTERM and SIGHUP), `/api/run-rename` and `/api/run-delete` (`stored_run`: only a folder
 directly under `<project>/backtests/`, inside the workspace, and not running; rename keeps the
 timestamp prefix).
+
+A new project opens side by side: JupyterLab opens only one file per `/lab/tree/…` address, so
+`/api/research` with `"layout": "new"` (the page's `#/research/P?open=new`) saves a JupyterLab
+workspace `klean-<project>` through JupyterLab's own API (`PUT /lab/api/workspaces/…`, the
+token in the `Authorization` header): a horizontal split with the strategy file in an editor
+and `research.ipynb` in a notebook, file browser collapsed (`research.side_by_side`). The
+iframe then loads `/lab/workspaces/klean-<project>`; JupyterLab keeps saving that layout as the
+user changes it. Opening the project later uses `/lab/tree/<project>/research.ipynb` as before.
 
 ## GUI security
 

@@ -61,11 +61,15 @@ class KleanTest(unittest.TestCase):
         self.init()
         ws = Workspace.load(self.ws_dir)
         py = projects.create(ws, "My First", "python")
-        self.assertEqual(sorted(p.name for p in py.iterdir()), ["krx_models.py", "main.py"])
+        self.assertEqual(sorted(p.name for p in py.iterdir()), ["krx_models.py", "main.py", "research.ipynb"])
+        notebook = json.loads((py / "research.ipynb").read_text())
+        self.assertEqual(notebook["metadata"]["kernelspec"]["name"], "python3")
+        self.assertEqual(projects.main_file(py).name, "main.py")
         self.assertEqual(projects.python_algorithm_class(py / "main.py"), "MyFirst")
         self.assertEqual(projects.language_of(py), "python")
         cs = projects.create(ws, "Top 20", "csharp")
-        self.assertEqual(sorted(p.name for p in cs.iterdir()), ["KrxModels.cs", "Main.cs", "Top20.csproj"])
+        self.assertEqual(sorted(p.name for p in cs.iterdir()), ["KrxModels.cs", "Main.cs", "Top20.csproj", "research.ipynb"])
+        self.assertEqual(projects.main_file(cs).name, "Main.cs")
         self.assertEqual(projects.csharp_algorithm_class(cs), "Top20")
         self.assertEqual(projects.language_of(cs), "csharp")
         csproj = (cs / "Top20.csproj").read_text()
@@ -73,6 +77,10 @@ class KleanTest(unittest.TestCase):
         self.assertIn('Exclude="$(LeanBin)/QuantConnect.Algorithm.CSharp.dll;$(LeanBin)/QuantConnect.Krx.dll"', csproj)
         with self.assertRaises(KleanError):
             projects.create(ws, "Top 20", "csharp")   # exists
+        for bad in ("", "../x", "/tmp/x", ".hidden", "a/../../x", "data", "storage/x"):
+            with self.assertRaises(KleanError, msg=bad):
+                projects.create(ws, bad, "python")
+        self.assertEqual(projects.create(ws, "Ideas/Nested", "python"), (self.ws_dir / "Ideas" / "Nested").resolve())
 
     def test_class_names(self):
         self.assertEqual(projects.class_name("krx top-20 v2"), "KrxTop20V2")

@@ -1,5 +1,6 @@
 // Research: the workspace's JupyterLab inside the page. LEAN's QuantBook is loaded in every
 // notebook; a project's notebook runs in the project folder (its krx_models etc. import).
+// ?open=new (after New project): the strategy file and research.ipynb side by side.
 import {api, app, backtestHash, esc, href, liveHash, pageState, setTitle} from "../util.js";
 
 const STATUS = {
@@ -7,7 +8,8 @@ const STATUS = {
   starting: "Starting JupyterLab…",
 };
 
-export async function pageResearch(project) {
+export async function pageResearch(project, query = "") {
+  const layout = project && new URLSearchParams(query || "").get("open") === "new" ? "new" : "";
   setTitle(project ? `Research · ${project}` : "Research");
   document.body.classList.add("wide");
   const w = await api("/api/workspace");
@@ -37,7 +39,7 @@ export async function pageResearch(project) {
   const poll = async () => {
     if (!document.body.contains(state)) return;        // left the page
     let r;
-    try { r = await api("/api/research", {}, project ? {project} : {}); }
+    try { r = await api("/api/research", {}, project ? {project, ...(layout ? {layout} : {})} : {}); }
     catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
     if (r.status === "ready") {
       state.innerHTML = '<span class="badge ok">running</span>';

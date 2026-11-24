@@ -199,6 +199,30 @@ with sync_playwright() as pw:
     if errors:
         raise SystemExit(f"research: browser errors: {errors}")
     print("ok  research: JupyterLab in the page, the notebook runs on LEAN")
+
+    # New project on the Workspace dashboard: created, then its Research dashboard with main.py and
+    # research.ipynb side by side
+    new_name = f"New{int(time.time())}"                  # unique, also in a reused workspace
+    page.goto(BASE + "#/")
+    page.locator("#pname").fill(new_name)
+    page.locator("#ptmpl").select_option("empty")
+    page.get_by_role("button", name="Create project").click()
+    expect(page.locator(".researchbar h1")).to_contain_text(new_name, timeout=30_000)
+    lab = page.frame_locator("iframe.lab")
+    tabs = lab.locator(".lm-DockPanel-tabBar .lm-TabBar-tabLabel")
+    expect(tabs).to_have_text(["main.py", "research.ipynb"], timeout=120_000)
+    expect(lab.locator(".jp-FileEditor .cm-content")).to_contain_text(f"class {new_name}(QCAlgorithm)")
+    expect(lab.locator(".jp-Notebook")).to_contain_text("QuantBook")
+    if not (WS / new_name / "research.ipynb").exists():
+        raise SystemExit("new project: no research.ipynb")
+    page.screenshot(path=str(SHOTS / "new-project.png"))
+    page.goto(BASE + "#/")
+    page.locator("#pname").fill(new_name)
+    page.get_by_role("button", name="Create project").click()
+    expect(page.locator("#pstate")).to_contain_text("already exists")
+    if errors:
+        raise SystemExit(f"new project: browser errors: {errors}")
+    print("ok  new project from the Workspace page, opened with main.py and research.ipynb")
     page.close()
 
     # a backtest started from the page finishes and shows up in the runs list

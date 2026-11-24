@@ -156,6 +156,21 @@ def api_project(ws: Workspace, q: dict) -> dict:
             "optimizations": [opt_row(o) for o in reversed(optimizations(p))]}
 
 
+def api_create_project(ws: Workspace, body: dict) -> dict:
+    """`klean create-project` from the Workspace dashboard."""
+    name = str(body.get("name") or "").strip()
+    language = str(body.get("language") or "python")
+    template = str(body.get("template") or "buy-hold")
+    if not name:
+        raise KleanError("give the project a name")
+    if "/" in name or "\\" in name:
+        raise KleanError("a project name is one folder name (no / or \\): the dashboard lists the workspace's top folders")
+    project = projects.create(ws, name, language, template)
+    rel = project.relative_to(ws.root.resolve()).as_posix()
+    return {"name": rel, "language": language, "template": template,
+            "files": [projects.main_file(project).name, "research.ipynb"]}
+
+
 def optimizations(project: Path) -> list[Path]:
     d = project / "optimizations"
     return sorted(o for o in d.iterdir() if (o / "optimization.json").exists()) if d.is_dir() else []
@@ -452,7 +467,8 @@ class Jobs:
     def research(self, ws: Workspace, body: dict | None, gui_port: int) -> dict:
         """The workspace's JupyterLab, shown in the page's Research tab: started on the first POST
         (installing JupyterLab into the Python env the first time), stopped with the GUI. GET
-        (body None) only reports its state. With a project, also its notebook's address."""
+        (body None) only reports its state. With a project, also its notebook's address; with
+        "layout": "new" too, a layout showing its strategy file and notebook side by side."""
         from klean import research
         project = None
         if body and body.get("project"):
@@ -476,7 +492,10 @@ class Jobs:
             state["url"] = f"{base}/lab?token={nb['token']}"
             if project is not None:
                 notebook = research.ensure_notebook(ws, project)
-                state["url"] = f"{base}/lab/tree/{project.name}/{notebook.name}?token={nb['token']}"
+                rel = project.relative_to(ws.root.resolve()).as_posix()
+                state["url"] = f"{base}/lab/tree/{rel}/{notebook.name}?token={nb['token']}"
+                if body and body.get("layout") == "new":
+                    state["url"] = research.side_by_side(nb["port"], nb["token"], ws.root.resolve(), project)
         return state
 
     def _start_notebook(self, ws: Workspace, gui_port: int) -> None:
@@ -626,6 +645,8 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                     self._json(jobs.start_live(Workspace.load(ws.root), body))
                 elif url.path == "/api/live-stop":
                     self._json(api_live_stop(Workspace.load(ws.root), body))
+                elif url.path == "/api/create-project":
+                    self._json(api_create_project(Workspace.load(ws.root), body))
                 elif url.path == "/api/run-delete":
                     self._json(api_run_delete(Workspace.load(ws.root), body))
                 elif url.path == "/api/run-rename":

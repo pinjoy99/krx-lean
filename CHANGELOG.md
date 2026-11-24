@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.23 — 2026-11-24
+
+- **New project in the GUI:** the Workspace dashboard has a *New project* box (name, language,
+  template → *Create project*). It runs `klean create-project`, then opens the new project's
+  Research dashboard with the strategy (`main.py`, or `Main.cs` in C#) and `research.ipynb`
+  side by side in JupyterLab.
+- `klean create-project` also writes the starter research notebook, `research.ipynb` (before,
+  `klean research` wrote it the first time). Older projects still get one from `klean research`.
+- Project names must stay inside the workspace (no `..`, absolute paths, hidden folders, or
+  `data` / `storage`).
+- The Research dashboard opens a project's notebook by its path in the workspace.
+
 ## 0.0.22 — 2026-11-23
 
 Documentation for the current scope: research and paper trading, no real-money orders.

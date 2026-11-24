@@ -119,8 +119,9 @@ sma = qb.indicator(SimpleMovingAverage(60), symbol, datetime(2020, 1, 1), dateti
   hundred MB.
 - Open notebooks with `klean research`, not plain `jupyter lab`: klean is what loads LEAN into
   the notebook.
-- If the project has no `research.ipynb`, klean writes a starter one (history of one stock, a
-  60-day average, the stock against the KOSPI 200). Your notebooks are never overwritten.
+- `klean create-project` writes a starter `research.ipynb` (history of one stock, a 60-day
+  average, the stock against the KOSPI 200); for an older project without one, `klean research`
+  writes it. Your notebooks are never overwritten.
 - Jupyter listens on 127.0.0.1 with a random token in the printed URL, and doesn't check the
   internet for news or updates; stop it with Ctrl+C. Under WSL2 it opens your Windows browser
   (with `wslu`), or open the URL yourself.
@@ -142,7 +143,7 @@ Four dashboards; the Workspace is the landing page, and each project has the oth
 
 | Dashboard | Shows |
 |---|---|
-| **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live); right: KRX data, setup check, settings |
+| **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live), and *New project* (name, language, template → *Create project*, as `klean create-project`; then the new project's Research dashboard opens with `main.py` (or `Main.cs`) and `research.ipynb` side by side); right: KRX data, setup check, settings |
 | **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), opened on the project's `research.ipynb`; *Backtest* and *Live* in the title bar |
 | **Backtest** | left: *New backtest* and *New optimization* forms, the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
 | **Live** | left: *New paper deployment* (parameters from one of the project's backtests, starting cash, optional first day) and the deployments; right: the selected one's account, equity vs KOSPI 200, positions, waiting orders, fills, daily runs (with LEAN's console output); *Trade new days*, *Stop* |

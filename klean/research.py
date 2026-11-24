@@ -21,11 +21,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 import shutil
 import socket
 import subprocess
 import threading
+import urllib.request
 from pathlib import Path
 
 from klean import projects, results
@@ -160,6 +162,34 @@ def ensure_notebook(ws: Workspace, project: Path, name: str = NOTEBOOK) -> Path:
     if not nb.exists():
         nb.write_text(json.dumps(notebook_template(results.is_demo_data(ws)), indent=1) + "\n", encoding="utf-8")
     return nb
+
+
+def side_by_side(port: int, token: str, ws_root: Path, project: Path) -> str:
+    """Save a JupyterLab workspace (layout) showing the project's strategy file and its notebook
+    side by side, through JupyterLab's workspaces API; returns its address. JupyterLab opens only one
+    file per /lab/tree/ address, so a new project opens this way."""
+    rel = project.relative_to(ws_root).as_posix()
+    code, notebook = f"{rel}/{projects.main_file(project).name}", f"{rel}/{NOTEBOOK}"
+    space = "klean-" + re.sub(r"[^A-Za-z0-9_-]+", "-", rel).strip("-")
+    layout = {"data": {
+        "layout-restorer:data": {
+            "main": {"dock": {"type": "split-area", "orientation": "horizontal", "sizes": [0.45, 0.55], "children": [
+                {"type": "tab-area", "currentIndex": 0, "widgets": [f"editor:{code}"]},
+                {"type": "tab-area", "currentIndex": 0, "widgets": [f"notebook:{notebook}"]}]},
+                "current": f"notebook:{notebook}"},
+            "left": {"collapsed": True, "visible": True, "widgets": ["filebrowser"]},
+            "right": {"collapsed": True, "visible": True, "widgets": []},
+            "relativeSizes": [0, 1, 0], "top": {"simpleVisibility": True}},
+        f"editor:{code}": {"data": {"path": code, "factory": "Editor"}},
+        f"notebook:{notebook}": {"data": {"path": notebook, "factory": "Notebook"}},
+        "file-browser-filebrowser:cwd": {"path": rel}},
+        "metadata": {"id": space}}
+    base = f"http://127.0.0.1:{port}/lab"
+    req = urllib.request.Request(f"{base}/api/workspaces/{space}", data=json.dumps(layout).encode(), method="PUT",
+                                 headers={"Authorization": f"token {token}", "Content-Type": "application/json"})
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=10):   # local: no proxy
+        pass
+    return f"{base}/workspaces/{space}?token={token}"
 
 
 def free_port() -> int:

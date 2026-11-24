@@ -1,6 +1,14 @@
 // Workspace dashboard (the landing page). Left: projects, with their backtests and live
-// paper trading deployments. Right: KRX data, setup check, settings.
+// paper trading deployments, and a New project form (`klean create-project`, then the new
+// project's Research dashboard with main.py and research.ipynb side by side). Right: KRX data,
+// setup check, settings.
 import {api, app, backtestHash, esc, liveHash, researchHash, runHash, setTitle, signClass, statVal} from "../util.js";
+
+const TEMPLATE_INFO = {
+  "buy-hold": "buy and hold one stock",
+  "top-market-cap": "every month, the largest stocks by market cap (KRX universe)",
+  "empty": "the KRX settings, no trading yet",
+};
 
 function shortName(name) {
   return name.replace(/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)-\d\d_?/, "$1-$2-$3 $4:$5 ").trim();
@@ -32,7 +40,18 @@ export async function pageWorkspace() {
       <div class="col-left">
         <div class="panel"><h2>Projects</h2>${w.projects.length ? `<p class="muted small">Open a project's research notebook by its name; its backtests and live runs from their columns.</p>
           <div class="scroll"><table class="runs"><tr><th>Project</th><th class="num">Backtests</th><th>Last backtest</th><th class="num">Live runs</th><th>Last live run</th></tr>${proj}</table></div>`
-          : `<p class="muted">No projects yet. Create one with <code>klean create-project NAME</code> (templates: ${w.templates.map(esc).join(", ")}).</p>`}</div>
+          : `<p class="muted">No projects yet: create one below.</p>`}</div>
+        <div class="panel" id="newproj"><h2>New project</h2>
+          <p class="muted small">Creates the strategy (<code>main.py</code>, or <code>Main.cs</code> in C#) from a template, the KRX models and
+            a research notebook (<code>research.ipynb</code>), then opens them in the project's Research dashboard.</p>
+          <div class="grid2">
+            <label class="field">Name<input type="text" id="pname" placeholder="e.g. Momentum" autocomplete="off"></label>
+            <label class="field">Language<select id="plang"><option value="python">Python</option><option value="csharp">C#</option></select></label>
+          </div>
+          <label class="field">Template<select id="ptmpl">${w.templates.map(t =>
+            `<option value="${esc(t)}">${esc(t)}${TEMPLATE_INFO[t] ? " — " + esc(TEMPLATE_INFO[t]) : ""}</option>`).join("")}</select></label>
+          <div class="row"><button id="pcreate">Create project</button><span id="pstate" class="muted"></span></div>
+        </div>
       </div>
       <div class="col-right">
         <div class="panel"><h2>KRX data</h2>${d.error ? `<div class="err">${esc(d.error)}</div>` : `<table>
@@ -50,4 +69,25 @@ export async function pageWorkspace() {
           <tr><td>klean</td><td>${esc(w.version)}</td></tr></table></div>
       </div>
     </div>`;
+  wireNewProject(w);
+}
+
+function wireNewProject(w) {
+  const $ = id => document.getElementById(id);
+  const create = async () => {
+    const name = $("pname").value.trim(), state = $("pstate");
+    if (!name) { state.innerHTML = '<span class="err">Give the project a name.</span>'; $("pname").focus(); return; }
+    if (w.projects.some(p => p.name === name)) { state.innerHTML = `<span class="err">${esc(name)} already exists.</span>`; return; }
+    $("pcreate").disabled = true;
+    state.textContent = "Creating…";
+    try {
+      const r = await api("/api/create-project", {}, {name, language: $("plang").value, template: $("ptmpl").value});
+      location.hash = researchHash(r.name) + "?open=new";
+    } catch (e) {
+      state.innerHTML = `<span class="err">${esc(e.message)}</span>`;
+      $("pcreate").disabled = false;
+    }
+  };
+  $("pcreate").onclick = create;
+  $("pname").onkeydown = e => { if (e.key === "Enter") create(); };
 }

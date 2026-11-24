@@ -1,4 +1,4 @@
-// klean GUI: hash router. Dashboards: #/ (workspace), #/research/P, #/backtest/P[?run=|?opt=|?cmp=…], #/live/P. Pages live in ./pages/, one module each.
+// klean GUI: hash router. Dashboards: #/ (workspace), #/research/P[?open=new], #/backtest/P[?run=|?opt=|?cmp=…], #/live/P. Pages live in ./pages/, one module each.
 import {TOKEN, api, compareHash, optHash, pageState, runHash, showError} from "./util.js";
 import {pageWorkspace} from "./pages/workspace.js";
 import {pageBacktest} from "./pages/backtest.js";
@@ -21,7 +21,7 @@ async function route() {
       location.replace(refs.length ? compareHash(refs) : "#/"); return;
     }
     if (parts[0] === "backtest") await pageBacktest(parts[1], query);
-    else if (parts[0] === "research") await pageResearch(parts[1] || "");
+    else if (parts[0] === "research") await pageResearch(parts[1] || "", query);
     else if (parts[0] === "live") await pageLive(parts[1], query);
     else await pageWorkspace();
     if (!document.getElementById("ws").textContent) api("/api/workspace").then(w => {

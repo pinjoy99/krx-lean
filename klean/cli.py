@@ -249,7 +249,8 @@ def cmd_data_status(args) -> None:
 def cmd_project_create(args) -> None:
     ws = Workspace.load(Path.cwd())
     project = projects.create(ws, args.name, args.language, args.template)
-    print(f"created {project} ({args.language}, {args.template}). Run: klean backtest \"{args.name}\"")
+    print(f"created {project} ({args.language}, {args.template}): {projects.main_file(project).name}, research.ipynb.\n"
+          f"Run: klean backtest \"{args.name}\"   or open the notebook: klean research \"{args.name}\"")
 
 
 def cmd_project_delete(args) -> int:
