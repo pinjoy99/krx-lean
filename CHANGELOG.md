@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.25 — 2026-11-24
+
+- **Parameters found in the strategy's code.** The Backtest dashboard's *New backtest* form lists
+  the parameters the strategy reads (`get_parameter("name", default)` / `GetParameter`, and
+  `set_period` / `SetPeriod` as `start_date` / `end_date`) with their defaults; only the values
+  you change are sent. *New optimization* starts with one row per numeric parameter at its
+  default (min = max) and a step to widen it. Python is read with its syntax tree (defaults such
+  as `str(self.HOLDINGS)` resolve), C# with patterns; the KRX models file is left out.
+
 ## 0.0.24 — 2026-11-24
 
 - **One JupyterLab layout per project.** Each project opens in its own layout (open files, tabs,

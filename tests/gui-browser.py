@@ -10,6 +10,7 @@ legend, log scale, compare from the project page, and a backtest started from th
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -237,6 +238,7 @@ with sync_playwright() as pw:
     expect(page).to_have_url(re.compile(r"#/backtest/HoldPy$"))
     page.locator("#nav-tabs a", has_text="Research").click()
     expect(page.locator("iframe.lab")).to_have_attribute("src", re.compile("/lab/workspaces/klean-p-HoldPy"), timeout=30_000)
+    expect(page.frame_locator("iframe.lab").locator(".jp-Notebook")).to_be_visible(timeout=120_000)   # its own layout loaded
     page.locator("#nav-project").select_option(new_name)
     expect(page.frame_locator("iframe.lab").locator(".lm-DockPanel-tabBar .lm-TabBar-tabLabel")).to_have_text(
         ["main.py", "research.ipynb"], timeout=120_000)
@@ -250,6 +252,23 @@ with sync_playwright() as pw:
           " project; the top bar switches project and dashboard")
     page.close()
 
+    # the forms list the parameters the strategy reads, with their defaults (top-market-cap: Py)
+    page = browser.new_page(viewport={"width": 1300, "height": 900})
+    page.goto(BASE + "#/backtest/Py")
+    names = page.locator("#params .kv input:first-child")
+    expect(names).to_have_count(5)
+    if [names.nth(i).input_value() for i in range(5)] != ["start_date", "end_date", "holdings", "market", "slippage_ticks"]:
+        raise SystemExit(f"parameters: {[names.nth(i).input_value() for i in range(5)]}")
+    expect(page.locator("#params .kv").nth(2).locator("input").nth(1)).to_have_value("20")          # holdings
+    page.locator("#newopt summary").click()
+    orows = page.locator("#oparams .kv4")
+    expect(orows).to_have_count(2)                                    # the numeric ones: holdings, slippage_ticks
+    expect(orows.first.locator("input").nth(0)).to_have_value("holdings")
+    expect(orows.first.locator("input").nth(1)).to_have_value("20")
+    expect(orows.first.locator("input").nth(3)).to_have_value("1")
+    print("ok  backtest and optimization forms prefilled with the strategy's parameters")
+    page.close()
+
     # a backtest started from the page finishes and shows up in the runs list
     page = browser.new_page(viewport={"width": 1300, "height": 900})
     page.goto(BASE + "#/backtest/HoldPy")
@@ -261,6 +280,9 @@ with sync_playwright() as pw:
     expect(page.locator("#bt-left tr[data-ref]")).to_have_count(runs_before + 1)
     expect(page.locator("#bt-right .runtitle")).to_contain_text("from-gui")      # the new run is shown
     expect(page.locator("#bt-right .uplot")).to_have_count(2)
+    newest = max((WS / "HoldPy" / "backtests").glob("*from-gui"), key=lambda d: d.name)
+    if json.loads((newest / "manifest.json").read_text()).get("parameters"):
+        raise SystemExit("backtest from the page: unchanged prefilled parameters were sent")
     print("ok  backtest started from the page")
 
     # Live: deploy from the page; it trades the days and shows its account

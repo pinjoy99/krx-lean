@@ -7,6 +7,8 @@ import {renderRun} from "./run.js";
 import {renderOptimization} from "./optimization.js";
 import {renderCompare} from "./compare.js";
 
+const NUMERIC = new Set(["int", "float"]);     // parameter kinds an optimization can search
+
 let shown = null;      // {project, data}: the project whose left column is on the page
 
 export async function pageBacktest(project, query) {
@@ -48,13 +50,13 @@ function drawLeft() {
   el.innerHTML = `
     <details class="panel" open id="newbt"><summary><h2>New backtest</h2></summary>
       <label class="field">Name (optional)<input type="text" id="bname" placeholder="e.g. half-weight"></label>
-      <div class="field">Parameters <a id="addp">+ add</a><div id="params"></div></div>
+      <div class="field">Parameters <a id="addp">+ add</a>${p.parameters?.length ? `<div class="muted small">From the strategy's code, with its defaults: only values you change are sent.</div>` : ""}<div id="params"></div></div>
       <div class="field">Extra LEAN config <a id="addc">+ add</a><div id="extra"></div></div>
       <div class="row"><button id="go">Start backtest</button><span id="jobstate" class="muted">${pageState.lastJob && pageState.lastJob.project === p.name ? pageState.lastJob.html : ""}</span></div>
       <pre id="console" style="display:none;margin-top:10px"></pre>
     </details>
     <details class="panel" id="newopt"><summary><h2>New optimization (grid search)</h2></summary>
-      <div class="field">Parameters: name, min, max, step <a id="addo">+ add</a><div id="oparams"></div></div>
+      <div class="field">Parameters: name, min, max, step <a id="addo">+ add</a>${p.parameters?.some(x => NUMERIC.has(x.kind)) ? `<div class="muted small">The strategy's numeric parameters, at their defaults (min = max keeps a value fixed): widen the ranges to search, remove the rows you don't need.</div>` : ""}<div id="oparams"></div></div>
       <div class="grid2">
         <label class="field">Target<input type="text" id="otarget" value="Sharpe Ratio"></label>
         <label class="field">Direction<select id="odir"><option value="max">maximize</option><option value="min">minimize</option></select></label>
@@ -100,19 +102,49 @@ async function drawRight(query) {
   } catch (e) { el.innerHTML = `<div class="panel"><div class="err">${esc(e.message)}</div></div>`; }
 }
 
+// A step to widen a numeric parameter's range from its default: 1 for whole numbers, else about
+// a tenth of the default rounded to 1, 2 or 5 times a power of ten.
+function niceStep(param) {
+  const v = Math.abs(parseFloat(param.default));
+  if (param.kind === "int") return "1";
+  if (!v) return "0.1";
+  const raw = v / 10, p10 = 10 ** Math.floor(Math.log10(raw)), m = raw / p10;
+  return String(+((m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p10).toPrecision(6));
+}
+
 function wireForms() {
   const p = shown.data, $ = id => document.getElementById(id);
-  const kvRow = target => { const d = document.createElement("div"); d.className = "kv";
+  // a parameter row; `param` (found in the strategy's code) fills the name and the default
+  const kvRow = (target, param = null) => { const d = document.createElement("div"); d.className = "kv";
     d.innerHTML = `<input type="text" placeholder="name" aria-label="name"><input type="text" placeholder="value" aria-label="value"><a title="remove">✕</a>`;
+    if (param) {
+      const [n, v] = d.querySelectorAll("input");
+      n.value = param.name; v.value = param.default;
+      d.dataset.default = param.default;
+      if (!param.default) v.placeholder = param.name === "end_date" ? "the latest data" : "strategy's default";
+      d.title = `read in ${param.where}${param.default ? `, default ${param.default}` : ""}`;
+    }
     d.querySelector("a").onclick = () => d.remove(); $(target).appendChild(d); };
-  const oRow = () => { const d = document.createElement("div"); d.className = "kv4";
+  const oRow = (param = null) => { const d = document.createElement("div"); d.className = "kv4";
     d.innerHTML = ["name", "min", "max", "step"].map(n => `<input type="text" placeholder="${n}" aria-label="${n}">`).join("") + '<a title="remove">✕</a>';
+    if (param) {
+      const [n, lo, hi, st] = d.querySelectorAll("input");
+      n.value = param.name; lo.value = hi.value = param.default; st.value = niceStep(param);
+      d.title = `read in ${param.where}, default ${param.default}`;
+    }
     d.querySelector("a").onclick = () => d.remove(); $("oparams").appendChild(d); };
-  oRow();
+  for (const param of p.parameters || []) kvRow("params", param);
+  const numeric = (p.parameters || []).filter(x => NUMERIC.has(x.kind) && x.default !== "");
+  if (numeric.length) numeric.forEach(oRow); else oRow();
   $("addp").onclick = () => kvRow("params");
   $("addc").onclick = () => kvRow("extra");
-  $("addo").onclick = oRow;
-  const collect = id => Object.fromEntries([...document.querySelectorAll(`#${id} .kv`)].map(d => [...d.querySelectorAll("input")].map(i => i.value.trim())).filter(([k]) => k));
+  $("addo").onclick = () => oRow();
+  // name -> value of the filled rows; rows prefilled from the code are sent only when changed
+  const collect = id => Object.fromEntries([...document.querySelectorAll(`#${id} .kv`)].flatMap(d => {
+    const [k, v] = [...d.querySelectorAll("input")].map(i => i.value.trim());
+    const unchanged = "default" in d.dataset && v === d.dataset.default;
+    return k && !unchanged ? [[k, v]] : [];
+  }));
   const boxes = () => [...document.querySelectorAll("#bt-left input[type=checkbox]:checked")].map(b => b.value);
   document.querySelectorAll("#bt-left input[type=checkbox]").forEach(b => b.onchange = () => $("cmp").disabled = boxes().length < 2);
   $("cmp").onclick = () => location.hash = compareHash(boxes());

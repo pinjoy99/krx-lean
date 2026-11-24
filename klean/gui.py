@@ -152,7 +152,8 @@ def api_project(ws: Workspace, q: dict) -> dict:
     files = sorted(f.relative_to(p).as_posix() for f in p.rglob("*") if f.is_file()
                    and f.relative_to(p).parts[0] not in results.OUTPUT_DIRS
                    and not any(part.startswith(".") for part in f.relative_to(p).parts[:-1]))
-    return {"name": p.name, "language": lang, "files": files,
+    from klean import params
+    return {"name": p.name, "language": lang, "files": files, "parameters": params.find(p),
             "runs": [run_row(r) for r in reversed(results.runs(p))],
             "optimizations": [opt_row(o) for o in reversed(optimizations(p))]}
 

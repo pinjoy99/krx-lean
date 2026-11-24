@@ -159,8 +159,16 @@ Backtest · Live**. On the Workspace page it shows the last project you used.
 |---|---|
 | **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live), and *New project* (name, language, template → *Create project*, as `klean create-project`; then the new project's Research dashboard opens with `main.py` (or `Main.cs`) and `research.ipynb` side by side); right: KRX data, setup check, settings |
 | **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), on the project's own layout; *Reset layout*, *Shut down kernels*, *Open in a new tab*. *Open JupyterLab (all files)* on the Workspace page shows the whole workspace instead |
-| **Backtest** | left: *New backtest* and *New optimization* forms, the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
+| **Backtest** | left: *New backtest* and *New optimization* forms (prefilled with the parameters the strategy reads, see below), the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
 | **Live** | left: *New paper deployment* (parameters from one of the project's backtests, starting cash, optional first day) and the deployments; right: the selected one's account, equity vs KOSPI 200, positions, waiting orders, fills, daily runs (with LEAN's console output); *Trade new days*, *Stop* |
+
+**Parameters in the forms.** klean reads the strategy's code for `get_parameter("name", default)`
+/ `GetParameter("name", default)` and `set_period` / `SetPeriod` (`start_date`, `end_date`), and
+lists them with their defaults (hover a row: where it's read). *New backtest* sends only the
+values you change, so a run's record lists just those. *New optimization* gets a row per numeric
+parameter at its default (min = max: kept fixed) with a step (1 for whole numbers); widen the
+ranges you want searched and remove the others. A default klean can't work out (a computed
+value) is left blank; digits with a leading zero, such as a stock code, count as text.
 
 Charts: drag across a chart to zoom into a period, double-click to zoom out; the legend under
 the chart shows the values at the cursor (the latest ones otherwise); *log scale* on equity
