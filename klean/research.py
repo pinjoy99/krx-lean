@@ -27,6 +27,7 @@ import shutil
 import socket
 import subprocess
 import threading
+import time
 import urllib.request
 from pathlib import Path
 
@@ -38,6 +39,7 @@ from klean.workspace import KleanError, Workspace, dotnet, git_commit, run, venv
 # commit; matplotlib as for `klean report`.
 RESEARCH_PACKAGES = ["jupyterlab==4.5.1", "ipykernel", "clr-loader==0.2.9", "matplotlib==3.8.4"]
 NOTEBOOK = "research.ipynb"
+KERNEL_IDLE_SECONDS = 3600
 STARTUP = "00-klean-lean.py"
 
 
@@ -164,14 +166,33 @@ def ensure_notebook(ws: Workspace, project: Path, name: str = NOTEBOOK) -> Path:
     return nb
 
 
-def side_by_side(port: int, token: str, ws_root: Path, project: Path) -> str:
-    """Save a JupyterLab workspace (layout) showing the project's strategy file and its notebook
-    side by side, through JupyterLab's workspaces API; returns its address. JupyterLab opens only one
-    file per /lab/tree/ address, so a new project opens this way."""
-    rel = project.relative_to(ws_root).as_posix()
-    code, notebook = f"{rel}/{projects.main_file(project).name}", f"{rel}/{NOTEBOOK}"
-    space = "klean-" + re.sub(r"[^A-Za-z0-9_-]+", "-", rel).strip("-")
-    layout = {"data": {
+# ---------------------------------------------------------------- one JupyterLab layout per project
+#
+# JupyterLab keeps layouts ("workspaces": open files, tabs, splits) in one folder per server. klean
+# keeps each project's in the project, <project>/.jupyter/layout.json, with file paths relative
+# to the project: it travels with the project (copy, rename, delete, another klean workspace) and
+# is hidden, so run snapshots and live deployments leave it out. klean loads it into JupyterLab
+# (`open_layout`) when the project opens and saves it back (`save_layout`) when switching
+# projects, every minute and when JupyterLab stops.
+
+LAYOUT_DIR = ".jupyter"
+LAYOUT_FILE = "layout.json"
+
+
+def layout_path(project: Path) -> Path:
+    return project / LAYOUT_DIR / LAYOUT_FILE
+
+
+def space_id(prefix: str) -> str:
+    """JupyterLab's name for a project's layout: by the project's path from the server's root
+    ("" when the server's root is the project, `klean research P`)."""
+    return "klean-p-" + re.sub(r"[^A-Za-z0-9_-]+", "-", prefix).strip("-") if prefix else "klean-solo"
+
+
+def default_layout(project: Path) -> dict:
+    """The strategy file and research.ipynb side by side (paths relative to the project)."""
+    code, notebook = projects.main_file(project).name, NOTEBOOK
+    return {
         "layout-restorer:data": {
             "main": {"dock": {"type": "split-area", "orientation": "horizontal", "sizes": [0.45, 0.55], "children": [
                 {"type": "tab-area", "currentIndex": 0, "widgets": [f"editor:{code}"]},
@@ -182,14 +203,162 @@ def side_by_side(port: int, token: str, ws_root: Path, project: Path) -> str:
             "relativeSizes": [0, 1, 0], "top": {"simpleVisibility": True}},
         f"editor:{code}": {"data": {"path": code, "factory": "Editor"}},
         f"notebook:{notebook}": {"data": {"path": notebook, "factory": "Notebook"}},
-        "file-browser-filebrowser:cwd": {"path": rel}},
-        "metadata": {"id": space}}
-    base = f"http://127.0.0.1:{port}/lab"
-    req = urllib.request.Request(f"{base}/api/workspaces/{space}", data=json.dumps(layout).encode(), method="PUT",
+        "file-browser-filebrowser:cwd": {"path": ""}}
+
+
+def _file_widgets(data: dict) -> dict[str, str]:
+    """Widget id -> file path, for the layout's open files."""
+    return {k: v["data"]["path"] for k, v in data.items()
+            if isinstance(v, dict) and isinstance(v.get("data"), dict) and isinstance(v["data"].get("path"), str)
+            and ":" in k}
+
+
+def _dock_ids(node) -> list[str]:
+    if not isinstance(node, dict):
+        return []
+    if node.get("type") == "tab-area":
+        return list(node.get("widgets", []))
+    return [i for child in node.get("children", []) for i in _dock_ids(child)]
+
+
+def _map_dock(node, rename: dict[str, str | None]):
+    """The dock tree with widget ids renamed; ids mapped to None are dropped, and so are areas left empty."""
+    if not isinstance(node, dict):
+        return None
+    if node.get("type") == "tab-area":
+        old = node.get("widgets", [])
+        current = old[node.get("currentIndex", 0)] if 0 <= node.get("currentIndex", 0) < len(old) else None
+        widgets = [rename.get(w, w) for w in old if rename.get(w, w) is not None]
+        if not widgets:
+            return None
+        new_current = rename.get(current, current) if current else None
+        return {**node, "widgets": widgets,
+                "currentIndex": widgets.index(new_current) if new_current in widgets else 0}
+    children = node.get("children", [])
+    sizes = node.get("sizes") or [1] * len(children)
+    kept = [(m, s) for m, s in ((_map_dock(c, rename), s) for c, s in zip(children, sizes)) if m is not None]
+    if not kept:
+        return None
+    if len(kept) == 1:
+        return kept[0][0]
+    total = sum(s for _, s in kept) or 1
+    return {**node, "children": [c for c, _ in kept], "sizes": [s / total for _, s in kept]}
+
+
+def _move(data: dict, path_map) -> dict:
+    """The layout with every open file's path changed by ``path_map(path, folder=False)`` (None:
+    close that file); also the file browser's folder."""
+    data = json.loads(json.dumps(data))
+    rename: dict[str, str | None] = {}
+    for wid, path in _file_widgets(data).items():
+        new = path_map(path)
+        entry = data.pop(wid)
+        if new is None:
+            rename[wid] = None
+            continue
+        kind = wid.split(":", 1)[0]
+        rename[wid] = f"{kind}:{new}"
+        entry["data"]["path"] = new
+        data[rename[wid]] = entry
+    restorer = data.get("layout-restorer:data", {})
+    main = restorer.get("main") or {}
+    if "dock" in main:
+        main["dock"] = _map_dock(main["dock"], rename)
+        if main["dock"] is None:
+            main.pop("dock")
+    if main.get("current") in rename:
+        main["current"] = rename[main["current"]]
+        if main["current"] is None:
+            main.pop("current")
+    cwd = data.get("file-browser-filebrowser:cwd")
+    if isinstance(cwd, dict) and isinstance(cwd.get("path"), str):
+        cwd["path"] = path_map(cwd["path"], folder=True)
+    return data
+
+
+def to_server(data: dict, prefix: str, project: Path) -> dict:
+    """A project's saved layout -> JupyterLab's paths (from the server's root); files that no
+    longer exist are left out."""
+    def path_map(path: str, folder: bool = False):
+        if not folder and not (project / path).is_file():
+            return None
+        return "/".join(p for p in (prefix, path) if p)
+    return _move(data, path_map)
+
+
+def from_server(data: dict, prefix: str) -> dict:
+    """JupyterLab's layout -> paths relative to the project; files outside the project are left out."""
+    head = prefix + "/" if prefix else ""
+
+    def path_map(path: str, folder: bool = False):
+        if not prefix:
+            return path
+        if folder and path == prefix:
+            return ""
+        return path[len(head):] if path.startswith(head) else ("" if folder else None)
+    return _move(data, path_map)
+
+
+def _lab(port: int, token: str, method: str, path: str, body: dict | None = None):
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Authorization": f"token {token}", "Content-Type": "application/json"})
-    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=10):   # local: no proxy
-        pass
-    return f"{base}/workspaces/{space}?token={token}"
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=10) as r:   # local: no proxy
+        text = r.read()
+    return json.loads(text) if text else None
+
+
+def open_layout(port: int, token: str, prefix: str, project: Path, reset: bool = False) -> str:
+    """Load the project's layout (or the two-file one) into JupyterLab; returns its address."""
+    saved = None
+    if not reset and layout_path(project).is_file():
+        try:
+            saved = json.loads(layout_path(project).read_text(encoding="utf-8"))
+        except ValueError:
+            saved = None
+    data = to_server(saved, prefix, project) if isinstance(saved, dict) else None
+    if not data or not _dock_ids((data.get("layout-restorer:data", {}).get("main") or {}).get("dock")):
+        data = to_server(default_layout(project), prefix, project)
+    space = space_id(prefix)
+    _lab(port, token, "PUT", f"/lab/api/workspaces/{space}", {"data": data, "metadata": {"id": space}})
+    if reset:
+        save_layout(port, token, prefix, project)
+    return f"http://127.0.0.1:{port}/lab/workspaces/{space}?token={token}"
+
+
+def save_layout(port: int, token: str, prefix: str, project: Path) -> bool:
+    """Write JupyterLab's current layout of the project into the project (only if it changed)."""
+    if not project.is_dir():
+        return False
+    got = _lab(port, token, "GET", f"/lab/api/workspaces/{space_id(prefix)}") or {}
+    data = got.get("data")
+    if not isinstance(data, dict) or not data:
+        return False
+    text = json.dumps(from_server(data, prefix), indent=1, sort_keys=True) + "\n"
+    path = layout_path(project)
+    if path.is_file() and path.read_text(encoding="utf-8") == text:
+        return False
+    path.parent.mkdir(exist_ok=True)
+    ignore = path.parent / ".gitignore"
+    if not ignore.exists():
+        ignore.write_text("# klean: JupyterLab layout, not part of the strategy\n*\n", encoding="utf-8")
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+    return True
+
+
+def project_kernels(port: int, token: str, prefix: str) -> list[dict]:
+    """The running notebook sessions (kernels) of one project's notebooks."""
+    head = prefix + "/" if prefix else ""
+    return [s for s in _lab(port, token, "GET", "/api/sessions") or [] if str(s.get("path", "")).startswith(head)]
+
+
+def shutdown_kernels(port: int, token: str, prefix: str) -> int:
+    sessions = project_kernels(port, token, prefix)
+    for s in sessions:
+        _lab(port, token, "DELETE", f"/api/sessions/{s['id']}")
+    return len(sessions)
 
 
 def free_port() -> int:
@@ -204,7 +373,13 @@ def jupyter_command(ws: Workspace, root: Path, port: int, token: str, frame_ance
            f"--ServerApp.root_dir={root}", f"--IdentityProvider.token={token}",
            "--ServerApp.port_retries=0",
            # no "news" / "new version" pop-ups (and no calls to jupyter.org): a local tool
-           "--LabApp.news_url=None", "--LabApp.check_for_updates_class=jupyterlab.NeverCheckForUpdate"]
+           "--LabApp.news_url=None", "--LabApp.check_for_updates_class=jupyterlab.NeverCheckForUpdate",
+           # layouts of this klean workspace only (each project's own is kept in the project, see open_layout)
+           f"--LabApp.workspaces_dir={research_dir(ws) / 'lab-workspaces'}",
+           # a kernel holds LEAN in memory: stop one that has been idle for an hour with no notebook
+           # open on it (closing a tab doesn't stop its kernel); open notebooks keep theirs
+           f"--MappingKernelManager.cull_idle_timeout={KERNEL_IDLE_SECONDS}",
+           "--MappingKernelManager.cull_interval=300", "--MappingKernelManager.cull_connected=False"]
     if frame_ancestors:   # `klean gui` shows JupyterLab in its page (another port on 127.0.0.1)
         csp = f"frame-ancestors 'self' {frame_ancestors}"
         cmd.append("--ServerApp.tornado_settings=" + json.dumps({"headers": {"Content-Security-Policy": csp}}))
@@ -213,16 +388,26 @@ def jupyter_command(ws: Workspace, root: Path, port: int, token: str, frame_ance
     return cmd
 
 
-def start(ws: Workspace, project: Path, port: int = 0, log=print, output=None) -> tuple[subprocess.Popen, str]:
-    """Start JupyterLab for the project and return (process, URL with its token)."""
+def start(ws: Workspace, project: Path, port: int = 0, log=print, output=None) -> tuple[subprocess.Popen, int, str]:
+    """Start JupyterLab for the project (its folder is the server's root); returns (process, port, token)."""
     ensure_packages(ws, log)
     env = prepare(ws)
-    nb = ensure_notebook(ws, project)
+    ensure_notebook(ws, project)
     port = port or free_port()
     token = secrets.token_urlsafe(24)
-    url = f"http://127.0.0.1:{port}/lab/tree/{nb.name}?token={token}"
     cmd = jupyter_command(ws, project, port, token)
-    return subprocess.Popen(cmd, cwd=project, env={**os.environ, **env}, stdout=output, stderr=output), url
+    return subprocess.Popen(cmd, cwd=project, env={**os.environ, **env}, stdout=output, stderr=output), port, token
+
+
+def wait_ready(proc: subprocess.Popen, port: int, token: str, seconds: float = 120) -> bool:
+    deadline = time.time() + seconds
+    while time.time() < deadline and proc.poll() is None:
+        try:
+            _lab(port, token, "GET", "/api/status")
+            return True
+        except OSError:
+            time.sleep(0.5)
+    return False
 
 
 def start_workspace_server(ws: Workspace, frame_ancestors: str, output=None) -> tuple[subprocess.Popen, int, str]:
@@ -241,16 +426,39 @@ def packages_installed(ws: Workspace) -> bool:
 
 
 def launch(ws: Workspace, project: Path, port: int = 0, open_browser: bool = True, log=print) -> int:
-    proc, url = start(ws, project, port, log)
+    """JupyterLab for one project, opened on the project's own layout, which is saved back every
+    minute and when it stops."""
+    proc, port, token = start(ws, project, port, log)
     if results.is_demo_data(ws):
         log(f"*** {results.DEMO_BANNER} ***")
+    url = f"http://127.0.0.1:{port}/lab/workspaces/{space_id('')}?token={token}"
     log(f"klean research: JupyterLab for {project.name}\n  {url}\n(Ctrl+C to stop)")
-    if open_browser:
-        from klean.gui import open_page
-        threading.Timer(3.0, lambda: open_page(url)).start()
+    stop = threading.Event()
+
+    def save():
+        try:
+            save_layout(port, token, "", project)
+        except (OSError, ValueError):
+            pass
+
+    def run():
+        if not wait_ready(proc, port, token):
+            return
+        try:
+            open_layout(port, token, "", project)
+        except (OSError, ValueError) as e:
+            log(f"klean research: couldn't load the project's layout ({e}); opening the default one")
+        if open_browser:
+            from klean.gui import open_page
+            open_page(url)
+        while not stop.wait(60):
+            save()
+    threading.Thread(target=run, daemon=True).start()
     try:
         return proc.wait()
     except KeyboardInterrupt:
+        stop.set()
+        save()
         proc.terminate()
         proc.wait()
         return 0

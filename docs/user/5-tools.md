@@ -91,13 +91,14 @@ US/global events and are empty outside your data's dates.
 
 ## Research notebooks
 
-The easiest way in is the GUI's **Research** tab (`klean gui`, then *Research*, or *Open … in
-Research* on a project page): JupyterLab for the whole workspace inside the page, with every
-project's files, notebooks and a terminal. Pick a project's `research.ipynb` from the list at the
-top. The first time, klean installs JupyterLab (a few minutes). On its own:
+The easiest way in is the GUI's **Research** dashboard (`klean gui`, pick the project in the top
+bar, then *Research*): JupyterLab inside the page. Each project opens in **its own layout**: the
+files and tabs you left open for it. The first time, that's the strategy (`main.py` / `Main.cs`)
+and `research.ipynb` side by side. The first time, klean also installs JupyterLab (a few
+minutes). On its own:
 
 ```bash
-klean research Top20                  # JupyterLab in the browser, with the project's research.ipynb
+klean research Top20                  # JupyterLab in the browser, on the project's layout
 klean research Top20 --port 8888 --no-browser
 klean research Top20 --execute        # run research.ipynb without a browser → research.executed.ipynb
 ```
@@ -119,6 +120,16 @@ sma = qb.indicator(SimpleMovingAverage(60), symbol, datetime(2020, 1, 1), dateti
   hundred MB.
 - Open notebooks with `klean research`, not plain `jupyter lab`: klean is what loads LEAN into
   the notebook.
+- **Layouts:** a project's layout is kept in the project, `.jupyter/layout.json` (hidden; file
+  paths relative to the project, so it survives a rename and travels with a copied folder; left
+  out of git by its own `.gitignore`, of run snapshots and of live deployments). klean saves it
+  when you switch to another project or dashboard, every minute, and when JupyterLab stops. In
+  the Research bar: *Reset layout* (back to the strategy and `research.ipynb`) and *Shut down
+  kernels* (the project's notebook kernels, with how many are running).
+- **Kernels** belong to JupyterLab, not to a layout: switching project leaves the other
+  project's kernels running. Each holds LEAN in memory, so JupyterLab stops a kernel after an hour
+  idle with no notebook open on it (closing a notebook's tab doesn't stop its kernel); kernels of
+  open notebooks keep running until you shut them down.
 - `klean create-project` writes a starter `research.ipynb` (history of one stock, a 60-day
   average, the stock against the KOSPI 200); for an older project without one, `klean research`
   writes it. Your notebooks are never overwritten.
@@ -139,12 +150,15 @@ klean gui                         # opens http://127.0.0.1:<port>/?token=… in 
 klean gui --port 8765 --no-browser
 ```
 
-Four dashboards; the Workspace is the landing page, and each project has the other three.
+Four dashboards; the Workspace is the landing page, and each project has the other three. The
+top bar is the same everywhere: *Workspace*, the **project** (choosing another one keeps the
+dashboard: from Top20's Backtest to Momentum's Backtest), and the project's **Research ·
+Backtest · Live**. On the Workspace page it shows the last project you used.
 
 | Dashboard | Shows |
 |---|---|
 | **Workspace** | left: projects with their number of backtests, last backtest, number of live runs and last live run (a project's name opens its Research, the run columns open Backtest or Live), and *New project* (name, language, template → *Create project*, as `klean create-project`; then the new project's Research dashboard opens with `main.py` (or `Main.cs`) and `research.ipynb` side by side); right: KRX data, setup check, settings |
-| **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), opened on the project's `research.ipynb`; *Backtest* and *Live* in the title bar |
+| **Research** | JupyterLab inside the page (LEAN loaded in every notebook; files, editor, terminal), on the project's own layout; *Reset layout*, *Shut down kernels*, *Open in a new tab*. *Open JupyterLab (all files)* on the Workspace page shows the whole workspace instead |
 | **Backtest** | left: *New backtest* and *New optimization* forms, the runs (tick two or more → *Compare selected*), the optimizations; right: the selected run (the latest by default: figures, equity vs KOSPI 200, drawdown, statistics, orders, log, code, run record, *Make LEAN report*, *Rename*, *Delete*), an optimization, or the comparison |
 | **Live** | left: *New paper deployment* (parameters from one of the project's backtests, starting cash, optional first day) and the deployments; right: the selected one's account, equity vs KOSPI 200, positions, waiting orders, fills, daily runs (with LEAN's console output); *Trade new days*, *Stop* |
 

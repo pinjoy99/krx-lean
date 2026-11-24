@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.0.24 — 2026-11-24
+
+- **One JupyterLab layout per project.** Each project opens in its own layout (open files, tabs,
+  splits), kept in the project as `.jupyter/layout.json` with paths relative to the project: it
+  survives a rename, travels with a copied folder, and is left out of git (its own `.gitignore`),
+  run snapshots and live deployments. Saved when you switch project or dashboard, every minute,
+  and when JupyterLab stops; `klean research P` uses it too. Before, projects shared one layout
+  after their first opening.
+- Research bar: *Reset layout* (the strategy and `research.ipynb` side by side again) and *Shut
+  down kernels* (this project's notebook kernels, with how many are running).
+- JupyterLab stops a kernel after an hour idle with no notebook open on it (each holds LEAN in
+  memory; closing a tab doesn't stop its kernel). Layouts are stored per klean workspace.
+- **Top bar:** *Workspace*, a **project switcher** and the project's **Research · Backtest ·
+  Live** on every dashboard. Choosing another project keeps the dashboard; the Workspace page
+  shows the last project used. The per-page Research/Backtest/Live buttons and the Research
+  page's notebook list are gone; *Open JupyterLab (all files)* on the Workspace page opens the
+  whole workspace. The top bar wraps on narrow windows.
+
 ## 0.0.23 — 2026-11-24
 
 - **New project in the GUI:** the Workspace dashboard has a *New project* box (name, language,

@@ -150,7 +150,8 @@ def api_project(ws: Workspace, q: dict) -> dict:
     p = inside(ws, ws.root / q["name"][0])
     lang = projects.language_of(p)
     files = sorted(f.relative_to(p).as_posix() for f in p.rglob("*") if f.is_file()
-                   and f.relative_to(p).parts[0] not in results.OUTPUT_DIRS)
+                   and f.relative_to(p).parts[0] not in results.OUTPUT_DIRS
+                   and not any(part.startswith(".") for part in f.relative_to(p).parts[:-1]))
     return {"name": p.name, "language": lang, "files": files,
             "runs": [run_row(r) for r in reversed(results.runs(p))],
             "optimizations": [opt_row(o) for o in reversed(optimizations(p))]}
@@ -467,8 +468,10 @@ class Jobs:
     def research(self, ws: Workspace, body: dict | None, gui_port: int) -> dict:
         """The workspace's JupyterLab, shown in the page's Research tab: started on the first POST
         (installing JupyterLab into the Python env the first time), stopped with the GUI. GET
-        (body None) only reports its state. With a project, also its notebook's address; with
-        "layout": "new" too, a layout showing its strategy file and notebook side by side."""
+        (body None) only reports its state. With a project, the address of the project's own
+        layout (kept in <project>/.jupyter/layout.json; the strategy file and research.ipynb side by
+        side the first time), loaded into JupyterLab the first time the project opens, and how many
+        of its notebooks have a kernel running."""
         from klean import research
         project = None
         if body and body.get("project"):
@@ -491,12 +494,52 @@ class Jobs:
             base = f"http://127.0.0.1:{nb['port']}"
             state["url"] = f"{base}/lab?token={nb['token']}"
             if project is not None:
-                notebook = research.ensure_notebook(ws, project)
+                research.ensure_notebook(ws, project)
                 rel = project.relative_to(ws.root.resolve()).as_posix()
-                state["url"] = f"{base}/lab/tree/{rel}/{notebook.name}?token={nb['token']}"
-                if body and body.get("layout") == "new":
-                    state["url"] = research.side_by_side(nb["port"], nb["token"], ws.root.resolve(), project)
+                opened = nb.setdefault("opened", {})
+                if rel not in opened:
+                    research.open_layout(nb["port"], nb["token"], rel, project)
+                    opened[rel] = project
+                state["url"] = f"{base}/lab/workspaces/{research.space_id(rel)}?token={nb['token']}"
+                try:
+                    state["kernels"] = len(research.project_kernels(nb["port"], nb["token"], rel))
+                except OSError:
+                    state["kernels"] = None
         return state
+
+    def research_layout(self, ws: Workspace, body: dict) -> dict:
+        """A project's layout and kernels: "save" (into the project), "reset" (back to the
+        strategy file and research.ipynb), "shutdown" (stop the kernels of its notebooks)."""
+        from klean import research
+        project = inside(ws, ws.root / str(body.get("project", "")))
+        projects.language_of(project)
+        action = str(body.get("action", ""))
+        nb = self.notebook
+        if nb.get("status") != "ready":
+            raise KleanError("JupyterLab isn't running")
+        rel = project.relative_to(ws.root.resolve()).as_posix()
+        port, token = nb["port"], nb["token"]
+        if action == "save":
+            return {"saved": research.save_layout(port, token, rel, project) if rel in nb.get("opened", {}) else False}
+        if action == "reset":
+            research.open_layout(port, token, rel, project, reset=True)
+            nb.setdefault("opened", {})[rel] = project
+            return {"url": f"http://127.0.0.1:{port}/lab/workspaces/{research.space_id(rel)}?token={token}"}
+        if action == "shutdown":
+            return {"stopped": research.shutdown_kernels(port, token, rel)}
+        raise KleanError(f"unknown action {action!r} (save, reset, shutdown)")
+
+    def save_layouts(self) -> None:
+        """Every opened project's layout back into the project (every minute, and when stopping)."""
+        from klean import research
+        nb = self.notebook
+        if nb.get("status") != "ready":
+            return
+        for rel, project in list(nb.get("opened", {}).items()):
+            try:
+                research.save_layout(nb["port"], nb["token"], rel, project)
+            except (OSError, ValueError):
+                pass
 
     def _start_notebook(self, ws: Workspace, gui_port: int) -> None:
         from klean import research
@@ -519,7 +562,14 @@ class Jobs:
                 try:
                     with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status?token={token}", timeout=2):
                         nb["status"] = "ready"
-                        return
+
+                    def autosave():                    # each opened project's layout, every minute
+                        while proc.poll() is None:
+                            time.sleep(60)
+                            if nb.get("proc") is proc:
+                                self.save_layouts()
+                    threading.Thread(target=autosave, daemon=True).start()
+                    return
                 except OSError:
                     time.sleep(0.5)
             raise KleanError(f"JupyterLab didn't answer in 2 minutes; see {folder / 'jupyter.log'}")
@@ -529,6 +579,7 @@ class Jobs:
     def stop_all(self) -> None:
         proc = self.notebook.get("proc")
         if proc is not None and proc.poll() is None:
+            self.save_layouts()
             proc.terminate()                  # JupyterLab shuts its kernels down first
             try:
                 proc.wait(timeout=10)
@@ -645,6 +696,8 @@ def make_handler(ws: Workspace, token: str, jobs: Jobs):
                     self._json(jobs.start_live(Workspace.load(ws.root), body))
                 elif url.path == "/api/live-stop":
                     self._json(api_live_stop(Workspace.load(ws.root), body))
+                elif url.path == "/api/research-layout":
+                    self._json(jobs.research_layout(Workspace.load(ws.root), body))
                 elif url.path == "/api/create-project":
                     self._json(api_create_project(Workspace.load(ws.root), body))
                 elif url.path == "/api/run-delete":

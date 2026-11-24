@@ -1,7 +1,7 @@
 // Backtest dashboard for one project. Left: new backtest / optimization forms, the runs list
 // (tick two or more to compare) and the optimizations. Right: the selected run (default: the
 // latest), an optimization, or a comparison. Moving between runs only redraws the right column.
-import {api, app, compareHash, esc, liveHash, optHash, pageState, researchHash, runHash, setTitle, signClass,
+import {api, app, compareHash, esc, optHash, pageState, runHash, setTitle, signClass,
         statVal} from "../util.js";
 import {renderRun} from "./run.js";
 import {renderOptimization} from "./optimization.js";
@@ -22,12 +22,8 @@ async function drawDashboard(project) {
   const p = await api("/api/project", {name: project});
   shown = {project, data: p};
   app.innerHTML = `<div class="dashhead">
-      <a href="#/" class="back">‹ Workspace</a>
       <h1>${esc(p.name)} <span class="badge run">${esc(p.language)}</span></h1>
       <span class="muted">Backtest</span>
-      <span class="spacer"></span>
-      <a class="button secondary" href="${researchHash(p.name)}">Research</a>
-      <a class="button secondary" href="${liveHash(p.name)}">Live</a>
     </div>
     <div class="cols">
       <div id="bt-left" class="col-left"></div>

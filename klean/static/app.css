@@ -16,7 +16,19 @@ header { display: flex; align-items: center; gap: 20px; padding: 10px 20px; back
 header .brand { font-weight: 700; letter-spacing: .3px; }
 header .brand small { color: var(--muted); font-weight: 400; margin-left: 6px; }
 header nav a { margin-right: 14px; }
+/* top bar: Workspace · project · Research | Backtest | Live, the same on every dashboard */
+header .topnav { display: flex; align-items: center; gap: 12px; min-width: 0; }
+header .topnav > a { margin-right: 0; padding: 4px 2px; border-bottom: 2px solid transparent; color: var(--muted); }
+header .topnav a.on { color: var(--text); border-color: var(--accent); }
+header .topnav select { width: auto; max-width: 16em; padding: 4px 8px; font-weight: 600; }
+header .dashtabs { display: flex; gap: 4px; }
+header .dashtabs a { margin: 0; padding: 4px 10px; border-bottom: 2px solid transparent; color: var(--muted); }
+header .dashtabs a.on { color: var(--text); border-color: var(--accent); }
+header .dashtabs a:hover, header .topnav > a:hover { color: var(--text); text-decoration: none; }
 header .ws { margin-left: auto; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
+@media (max-width: 900px) { header { gap: 12px; padding: 8px 12px; flex-wrap: wrap; } header .ws, header .brand small { display: none; }
+  header .topnav { flex-wrap: wrap; gap: 6px 10px; } header .topnav select { max-width: 11em; }
+  header .dashtabs a { padding: 4px 6px; } }
 main { max-width: 1240px; margin: 0 auto; padding: 18px 20px 60px; }
 a { color: var(--accent); text-decoration: none; cursor: pointer; }
 a:hover { text-decoration: underline; }
@@ -70,7 +82,6 @@ input[type=text], textarea, select { font: inherit; padding: 5px 8px; border: 1p
 /* Research: JupyterLab fills the window below the header */
 body.wide main { max-width: none; padding: 8px 12px 0; }
 .researchbar { margin-bottom: 8px; }
-.researchbar select { width: auto; min-width: 14em; }
 iframe.lab { display: block; width: 100%; height: calc(100vh - 120px); border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 a.button { display: inline-block; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; }
 a.button.secondary { background: transparent; color: var(--accent); }

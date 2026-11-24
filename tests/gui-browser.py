@@ -151,9 +151,12 @@ with sync_playwright() as pw:
         page.screenshot(path=str(SHOTS / f"{scheme}-optimization.png"), full_page=True)
         print(f"ok  {scheme}-optimization in the right column")
 
-        # Live dashboard is reachable from the title bar
-        page.locator(".dashhead a", has_text="Live").click()
+        # the top bar's tabs: this project's Live dashboard
+        expect(page.locator("#nav-tabs a.on")).to_have_text("Backtest")
+        page.locator("#nav-tabs a", has_text="Live").click()
         expect(page.locator(".dashhead")).to_contain_text("Live")
+        expect(page.locator("#nav-tabs a.on")).to_have_text("Live")
+        page.screenshot(path=str(SHOTS / f"{scheme}-live-nav.png"))
         if errors:
             raise SystemExit(f"{scheme}: browser errors: {errors}")
         page.close()
@@ -175,7 +178,8 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(BASE + "#/")
     page.locator("a.projlink", has_text=re.compile("^Py$")).click()
-    expect(page.locator(".dashhead a.button", has_text="Backtest")).to_be_visible()
+    expect(page.locator("#nav-tabs a.on")).to_have_text("Research")             # top bar: this project's dashboards
+    expect(page.locator("#nav-project")).to_have_value("Py")
     expect(page.locator("iframe.lab")).to_be_visible(timeout=300_000)    # may install JupyterLab first
     lab = page.frame_locator("iframe.lab")
     expect(lab.locator(".jp-Notebook")).to_be_visible(timeout=120_000)
@@ -215,14 +219,35 @@ with sync_playwright() as pw:
     expect(lab.locator(".jp-Notebook")).to_contain_text("QuantBook")
     if not (WS / new_name / "research.ipynb").exists():
         raise SystemExit("new project: no research.ipynb")
+    expect(page.locator("#rkernels")).to_contain_text("running")
     page.screenshot(path=str(SHOTS / "new-project.png"))
+    # the top bar: Backtest of the same project; leaving Research saves its layout into the project
+    page.locator("#nav-tabs a", has_text="Backtest").click()
+    expect(page.locator(".dashhead h1")).to_contain_text(new_name)
+    layout = WS / new_name / ".jupyter" / "layout.json"
+    for _ in range(40):
+        if layout.exists():
+            break
+        time.sleep(0.25)
+    saved = layout.read_text() if layout.exists() else ""
+    if '"editor:main.py"' not in saved or '"notebook:research.ipynb"' not in saved:
+        raise SystemExit(f"new project: layout not saved into the project: {saved[:300]!r}")
+    # switching project keeps the dashboard; Research opens that project's own layout
+    page.locator("#nav-project").select_option("HoldPy")
+    expect(page).to_have_url(re.compile(r"#/backtest/HoldPy$"))
+    page.locator("#nav-tabs a", has_text="Research").click()
+    expect(page.locator("iframe.lab")).to_have_attribute("src", re.compile("/lab/workspaces/klean-p-HoldPy"), timeout=30_000)
+    page.locator("#nav-project").select_option(new_name)
+    expect(page.frame_locator("iframe.lab").locator(".lm-DockPanel-tabBar .lm-TabBar-tabLabel")).to_have_text(
+        ["main.py", "research.ipynb"], timeout=120_000)
     page.goto(BASE + "#/")
     page.locator("#pname").fill(new_name)
     page.get_by_role("button", name="Create project").click()
     expect(page.locator("#pstate")).to_contain_text("already exists")
     if errors:
         raise SystemExit(f"new project: browser errors: {errors}")
-    print("ok  new project from the Workspace page, opened with main.py and research.ipynb")
+    print("ok  new project from the Workspace page, opened with main.py and research.ipynb; its layout saved in the"
+          " project; the top bar switches project and dashboard")
     page.close()
 
     # a backtest started from the page finishes and shows up in the runs list

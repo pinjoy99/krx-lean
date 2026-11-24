@@ -13,7 +13,7 @@ also runs under `lean backtest`.
 | `results.py` | finding runs, statistics, equity curves, `compare`, logs, source files and the code snapshot, `status data` |
 | `optimize.py` | grid search |
 | `report.py` | LEAN's Report |
-| `research.py` | Jupyter with LEAN's QuantBook |
+| `research.py` | Jupyter with LEAN's QuantBook; one JupyterLab layout per project |
 | `kis.py`, `plugin/KisClient.cs`, `plugin/KisPaperBrokerage.cs` | KIS-PAPER: the Korea Investment (KIS) 모의투자 Open API only (`openapivts…:29443`; no real-trading server; keys `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_ACCOUNT`): tokens (cached, shared by Python and C#), balance, cash orders (VTTC0012U buy, VTTC0011U sell), cancel (VTTC0013U), daily fills (VTTC0081R), daily prices (FHKST03010100); `KisPaperBrokerage` sends orders in the pre-open auction, reads fills on the next run; the data queue asks KIS for day bars the KRX files don't have (`krx-kis-prices`). `tests/fake_kis.py` simulates the API for tests |
 | `live.py`, `plugin/` | live paper trading: deployments (`<project>/live/<id>/`: frozen `code/`, `ledger.json`, `runs/<day>/`), one LEAN live-mode process per trading day with klean's plugin (`QuantConnect.Krx.dll`, built into the LEAN build by `ensure_plugin`): `KrxDailyDataQueue` serves the session day's bars, `KrxPaperBrokerage` fills the previous day's orders at the open before LEAN reads the account, records new orders, and stops the run when it's quiet; `KRX_SESSION_DATE` tells the universe reader which day's file to read |
 | `gui.py`, `static/` | local web page: `index.html` (shell), `app.css`, `js/main.js` (router), `js/pages/*.js` (one module per dashboard: workspace, research, backtest, live; the backtest dashboard's right column draws `run.js`, `optimization.js` or `compare.js`), `js/chart.js` (uPlot charts), `js/util.js`; `vendor/uplot/` (MIT, copied in; no CDN, no npm build) |
@@ -160,13 +160,28 @@ also on SIGTERM and SIGHUP), `/api/run-rename` and `/api/run-delete` (`stored_ru
 directly under `<project>/backtests/`, inside the workspace, and not running; rename keeps the
 timestamp prefix).
 
-A new project opens side by side: JupyterLab opens only one file per `/lab/tree/…` address, so
-`/api/research` with `"layout": "new"` (the page's `#/research/P?open=new`) saves a JupyterLab
-workspace `klean-<project>` through JupyterLab's own API (`PUT /lab/api/workspaces/…`, the
-token in the `Authorization` header): a horizontal split with the strategy file in an editor
-and `research.ipynb` in a notebook, file browser collapsed (`research.side_by_side`). The
-iframe then loads `/lab/workspaces/klean-<project>`; JupyterLab keeps saving that layout as the
-user changes it. Opening the project later uses `/lab/tree/<project>/research.ipynb` as before.
+**One JupyterLab layout per project.** JupyterLab keeps layouts ("workspaces": open files, tabs,
+splits) in one folder per server (`--LabApp.workspaces_dir`, set to the klean workspace's
+`.klean/research/lab-workspaces/`), so klean keeps each project's own copy in the project,
+`<project>/.jupyter/layout.json`, with file paths relative to the project (`research.from_server`
+/ `to_server`: files outside the project or no longer there are left out, empty tab areas
+collapse). `/api/research` with a project loads it into JupyterLab as `klean-p-<project>` the
+first time the project opens in this JupyterLab (`open_layout`: `PUT /lab/api/workspaces/…`,
+the token in the `Authorization` header; the strategy file and `research.ipynb` side by side if
+there's none) and returns `/lab/workspaces/klean-p-<project>`; later openings use JupyterLab's own
+copy, which it saves as the user changes it. `save_layout` writes it back into the project (only
+when it changed; with a `.gitignore` of `*` in `.jupyter/`): when the page leaves the project's
+Research (`/api/research-layout` `save`), every minute for every opened project, and before the
+GUI stops JupyterLab. `reset` writes the two-file layout; `shutdown` deletes the project's
+sessions (`/api/sessions` under the project's path), which stops their kernels. `klean research
+P` does the same with `klean-solo` (its server's root is the project). JupyterLab stops kernels
+idle for an hour with no client (`MappingKernelManager.cull_idle_timeout=3600`,
+`cull_connected=False`). Hidden folders are left out of code snapshots and the project's file
+list.
+
+**Top bar** (`main.js`): *Workspace*, a project list (from `/api/workspace`, refreshed on the
+Workspace page; the last project in `localStorage`, try/catch) and the project's Research ·
+Backtest · Live as tabs; choosing a project keeps the dashboard.
 
 ## GUI security
 

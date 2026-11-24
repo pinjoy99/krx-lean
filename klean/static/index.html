@@ -12,7 +12,11 @@
 <body>
 <header>
   <span class="brand">klean<small>local LEAN · KRX</small></span>
-  <nav><a href="#/">Workspace</a></nav>
+  <nav class="topnav">
+    <a href="#/" id="nav-ws">Workspace</a>
+    <select id="nav-project" aria-label="Project"><option value="">Project…</option></select>
+    <span class="dashtabs" id="nav-tabs" hidden><a data-d="research">Research</a><a data-d="backtest">Backtest</a><a data-d="live">Live</a></span>
+  </nav>
   <span class="ws" id="ws"></span>
 </header>
 <div id="demobar" class="demobar" hidden>SYNTHETIC DEMO DATA — made-up prices, not real market data. Results say nothing about the Korean market.</div>

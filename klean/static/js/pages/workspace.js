@@ -1,6 +1,6 @@
 // Workspace dashboard (the landing page). Left: projects, with their backtests and live
 // paper trading deployments, and a New project form (`klean create-project`, then the new
-// project's Research dashboard with main.py and research.ipynb side by side). Right: KRX data,
+// project's Research dashboard, with main.py and research.ipynb side by side the first time). Right: KRX data,
 // setup check, settings.
 import {api, app, backtestHash, esc, liveHash, researchHash, runHash, setTitle, signClass, statVal} from "../util.js";
 
@@ -38,7 +38,9 @@ export async function pageWorkspace() {
   app.innerHTML = `<div class="dashhead"><h1>Workspace</h1></div>
     <div class="cols wide-left">
       <div class="col-left">
-        <div class="panel"><h2>Projects</h2>${w.projects.length ? `<p class="muted small">Open a project's research notebook by its name; its backtests and live runs from their columns.</p>
+        <div class="panel"><div class="row" style="justify-content:space-between"><h2>Projects</h2>
+          <a href="#/research" class="small" title="JupyterLab on the whole workspace: every project's files and a terminal">Open JupyterLab (all files)</a></div>
+          ${w.projects.length ? `<p class="muted small">Open a project's research by its name, its backtests and live runs from their columns, or pick it in the top bar.</p>
           <div class="scroll"><table class="runs"><tr><th>Project</th><th class="num">Backtests</th><th>Last backtest</th><th class="num">Live runs</th><th>Last live run</th></tr>${proj}</table></div>`
           : `<p class="muted">No projects yet: create one below.</p>`}</div>
         <div class="panel" id="newproj"><h2>New project</h2>
@@ -82,7 +84,7 @@ function wireNewProject(w) {
     state.textContent = "Creating…";
     try {
       const r = await api("/api/create-project", {}, {name, language: $("plang").value, template: $("ptmpl").value});
-      location.hash = researchHash(r.name) + "?open=new";
+      location.hash = researchHash(r.name);
     } catch (e) {
       state.innerHTML = `<span class="err">${esc(e.message)}</span>`;
       $("pcreate").disabled = false;

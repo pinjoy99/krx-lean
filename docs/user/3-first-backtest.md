@@ -25,6 +25,7 @@ krx-workspace/
     optimizations/…          one folder per optimization
   storage/                   LEAN's object store (if a strategy or notebook uses it)
   .klean/                    klean's own files (research settings); leave them alone
+  Top20/.jupyter/            the project's JupyterLab layout (hidden, not part of the strategy)
 ```
 
 ## Create a project and run it
@@ -40,7 +41,8 @@ strategy: the 20 largest KOSPI common stocks, equal weight, rebalanced monthly),
 For C#: `klean create-project Top20CS --language csharp --template top-market-cap`.
 Every project also gets a starter research notebook, `research.ipynb` ([5. Tools](5-tools.md#research-notebooks)).
 In the GUI (`klean gui`), the Workspace dashboard's *New project* box does the same and opens
-the new project with `main.py` and `research.ipynb` side by side.
+the new project with `main.py` and `research.ipynb` side by side. Each project keeps its own
+JupyterLab layout ([5. Tools](5-tools.md#research-notebooks)).
 
 What `backtest` does: checks (Python) or compiles (C#) the project, runs LEAN with the
 workspace's data, and prints the main statistics. If the algorithm fails (an exception in

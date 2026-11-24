@@ -93,35 +93,6 @@ class GuiTest(unittest.TestCase):
             self.assertIn(why, body, bad)
         self.assertFalse((self.root / "Q").exists())
 
-    def test_new_project_layout(self):
-        from http.server import BaseHTTPRequestHandler
-        from klean import research
-        seen = []
-
-        class Lab(BaseHTTPRequestHandler):
-            def log_message(self, *a):
-                pass
-
-            def do_PUT(self):  # noqa: N802
-                seen.append((self.path, self.headers["Authorization"],
-                             json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
-                self.send_response(204)
-                self.end_headers()
-        lab = gui.LocalServer(("127.0.0.1", 0), Lab)
-        threading.Thread(target=lab.serve_forever, daemon=True).start()
-        try:
-            port = lab.server_address[1]
-            url = research.side_by_side(port, "tok", self.root, self.root / "A")
-        finally:
-            lab.shutdown()
-            lab.server_close()
-        self.assertEqual(url, f"http://127.0.0.1:{port}/lab/workspaces/klean-A?token=tok")
-        path, auth, layout = seen[0]
-        self.assertEqual((path, auth), ("/lab/api/workspaces/klean-A", "token tok"))
-        dock = layout["data"]["layout-restorer:data"]["main"]["dock"]
-        self.assertEqual([c["widgets"] for c in dock["children"]], [["editor:A/main.py"], ["notebook:A/research.ipynb"]])
-        self.assertEqual(layout["data"]["notebook:A/research.ipynb"]["data"], {"path": "A/research.ipynb", "factory": "Notebook"})
-
     def test_static_files(self):
         # the page's code and styles load without the token (they hold no data)...
         for path in ("/static/js/main.js", "/static/js/pages/run.js", "/static/app.css",

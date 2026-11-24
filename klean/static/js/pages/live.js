@@ -2,7 +2,7 @@
 // (klean's LEAN plugin: one run per trading day, orders filled at the next day's open).
 // Left: deploy, and the deployments. Right: the selected one's account, equity, positions,
 // orders, fills and daily runs.
-import {api, app, backtestHash, compact, day, esc, full, liveHash, researchHash, setTitle, won} from "../util.js";
+import {api, app, compact, day, esc, full, liveHash, setTitle, won} from "../util.js";
 import {lineChart} from "../chart.js";
 
 let shown = null;     // {project, data}
@@ -18,12 +18,8 @@ async function drawDashboard(project) {
   const p = await api("/api/live", {project});
   shown = {project, data: p};
   app.innerHTML = `<div class="dashhead">
-      <a href="#/" class="back">‹ Workspace</a>
       <h1>${esc(p.name)} <span class="badge run">${esc(p.language)}</span></h1>
       <span class="muted">Live</span>
-      <span class="spacer"></span>
-      <a class="button secondary" href="${researchHash(p.name)}">Research</a>
-      <a class="button secondary" href="${backtestHash(p.name)}">Backtest</a>
     </div>
     <div class="cols">
       <div id="lv-left" class="col-left"></div>

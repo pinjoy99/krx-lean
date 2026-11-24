@@ -1,51 +1,66 @@
 // Research: the workspace's JupyterLab inside the page. LEAN's QuantBook is loaded in every
 // notebook; a project's notebook runs in the project folder (its krx_models etc. import).
-// ?open=new (after New project): the strategy file and research.ipynb side by side.
-import {api, app, backtestHash, esc, href, liveHash, pageState, setTitle} from "../util.js";
+// Each project opens in its own JupyterLab layout (open files, tabs, splits), kept in the
+// project as .jupyter/layout.json: the strategy file and research.ipynb side by side at first.
+// The project is chosen in the top bar; without one, JupyterLab shows the whole workspace.
+import {api, app, esc, pageState, setTitle} from "../util.js";
 
 const STATUS = {
   installing: "Installing JupyterLab into the workspace's Python environment (first time only, a few minutes)…",
   starting: "Starting JupyterLab…",
 };
 
-export async function pageResearch(project, query = "") {
-  const layout = project && new URLSearchParams(query || "").get("open") === "new" ? "new" : "";
+export async function pageResearch(project) {
   setTitle(project ? `Research · ${project}` : "Research");
   document.body.classList.add("wide");
   const w = await api("/api/workspace");
-  const names = w.projects.map(p => p.name);
   const lang = w.projects.find(p => p.name === project)?.language;
   app.innerHTML = `<div class="research">
     <div class="dashhead researchbar">
-      <a href="#/" class="back">‹ Workspace</a>
-      <h1>${project ? esc(project) + (lang ? ` <span class="badge run">${esc(lang)}</span>` : "") : "Research"}</h1>
+      <h1>${project ? esc(project) + (lang ? ` <span class="badge run">${esc(lang)}</span>` : "") : "All files"}</h1>
       <span class="muted">Research</span>
-      <select id="rproj" aria-label="Notebook">
-        <option value="">Workspace (all projects)</option>
-        ${names.map(n => `<option value="${esc(n)}" ${n === project ? "selected" : ""}>${esc(n)} / research.ipynb</option>`).join("")}
-      </select>
       <span id="rstate" class="muted"></span>
       <span class="spacer"></span>
+      ${project ? `<span id="rkernels" class="muted small"></span>
+      <button class="secondary" id="rkill" title="Stop the kernels of this project's notebooks (frees their memory; variables are lost)" hidden>Shut down kernels</button>
+      <button class="secondary" id="rreset" title="Close everything and show the strategy file and research.ipynb side by side again" hidden>Reset layout</button>` : ""}
       <a id="rtab" target="_blank" rel="noopener noreferrer" hidden>Open in a new tab</a>
-      ${project ? `<a class="button" href="${backtestHash(project)}">Backtest</a>
-      <a class="button secondary" href="${liveHash(project)}">Live</a>` : ""}
     </div>
     <div id="rbody"><p class="muted">LEAN's QuantBook on this workspace's data, in JupyterLab. Notebooks, code files and a
       terminal: everything in the workspace folder. JupyterLab keeps running while klean gui runs.</p></div>
   </div>`;
-  document.getElementById("rproj").onchange = e => location.hash = e.target.value ? href("research", e.target.value) : "#/research";
 
   const state = document.getElementById("rstate"), body = document.getElementById("rbody");
+  const show = url => {
+    const tab = document.getElementById("rtab");
+    tab.href = url; tab.hidden = false;
+    body.innerHTML = `<iframe class="lab" title="JupyterLab" src="${esc(url)}"></iframe>`;
+  };
+  const kernels = n => {
+    const el = document.getElementById("rkernels");
+    if (!el || n === null || n === undefined) return;
+    el.textContent = n === 1 ? "1 kernel running" : `${n} kernels running`;
+    document.getElementById("rkill").disabled = n === 0;
+  };
   const poll = async () => {
     if (!document.body.contains(state)) return;        // left the page
     let r;
-    try { r = await api("/api/research", {}, project ? {project, ...(layout ? {layout} : {})} : {}); }
+    try { r = await api("/api/research", {}, project ? {project} : {}); }
     catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
     if (r.status === "ready") {
       state.innerHTML = '<span class="badge ok">running</span>';
-      const tab = document.getElementById("rtab");
-      tab.href = r.url; tab.hidden = false;
-      body.innerHTML = `<iframe class="lab" title="JupyterLab" src="${esc(r.url)}"></iframe>`;
+      show(r.url);
+      if (project) {
+        document.getElementById("rkill").hidden = document.getElementById("rreset").hidden = false;
+        kernels(r.kernels);
+        wireProject();
+        const refresh = async () => {                    // notebooks start and stop kernels inside JupyterLab
+          if (!document.body.contains(state)) return;
+          try { kernels((await api("/api/research", {}, {project})).kernels); } catch { /* shown on the next action */ }
+          pageState.pollTimer = setTimeout(refresh, 15000);
+        };
+        pageState.pollTimer = setTimeout(refresh, 15000);
+      }
       return;
     }
     if (r.status === "failed" || r.status === "stopped") {
@@ -60,5 +75,22 @@ export async function pageResearch(project, query = "") {
     body.innerHTML = `<p class="muted">${esc(STATUS[r.status] || "")}</p>`;
     pageState.pollTimer = setTimeout(poll, 1000);
   };
+
+  function wireProject() {
+    document.getElementById("rreset").onclick = async () => {
+      if (!confirm(`Reset ${project}'s layout? Open files close (they are saved files, nothing is lost) and the strategy and research.ipynb open side by side.`)) return;
+      body.innerHTML = '<p class="muted">Resetting the layout…</p>';    // unload JupyterLab first, so it doesn't save the old layout over the new one
+      try { show((await api("/api/research-layout", {}, {project, action: "reset"})).url); }
+      catch (e) { body.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+    };
+    document.getElementById("rkill").onclick = async () => {
+      if (!confirm(`Shut down the kernels of ${project}'s notebooks? Their variables are lost; run the cells again to get them back.`)) return;
+      try {
+        const r = await api("/api/research-layout", {}, {project, action: "shutdown"});
+        kernels(0);
+        state.innerHTML = `<span class="badge ok">running</span> <span class="muted">${r.stopped} kernel(s) shut down</span>`;
+      } catch (e) { state.innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+    };
+  }
   poll();
 }

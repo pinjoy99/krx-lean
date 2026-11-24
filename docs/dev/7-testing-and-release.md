@@ -38,7 +38,9 @@ following the cursor and the log scale; comparing two runs from the project page
 started from the page finishing and appearing in the runs list; the Research tab opening a
 project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel; a project
 created with the Workspace dashboard's *New project* box opening with `main.py` and
-`research.ipynb` side by side (and a second one with the same name refused). A paper deployment
+`research.ipynb` side by side, its layout saved into the project when leaving Research, the top
+bar switching project (keeping the dashboard) and dashboard, and the project's layout restored
+(and a second project with the same name refused). A paper deployment
 made on the Live dashboard trades its days, shows its account, fills and daily runs, and appears
 on the Workspace dashboard.
 
