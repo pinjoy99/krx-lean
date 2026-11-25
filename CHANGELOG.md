@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.29 — 2026-11-25
+
+- **One browser tab at a time per project's Research.** With a project's Research open in two
+  tabs, JupyterLab gave the second an empty layout, both tabs edited their own copies of the same
+  files, and saving from both ended in "File Changed: overwrite or revert?" (one side's edits
+  lost). Now opening it in another tab, or with *Open in a new tab*, moves it there: the first
+  tab saves, unloads JupyterLab and shows "open in another klean tab" with *Use it here*.
+
 ## 0.0.28 — 2026-11-25
 
 - **Edits in Research are saved when you click away.** JupyterLab saved files only every 2

@@ -116,3 +116,4 @@ table.runs th, table.runs td.num { white-space: nowrap; }
 .col-right table td:first-child { overflow-wrap: normal; word-break: normal; min-width: 9em; }
 .badge.paper { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
 #lvrun-view > .runtitle { display: none; }      /* the deployment's own title is above */
+.lab-elsewhere { max-width: 640px; margin: 40px auto; }

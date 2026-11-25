@@ -201,6 +201,14 @@ idle for an hour with no client (`MappingKernelManager.cull_idle_timeout=3600`,
 `cull_connected=False`). Hidden folders are left out of code snapshots and the project's file
 list.
 
+**One tab per project** (`research.js`): JupyterLab gives a second window on a layout already open
+a new empty one (`auto-N`), its editors don't sync, and saving from both ends in "File Changed". The
+klean tabs of a browser profile talk over a `BroadcastChannel` (`klean-research`): opening a
+project's Research posts `claim`; a tab showing it answers `releasing`, blurs its iframe (the
+autosave extension saves), waits 1.5 s, removes the iframe and answers `released`; the claimer loads
+JupyterLab after that (or after 400 ms without an answer). *Open in a new tab* does the same before
+`window.open`.
+
 **Top bar** (`main.js`): *Workspace*, a project list (from `/api/workspace`, refreshed on the
 Workspace page; the last project in `localStorage`, try/catch) and the project's Research ·
 Backtest · Live as tabs; choosing a project keeps the dashboard.

@@ -131,6 +131,12 @@ sma = qb.indicator(SimpleMovingAverage(60), symbol, datetime(2020, 1, 1), dateti
   when you switch to another project or dashboard, every minute, and when JupyterLab stops. In
   the Research bar: *Reset layout* (back to the strategy and `research.ipynb`) and *Shut down
   kernels* (the project's notebook kernels, with how many are running).
+- **One tab at a time per project.** Opening a project's Research in a second browser tab (or
+  with *Open in a new tab*) moves it there: the first tab saves, unloads its JupyterLab and shows
+  "open in another klean tab" with *Use it here* to take it back. So a file is never edited in two
+  places at once (which would end in JupyterLab's "File Changed: overwrite or revert?" and one
+  side's edits lost), and the project keeps its layout. (Two different browsers on one `klean gui`
+  aren't kept apart.)
 - **Kernels** belong to JupyterLab, not to a layout: switching project leaves the other
   project's kernels running. Each holds LEAN in memory, so JupyterLab stops a kernel after an hour
   idle with no notebook open on it (closing a notebook's tab doesn't stop its kernel); kernels of

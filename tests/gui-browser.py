@@ -179,7 +179,8 @@ with sync_playwright() as pw:
     page.close()
 
     # Research: the workspace's JupyterLab inside the page, the project's notebook on the LEAN kernel
-    page = browser.new_page(viewport={"width": 1400, "height": 950})
+    # (a context: a second tab in the same browser profile joins it below)
+    page = browser.new_context(viewport={"width": 1400, "height": 950}).new_page()
     errors = []
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" and not aborted_by_navigation(m) else None)
     page.on("pageerror", lambda e: errors.append(str(e)))
@@ -210,6 +211,32 @@ with sync_playwright() as pw:
     if errors:
         raise SystemExit(f"research: browser errors: {errors}")
     print("ok  research: JupyterLab in the page, the notebook runs on LEAN")
+
+    # one tab at a time per project: a second tab takes Py's Research (with the project's own layout,
+    # not a new auto-N one), the first shows where it went; an edit made in the first is kept
+    lab.locator(".lm-DockPanel-tabBar .lm-TabBar-tabLabel", has_text="main.py").click()
+    lab.locator(".jp-FileEditor .cm-content").first.click()
+    page.keyboard.press("Control+End")
+    page.keyboard.type("\n# edited before another tab took over\n")
+    page2 = page.context.new_page()
+    page2.goto(BASE + "#/research/Py")
+    expect(page.locator(".lab-elsewhere")).to_contain_text("open in another klean tab", timeout=60_000)
+    expect(page.locator("iframe.lab")).to_have_count(0)
+    expect(page2.locator("iframe.lab")).to_be_visible(timeout=60_000)
+    for _ in range(120):
+        frame = next((f for f in page2.frames if "/lab/workspaces/" in f.url), None)
+        if frame:
+            break
+        time.sleep(0.25)
+    if not frame or "/lab/workspaces/klean-p-Py" not in frame.url:
+        raise SystemExit(f"second tab: not on the project's layout: {frame.url if frame else None}")
+    if "# edited before another tab took over" not in (WS / "Py" / "main.py").read_text():
+        raise SystemExit("second tab: the first tab's edit to main.py was lost")
+    page.locator("#rhere").click()                                      # take it back
+    expect(page2.locator(".lab-elsewhere")).to_be_visible(timeout=30_000)
+    expect(page.locator("iframe.lab")).to_be_visible(timeout=60_000)
+    page2.close()
+    print("ok  research: one tab at a time per project (the other shows where it is, Use it here takes it back)")
 
     # New project on the Workspace dashboard: created, then its Research dashboard with main.py and
     # research.ipynb side by side

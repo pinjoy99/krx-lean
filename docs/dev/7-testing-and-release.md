@@ -36,7 +36,9 @@ python tests/gui-browser.py ~/e2e/ws-<n> [screenshot folder]
 Every page in light and dark mode with no browser console errors; chart zoom, the legend
 following the cursor and the log scale; comparing two runs from the project page; a backtest
 started from the page finishing and appearing in the runs list; the Research tab opening a
-project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel; a project
+project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel; a second tab
+taking the project's Research (the first shows where it went and keeps its last edit; the second
+gets the project's layout; *Use it here* takes it back); a project
 created with the Workspace dashboard's *New project* box opening with `main.py` and
 `research.ipynb` side by side, an edit to `main.py` on disk right after clicking *Backtest* (saved
 on focus change, not lost with the frame), its layout saved into the project when leaving Research, the top
