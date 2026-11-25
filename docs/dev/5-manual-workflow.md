@@ -82,7 +82,7 @@ LEAN's `config.json` contains comments and trailing commas; strip them before pa
 ## A notebook by hand
 
 What `klean research` sets up, by hand (JupyterLab 4.5.1, ipykernel and clr-loader 0.2.9
-installed into the 3.11 env first):
+installed into the 3.11 env first; klean also adds `jupyterlab-autosave-on-focus-change`):
 
 ```bash
 mkdir -p ~/research && cd ~/research

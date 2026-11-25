@@ -228,9 +228,20 @@ with sync_playwright() as pw:
         raise SystemExit("new project: no research.ipynb")
     expect(page.locator("#rkernels")).to_contain_text("running")
     page.screenshot(path=str(SHOTS / "new-project.png"))
+    # an edit in the editor, then straight to Backtest: saved when focus leaves it (not lost with the frame)
+    editor = lab.locator(".jp-FileEditor .cm-content").first
+    editor.click()
+    page.keyboard.press("Control+End")
+    page.keyboard.type("\n# edited in Research\n")
     # the top bar: Backtest of the same project; leaving Research saves its layout into the project
     page.locator("#nav-tabs a", has_text="Backtest").click()
     expect(page.locator(".dashhead h1")).to_contain_text(new_name)
+    for _ in range(40):
+        if "# edited in Research" in (WS / new_name / "main.py").read_text():
+            break
+        time.sleep(0.25)
+    else:
+        raise SystemExit("research: an edit in main.py was lost when switching to Backtest (not saved on focus change)")
     layout = WS / new_name / ".jupyter" / "layout.json"
     for _ in range(40):
         if layout.exists():
@@ -254,8 +265,8 @@ with sync_playwright() as pw:
     expect(page.locator("#pstate")).to_contain_text("already exists")
     if errors:
         raise SystemExit(f"new project: browser errors: {errors}")
-    print("ok  new project from the Workspace page, opened with main.py and research.ipynb; its layout saved in the"
-          " project; the top bar switches project and dashboard")
+    print("ok  new project from the Workspace page, opened with main.py and research.ipynb; an edit saved on leaving;"
+          " its layout saved in the project; the top bar switches project and dashboard")
     page.close()
 
     # the forms list the parameters the strategy reads, with their defaults (top-market-cap: Py)

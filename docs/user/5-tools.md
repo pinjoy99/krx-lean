@@ -117,7 +117,12 @@ sma = qb.indicator(SimpleMovingAverage(60), symbol, datetime(2020, 1, 1), dateti
 
 - **First use:** klean installs JupyterLab 4.5.1, ipykernel, clr-loader 0.2.9 and matplotlib
   into the Python 3.11 environment (the versions of LEAN's Docker image); a few minutes and a few
-  hundred MB.
+  hundred MB. Also the JupyterLab extension *autosave-on-focus-change* (0.4.1, BSD-3).
+- **Saving:** a file is saved as soon as you click away from it: another tab in JupyterLab, or
+  klean's own page (the *Backtest* tab, another project). So a backtest started right after an
+  edit runs the edited code, and switching dashboards never drops an edit. (JupyterLab alone
+  saves only every 2 minutes.) Turn it off, or exclude files, in JupyterLab's *Settings ›
+  Settings Editor › Autosave on focus change*.
 - Open notebooks with `klean research`, not plain `jupyter lab`: klean is what loads LEAN into
   the notebook.
 - **Layouts:** a project's layout is kept in the project, `.jupyter/layout.json` (hidden; file
@@ -180,7 +185,7 @@ URL yourself. Stop it with Ctrl+C or by closing its terminal (JupyterLab stops w
 *Delete*
 removes a run's folder for good, after asking; only runs in a project's `backtests/` folder can
 be renamed or deleted, and never one that is still running. To edit a strategy, open its
-`main.py` in the Research tab (JupyterLab's editor; files save automatically) or use your own
+`main.py` in the Research tab (JupyterLab's editor; a file is saved when you click away from it) or use your own
 editor.
 
 ## Live paper trading (Live)

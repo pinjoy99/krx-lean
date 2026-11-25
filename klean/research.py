@@ -37,7 +37,10 @@ from klean.workspace import KleanError, Workspace, dotnet, git_commit, run, venv
 
 # JupyterLab and clr-loader as in LEAN's DockerfileLeanFoundation / DockerfileJupyter at the tested
 # commit; matplotlib as for `klean report`.
-RESEARCH_PACKAGES = ["jupyterlab==4.5.1", "ipykernel", "clr-loader==0.2.9", "matplotlib==3.8.4"]
+RESEARCH_PACKAGES = ["jupyterlab==4.5.1", "ipykernel", "clr-loader==0.2.9", "matplotlib==3.8.4",
+                     # saves a file when you click away from it (the GUI's tabs replace JupyterLab's frame,
+                     # which would otherwise drop edits made in the last 2 minutes): BSD-3, JupyterLab 4
+                     "jupyterlab-autosave-on-focus-change==0.4.1"]
 NOTEBOOK = "research.ipynb"
 KERNEL_IDLE_SECONDS = 3600
 STARTUP = "00-klean-lean.py"
@@ -47,7 +50,8 @@ def research_dir(ws: Workspace) -> Path:
     return ws.root / ".klean" / "research"
 
 
-PACKAGES_CHECK = "import jupyterlab, ipykernel, nbconvert, clr_loader, matplotlib"
+PACKAGES_CHECK = ("import jupyterlab, ipykernel, nbconvert, clr_loader, matplotlib, importlib.metadata as m; "
+                  "m.version('jupyterlab-autosave-on-focus-change')")    # a JupyterLab extension: nothing to import
 
 
 def ensure_packages(ws: Workspace, log=print) -> None:

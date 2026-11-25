@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.28 — 2026-11-25
+
+- **Edits in Research are saved when you click away.** JupyterLab saved files only every 2
+  minutes, so a backtest started right after editing `main.py` could run the old code, and
+  clicking a top-bar tab (*Backtest*, *Live*, another project) replaced JupyterLab's frame and
+  dropped the unsaved edit. klean now installs the JupyterLab extension
+  `jupyterlab-autosave-on-focus-change` 0.4.1 (BSD-3) with JupyterLab: a file is saved as soon as
+  it loses focus, also to klean's page. Existing environments get it the next time Research
+  starts. It can be turned off in JupyterLab's settings.
+
 ## 0.0.27 — 2026-11-25
 
 - Fix (0.0.26): two klean processes starting at the same moment could each conclude that file

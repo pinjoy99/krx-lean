@@ -95,7 +95,10 @@ LEAN's build already has the research parts: `QuantConnect.Research.dll` and `st
 imports `AlgorithmImports`, and starts LEAN's handlers from `./config.json`. klean:
 
 1. installs `RESEARCH_PACKAGES` (JupyterLab 4.5.1 and clr-loader 0.2.9, as in LEAN's Docker
-   images; ipykernel; matplotlib 3.8.4) into the workspace's Python 3.11 env, once;
+   images; ipykernel; matplotlib 3.8.4; `jupyterlab-autosave-on-focus-change` 0.4.1) into the
+   workspace's Python 3.11 env, once (again when one is missing: `PACKAGES_CHECK`). The extension
+   saves a document when it loses focus, also to klean's page: the GUI's tabs replace
+   JupyterLab's frame, and JupyterLab's own autosave (every 120 s) would drop the last edits;
 2. writes `<workspace>/.klean/research/config.json` (data folder, `composer-dll-directory` =
    the launcher folder, `object-store-root` = `<workspace>/storage`, LEAN's log to
    `.klean/research/log.txt`, plus the workspace's LEAN keys), a copy of `krx_models.py` in

@@ -38,7 +38,8 @@ following the cursor and the log scale; comparing two runs from the project page
 started from the page finishing and appearing in the runs list; the Research tab opening a
 project's notebook in the embedded JupyterLab and running a cell on the LEAN kernel; a project
 created with the Workspace dashboard's *New project* box opening with `main.py` and
-`research.ipynb` side by side, its layout saved into the project when leaving Research, the top
+`research.ipynb` side by side, an edit to `main.py` on disk right after clicking *Backtest* (saved
+on focus change, not lost with the frame), its layout saved into the project when leaving Research, the top
 bar switching project (keeping the dashboard) and dashboard, and the project's layout restored
 (and a second project with the same name refused); the backtest and optimization forms prefilled
 with a top-market-cap strategy's parameters, and a backtest started from the page sending none
