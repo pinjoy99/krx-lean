@@ -71,6 +71,12 @@ def start_gui() -> str:
     raise SystemExit("klean gui didn't start:\n" + ("".join(failed) or f"no answer from {url} in 30 s"))
 
 
+def aborted_by_navigation(message) -> bool:
+    """JupyterLab (in the Research frame) logs its requests in progress as errors when the page
+    moves on, e.g. to another dashboard while a file is still opening: harmless, not klean's."""
+    return "Failed to fetch" in message.text and "/static/lab/" in (message.location or {}).get("url", "")
+
+
 def check(page: Page, errors: list[str], name: str, hash_: str, charts: int) -> None:
     page.goto(BASE + hash_)
     try:
@@ -175,7 +181,7 @@ with sync_playwright() as pw:
     # Research: the workspace's JupyterLab inside the page, the project's notebook on the LEAN kernel
     page = browser.new_page(viewport={"width": 1400, "height": 950})
     errors = []
-    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" and not aborted_by_navigation(m) else None)
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(BASE + "#/")
     page.locator("a.projlink", has_text=re.compile("^Py$")).click()

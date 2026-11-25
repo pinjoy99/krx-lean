@@ -223,6 +223,11 @@ the account as it was and is retried on the next run.
   day's close), limit (at the open if better, else at the limit if the day's range reaches
   it; otherwise it keeps waiting). No short selling; a buy larger than the cash is reduced.
   Not yet: splits and dividends on holdings, the ±30% daily price limits.
+- **One run at a time.** A scheduled `klean live run`, `klean update data` and the GUI can start
+  at the same time: one of them processes the deployment's new days, the others skip it
+  ("skipped, already being run by pid …"), so no day is processed twice and no KIS-PAPER order
+  is sent twice. *Stop* during a run stops it after the day in progress. A data update waits
+  for a trading day in progress to finish.
 - Files: `<project>/live/<id>/` with `deployment.json`, `code/` (the frozen code),
   `ledger.json` (cash, holdings, waiting orders, fills, daily equity) and `runs/<day>/` (LEAN's
   output for each day).
@@ -248,7 +253,8 @@ klean's own paper broker: broker `kis-paper`. klean only ever connects to KIS's 
 
 2. Check them: `klean live kis-check` (logs in, shows the 모의투자 account and one day's prices).
 3. Deploy: `klean live deploy Top20 --broker kis-paper`. The account's cash and every holding
-   are the strategy's, so one account serves one strategy: klean refuses a second running
+   are the strategy's, so one account serves one strategy (in all your klean workspaces:
+   `~/.klean/kis-accounts.json` records which deployment trades it): klean refuses a second running
    deployment on the same account.
 4. Schedule `klean live run` inside KRX's **pre-open auction, 08:30–08:59 KST**, on trading
    days. At that time the strategy gets the previous trading day's prices from KIS (the KRX

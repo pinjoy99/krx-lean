@@ -160,6 +160,15 @@ def cmd_init(args) -> None:
 
 
 def install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None = None) -> None:
+    """Into the workspace's data/, holding its data lock (a live trading day in progress
+    finishes first; two installs never overlap)."""
+    from klean import locks
+    with locks.hold(locks.data_lock(ws.root), "installing KRX data",
+                    on_wait=lambda h: print(f"klean: waiting for {locks.describe(h)} to finish with the data")):
+        _install_data(ws, zip_path, root)
+
+
+def _install_data(ws: Workspace, zip_path: Path | None = None, root: Path | None = None) -> None:
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))   # krx_lean from the clone; it needn't be installed
     from krx_lean import lean_install
@@ -217,7 +226,9 @@ def install_demo(ws: Workspace) -> None:
     with tempfile.TemporaryDirectory(prefix="klean-demo-") as tmp:
         info = demo.generate(Path(tmp), holidays)
         build.build(Path(tmp))
-        lean_install.install(Path(tmp), ws.data)
+        from klean import locks
+        with locks.hold(locks.data_lock(ws.root), "installing demo data"):
+            lean_install.install(Path(tmp), ws.data)
     print(f"synthetic demo data installed: {info['securities']} made-up securities (codes D…/E…), "
           f"{info['first']} → {info['last']}, KOSPI and KOSPI 200 indices.\n"
           "Every folder is marked SYNTHETIC-DEMO-DATA.txt; runs, reports and the GUI say so.")
@@ -615,8 +626,11 @@ def cmd_live(args) -> int:
             print("nothing new to run (no trading days after the last one processed)")
         return 0 if all(r["ok"] for _, runs in done for r in runs) else 1
     dep = live.find(ws.root / args.project, args.id)                 # stop
-    live.stop(dep)
-    print(f"live deployment {args.project}/{args.id} stopped; its account and history stay in {dep}")
+    if live.stop(dep).get("stopping"):
+        print(f"live deployment {args.project}/{args.id}: stops after the day being processed now; its account and "
+              f"history stay in {dep}")
+    else:
+        print(f"live deployment {args.project}/{args.id} stopped; its account and history stay in {dep}")
     return 0
 
 

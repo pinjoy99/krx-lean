@@ -45,8 +45,12 @@ def ensure_packages(ws: Workspace, log=print) -> None:
     env = python_env(ws)
     py = str(venv_python(ws.python_venv))
     if subprocess.run([py, "-c", "import matplotlib"], capture_output=True).returncode:
-        log(f"klean: installing {' '.join(REPORT_PACKAGES)} into {ws.python_venv} (once)")
-        run([py, "-m", "pip", "install", "-q", *REPORT_PACKAGES], env=env)
+        from klean import locks
+        with locks.hold(Path(ws.python_venv) / ".klean-pip.lock", "installing matplotlib",
+                        on_wait=lambda h: log(f"klean: waiting for {locks.describe(h)} (another package install)")):
+            if subprocess.run([py, "-c", "import matplotlib"], capture_output=True).returncode:
+                log(f"klean: installing {' '.join(REPORT_PACKAGES)} into {ws.python_venv} (once)")
+                run([py, "-m", "pip", "install", "-q", *REPORT_PACKAGES], env=env)
 
 
 def default_description(run_dir: Path) -> str:

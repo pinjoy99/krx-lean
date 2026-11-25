@@ -19,6 +19,7 @@ frozen project), ``ledger.json`` (the account), ``runs/<day>/`` (each day's LEAN
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import json
 import os
@@ -56,19 +57,35 @@ def plugin_path(ws: Workspace) -> Path:
     return ws.launcher_dir / PLUGIN_DLL
 
 
-def ensure_plugin(ws: Workspace, log=print) -> Path:
-    """Build klean's LEAN plugin into the LEAN build if it's missing or older than its sources
-    or than LEAN itself (rebuilt LEAN: rebuild the plugin against it)."""
+def plugin_current(ws: Workspace) -> bool:
     dll = plugin_path(ws)
     sources = [*PLUGIN_SRC.glob("*.cs"), *PLUGIN_SRC.glob("*.csproj"), projects.CS_MODELS]
     lean = ws.launcher_dir / "QuantConnect.Lean.Engine.dll"
-    if dll.exists() and dll.stat().st_mtime >= max(p.stat().st_mtime for p in [*sources, lean]):
+    return dll.exists() and dll.stat().st_mtime >= max(p.stat().st_mtime for p in [*sources, lean])
+
+
+def ensure_plugin(ws: Workspace, log=print) -> Path:
+    """Build klean's LEAN plugin into the LEAN build if it's missing or older than its sources
+    or than LEAN itself (rebuilt LEAN: rebuild the plugin against it). One build at a time: a
+    lock in the plugin's source folder, which every workspace using this krx-lean clone shares
+    (dotnet writes its obj/ there), whatever LEAN build it targets; the new DLL replaces the old
+    one in one step (a LEAN process already running keeps the file it loaded)."""
+    from klean import locks
+    dll = plugin_path(ws)
+    if plugin_current(ws):
         return dll
-    log(f"klean: building the KRX live plugin into {ws.launcher_dir}")
-    out = Path(ws.root) / ".klean" / "plugin-build"
-    run_command([dotnet(), "build", str(PLUGIN_SRC / "Krx.Lean.csproj"), "-c", "Release", "-nologo", "-v", "q",
-         f"-p:LeanBin={ws.launcher_dir}", "-o", str(out)])
-    shutil.copy2(out / PLUGIN_DLL, dll)
+    with locks.hold(PLUGIN_SRC / ".klean-plugin-build.lock", "building the KRX live plugin",
+                    on_wait=lambda h: log(f"klean: waiting for {locks.describe(h)} (building the live plugin)")):
+        if plugin_current(ws):                       # built by another process meanwhile
+            return dll
+        log(f"klean: building the KRX live plugin into {ws.launcher_dir}")
+        out = Path(ws.root) / ".klean" / f"plugin-build-{os.getpid()}"
+        try:
+            run_command([dotnet(), "build", str(PLUGIN_SRC / "Krx.Lean.csproj"), "-c", "Release", "-nologo", "-v", "q",
+                         f"-p:LeanBin={ws.launcher_dir}", "-o", str(out)])
+            locks.replace_file(out / PLUGIN_DLL, dll)
+        finally:
+            shutil.rmtree(out, ignore_errors=True)
     return dll
 
 
@@ -154,6 +171,81 @@ def find(project: Path, dep_id: str) -> Path:
     return dep
 
 
+# ---------------------------------------------------------------- KIS accounts: one strategy each
+
+def kis_claims_path() -> Path:
+    """Which deployment trades each KIS 모의투자 account, for every klean workspace of this user."""
+    return Path.home() / ".klean" / "kis-accounts.json"
+
+
+class _Claims:
+    """The claims file, read and written while its lock is held (``kis_claims()``)."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        try:
+            self.data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.data = {}
+
+    def holder(self, account: str, besides: Path | None = None) -> str | None:
+        """The deployment that trades ``account`` (as "project/id"), if one is still running."""
+        c = self.data.get(account)
+        if not c:
+            return None
+        dep = Path(c["deployment"])
+        if besides is not None and dep == besides.resolve():
+            return None
+        try:
+            running = load(dep)["status"] == "running"
+        except (OSError, ValueError, KeyError):
+            running = False
+        if not running:                          # stopped or deleted: the claim lapses
+            del self.data[account]
+            self._save()
+            return None
+        return f"{c.get('project', '?')}/{dep.name} (in {c.get('workspace', '?')})"
+
+    def claim(self, account: str, dep: Path) -> None:
+        record = load(dep)
+        self.data[account] = {"deployment": str(dep.resolve()), "project": record.get("project", ""),
+                              "workspace": str(dep.resolve().parents[2]),
+                              "since": dt.datetime.now().isoformat(timespec="seconds")}
+        self._save()
+
+    def release(self, dep: Path) -> None:
+        mine = [a for a, c in self.data.items() if c.get("deployment") == str(dep.resolve())]
+        for a in mine:
+            del self.data[a]
+        if mine:
+            self._save()
+
+    def _save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        tmp.replace(self.path)
+
+
+@contextlib.contextmanager
+def kis_claims():
+    from klean import locks
+    path = kis_claims_path()
+    with locks.hold(path.with_suffix(".lock"), "KIS-PAPER account claims"):
+        yield _Claims(path)
+
+
+def _workspace_holder(ws: Workspace, account: str) -> str | None:
+    """A running KIS deployment of this workspace on ``account`` that has no claim yet (made by
+    klean before 0.0.26)."""
+    for project in projects.list_projects(ws):
+        for dep in deployments(project):
+            o = load(dep)
+            if is_kis(o) and o["status"] == "running" and o.get("kis_account") == account:
+                return f"{project.name}/{dep.name}"
+    return None
+
+
 def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, str] | None = None,
            cash: float = 100_000_000, commission_rate: float = 0.00015, start: str = "",
            source_run: str = "", models_as_is: bool = False, broker: str = "paper") -> Path:
@@ -173,25 +265,35 @@ def deploy(ws: Workspace, project: Path, name: str = "", parameters: dict[str, s
     last = days[-1]
     first = start or (dt.date.fromisoformat(last) + dt.timedelta(days=1)).isoformat()
     account_id = ""
+    claims = contextlib.nullcontext()
     if broker == "kis-paper":
         from klean import kis
         if start:
             raise KleanError("a KIS-PAPER deployment can't be backdated: it trades from the next pre-open auction")
         client = kis.Kis()
         account_id = client.account_id()
-        for other_project in projects.list_projects(ws):
-            for other in deployments(other_project):
-                o = load(other)
-                if is_kis(o) and o["status"] == "running" and o.get("kis_account") == account_id:
-                    raise KleanError(
-                        f"{other_project.name}/{other.name} already trades this KIS account: a strategy sees the whole "
-                        "account (cash and every holding) as its own, so two can't share one. Stop it first, or use "
-                        "another account")
-        account = client.balance()               # also checks the credentials
-        cash = account["total"] or account["cash"]
-        first = previous_trading_day(ws, kis.now_kst().date() + dt.timedelta(days=1))
+        claims = kis_claims()
     elif broker != "paper":
         raise KleanError(f"unknown broker {broker!r} (paper, kis-paper)")
+    with claims as book:                 # KIS-PAPER: check and claim the account in one locked step
+        if broker == "kis-paper":
+            holder = book.holder(account_id) or _workspace_holder(ws, account_id)
+            if holder is not None:
+                raise KleanError(
+                    f"{holder} already trades this KIS account: a strategy sees the whole account (cash and every "
+                    "holding) as its own, so two can't share one. Stop it first, or use another account")
+            account = client.balance()               # also checks the credentials
+            cash = account["total"] or account["cash"]
+            first = previous_trading_day(ws, kis.now_kst().date() + dt.timedelta(days=1))
+        dep = _create(ws, project, language, name, parameters, cash, commission_rate, first, days, last,
+                      source_run, broker, account_id)
+        if broker == "kis-paper":
+            book.claim(account_id, dep)
+    return dep
+
+
+def _create(ws: Workspace, project: Path, language: str, name: str, parameters, cash: float, commission_rate: float,
+            first: str, days: list[str], last: str, source_run: str, broker: str, account_id: str) -> Path:
     params = {str(k): str(v) for k, v in (parameters or {}).items()}
     stamp = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
@@ -297,31 +399,81 @@ def run_session(ws: Workspace, dep: Path, session: str, timeout: float = 900, lo
     return entry
 
 
+STOP_REQUEST = "klean-stop-requested"
+
+
+def live_lock(dep: Path) -> Path:
+    return dep / "klean-live.lock"
+
+
 def run(ws: Workspace, dep: Path, log=print, max_sessions: int = 0, now: bool = False) -> list[dict]:
     """Process every trading day the deployment hasn't seen yet, oldest first; stops at the
     first failure (the next run retries it). A KIS deployment runs only during KRX's pre-open
     auction (08:30-08:59 KST) on a trading day, unless ``now`` (testing a 모의투자 account during
-    market hours: market orders then fill at once)."""
+    market hours: market orders then fill at once).
+
+    One run at a time per deployment, whoever starts it (cron, `klean update data`, the GUI): a
+    second one is skipped (the first does the work), and the days to process are worked out
+    while holding the lock, so no day is processed twice and no KIS-PAPER order is sent twice."""
+    from klean import locks
     record = load(dep)
     if record["status"] != "running":
         return []
+    label = f"{record['project']}/{dep.name}"
     if is_kis(record):
         from klean import kis
         t = kis.now_kst()
         if not now and not (kis.in_pre_open(t) and is_trading_day(ws, t.date())):
-            log(f"klean: live {record['project']}/{dep.name} (KIS-PAPER): orders go out during the pre-open auction, "
+            log(f"klean: live {label} (KIS-PAPER): orders go out during the pre-open auction, "
                 f"08:30-08:59 KST on trading days; it's {t:%a %H:%M} KST: skipped")
             return []
+    try:
+        with locks.hold(live_lock(dep), f"live run {label}", wait=False):
+            return _run_locked(ws, dep, label, log, max_sessions, now)
+    except locks.Busy as e:
+        log(f"klean: live {label}: skipped, already being run by {locks.describe(e.holder)}")
+        return []
+
+
+def _run_locked(ws: Workspace, dep: Path, label: str, log, max_sessions: int, now: bool) -> list[dict]:
+    from klean import locks
+    record = load(dep)                                  # again: it may have changed while we waited
+    if _apply_stop_request(dep, log) or record["status"] != "running":
+        return []
+    if is_kis(record):
+        from klean import kis
         kis.Kis()                    # checks the KIS-PAPER keys (and says to rename keys from earlier versions)
+        account = record.get("kis_account", "")
+        with kis_claims() as book:
+            other = book.holder(account, besides=dep)
+            if other is not None:
+                log(f"klean: live {label} (KIS-PAPER): {other} trades this account now: not run. Stop one of them")
+                return []
+            book.claim(account, dep)               # deployments from before 0.0.26 get their claim here
     ensure_plugin(ws, log)
     done = []
     for session in pending_sessions(ws, dep)[: max_sessions or None]:
-        entry = run_session(ws, dep, session, log=log, now=now)
+        with locks.hold(locks.data_lock(ws.root), f"live day {session} of {label}", shared=True,
+                        on_wait=lambda h: log(f"klean: live {label}: waiting for {locks.describe(h)} (the data)")):
+            entry = run_session(ws, dep, session, log=log, now=now)
         done.append(entry)
         if not entry["ok"]:
             log(f"klean: live {dep.name}: {session} FAILED: {entry.get('error')}")
             break
+        if _apply_stop_request(dep, log):
+            break
+    _apply_stop_request(dep, log)                 # asked meanwhile, with no day left to process
     return done
+
+
+def _apply_stop_request(dep: Path, log=print) -> bool:
+    """`stop` asked while a run was busy: stop now (between two trading days)."""
+    if not (dep / STOP_REQUEST).exists():
+        return False
+    _stop(dep)
+    (dep / STOP_REQUEST).unlink(missing_ok=True)
+    log(f"klean: live {dep.name}: stopped (as asked while it was running)")
+    return True
 
 
 def run_all(ws: Workspace, log=print, now: bool = False) -> list[tuple[str, list[dict]]]:
@@ -335,11 +487,27 @@ def run_all(ws: Workspace, log=print, now: bool = False) -> list[tuple[str, list
     return out
 
 
-def stop(dep: Path) -> dict:
+def stop(dep: Path, log=print) -> dict:
+    """Stop trading new days. If a run is processing days right now, the stop is applied after
+    its current day (a request file it checks); the returned record then has "stopping": true."""
+    from klean import locks
+    try:
+        with locks.hold(live_lock(dep), f"stopping {dep.name}", wait=False):
+            return _stop(dep)
+    except locks.Busy as e:
+        (dep / STOP_REQUEST).write_text(dt.datetime.now().isoformat(timespec="seconds") + "\n", encoding="utf-8")
+        log(f"klean: live {dep.name}: being run by {locks.describe(e.holder)}; it stops after the current day")
+        return {**load(dep), "stopping": True}
+
+
+def _stop(dep: Path) -> dict:
     record = load(dep)
     if record["status"] != "stopped":
         record.update(status="stopped", stopped_utc=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
         save(dep, record)
+    if is_kis(record):
+        with kis_claims() as book:
+            book.release(dep)
     return record
 
 

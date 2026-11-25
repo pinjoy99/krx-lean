@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.26 — 2026-11-25
+
+klean processes (the GUI, schedules, the command line) no longer collide when they run at the
+same time:
+
+- **Live runs:** one run at a time per deployment. A second `klean live run`, `klean update data`
+  or GUI run skips it ("already being run by pid …"), and the days to process are worked out
+  inside the lock: no trading day processed twice, **no KIS-PAPER order sent twice**. *Stop*
+  during a run stops it after the day in progress.
+- **One KIS 모의투자 account, one strategy, in all your klean workspaces:** deploying checks and
+  claims the account in one step (`~/.klean/kis-accounts.json`); *Stop* releases it. Existing
+  KIS-PAPER deployments are claimed on their next run.
+- **Data updates** replace each file in one step (a run reading it sees the old file or the new
+  one, never part of one) and wait for a live trading day in progress; two updates never overlap.
+- **pip** installs into the shared Python environment one at a time, and `requirements.txt` is
+  skipped when nothing changed (backtests start faster).
+- **The live plugin** is built once when two runs need it, and replaced in one step.
+- Locks are released by the system when a process ends, even after a crash; klean warns if the
+  workspace is on a drive without file locks.
+
 ## 0.0.25 — 2026-11-24
 
 - **Parameters found in the strategy's code.** The Backtest dashboard's *New backtest* form lists

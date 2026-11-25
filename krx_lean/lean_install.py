@@ -110,7 +110,15 @@ def sync_tree(src: Path, dst: Path) -> tuple[int, int]:
                 same += 1
                 continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, target)       # keeps the modification time, for the next comparison
+        # copy to a temporary name, then rename: a backtest or live run reading the file meanwhile
+        # sees the old file or the new one, never part of one (copy2 keeps the modification time)
+        tmp = target.with_name(f".{target.name}.krx-lean-tmp-{os.getpid()}")
+        try:
+            shutil.copy2(path, tmp)
+            os.replace(tmp, target)
+        finally:
+            if tmp.exists():
+                tmp.unlink()
         copied += 1
     return copied, same
 

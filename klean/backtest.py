@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import os
 import platform
@@ -113,6 +114,32 @@ def python_env(ws: Workspace) -> dict[str, str]:
     return {"PYTHONNET_PYDLL": ws.python_dll, "PYTHONPATH": site_packages(ws.python_venv)}
 
 
+def install_requirements(ws: Workspace, requirements: Path, log=print) -> bool:
+    """pip install -r into the workspace's Python environment, one install at a time (the
+    environment may serve several projects and workspaces: a lock file in it). Skipped when this
+    requirements.txt was already installed and nothing in the environment changed since (its
+    site-packages folder's time). Returns whether pip ran."""
+    from klean import locks
+    venv = Path(ws.python_venv)
+    stamps = venv / ".klean-requirements.json"
+    key = hashlib.sha256(requirements.read_bytes()).hexdigest()
+    site = Path(site_packages(ws.python_venv))
+    with locks.hold(venv / ".klean-pip.lock", f"installing {requirements}",
+                    on_wait=lambda h: log(f"klean: waiting for {locks.describe(h)} (another package install)")):
+        try:
+            done = json.loads(stamps.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            done = {}
+        if done.get(key) == site.stat().st_mtime_ns:
+            return False
+        run([str(venv_python(ws.python_venv)), "-m", "pip", "install", "-q", "-r", str(requirements)])
+        done[key] = site.stat().st_mtime_ns
+        tmp = stamps.with_suffix(".tmp")
+        tmp.write_text(json.dumps(done), encoding="utf-8")
+        tmp.replace(stamps)
+        return True
+
+
 def prepare(ws: Workspace, project: Path, language: str, build_config: str = "Release"
             ) -> tuple[Path, str, dict[str, str]]:
     """Compile/check the project; return (algorithm location, class name, extra environment)."""
@@ -123,7 +150,7 @@ def prepare(ws: Workspace, project: Path, language: str, build_config: str = "Re
                  if p.relative_to(project).parts[0] not in results.OUTPUT_DIRS]
         run([py, "-m", "py_compile", *files])
         if (project / "requirements.txt").exists():
-            run([py, "-m", "pip", "install", "-q", "-r", str(project / "requirements.txt")])
+            install_requirements(ws, project / "requirements.txt")
         return project / "main.py", projects.python_algorithm_class(project / "main.py"), env
     csproj = sorted(project.glob("*.csproj"))[0]
     projects.upgrade_csproj(csproj)

@@ -149,6 +149,24 @@ Paper only: klean has two brokerages, both paper, and no real-money one (see the
 - `klean update data` calls `run_all` after installing the data; KIS-PAPER deployments skip
   themselves outside their window.
 
+## Locks between klean processes
+
+`locks.py`: `flock` on a lock file (Linux, WSL2, macOS); the system releases a lock when its
+process ends, even after `kill -9`. Exclusive or shared; wait (optionally with a timeout) or
+give up at once (`Busy`, naming the holder's pid and task, which the exclusive holder writes in
+the file). `works_in` checks once per folder that two handles exclude each other (some file
+systems, possibly WSL's `/mnt/c`, don't lock) and warns.
+
+| Lock file | Kind | Held by | Others |
+|---|---|---|---|
+| `<deployment>/klean-live.lock` | exclusive, no wait | `live.run`: the pending days are worked out inside it | skip ("already being run by pid …"); `live.stop` leaves `klean-stop-requested`, applied after the current day |
+| `<workspace>/.klean/locks/data.lock` | exclusive / shared | `install_data` (incl. demo) / each live trading day | the install waits for a day in progress; backtests don't take it (an optimization would hold updates for hours): files are replaced by rename, so a reader sees an old or a new file, never half of one |
+| `<python env>/.klean-pip.lock` | exclusive | pip for `requirements.txt`, JupyterLab, matplotlib | wait; `requirements.txt` is skipped when its hash was installed and site-packages' time hasn't changed since (`.klean-requirements.json`) |
+| `klean/plugin/.klean-plugin-build.lock` | exclusive | the plugin build (dotnet writes `klean/plugin/obj/`, shared by every workspace of this clone) | wait, then find it built; the DLL replaces the old one by rename (a LEAN process running keeps the file it loaded) |
+| `~/.klean/kis-accounts.lock` | exclusive | KIS-PAPER deploy: check and claim the account in `~/.klean/kis-accounts.json` in one step (all workspaces); `stop` releases it; a run claims it for a deployment from before 0.0.26 and refuses if another deployment holds it | wait |
+
+`tests/klean/test_klean_locks.py` races real processes for each.
+
 ## GUI actions
 
 POST endpoints (all need the token header): `/api/backtest`, `/api/report`, `/api/optimize`

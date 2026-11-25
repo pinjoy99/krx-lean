@@ -197,9 +197,11 @@ async function drawRight(id) {
     };
     document.getElementById("lvstop").onclick = async () => {
       if (!confirm(`Stop ${d.name}? It won't trade on new days any more; its account and history stay.`)) return;
-      await api("/api/live-stop", {}, {project: p.name, id});
+      const r = await api("/api/live-stop", {}, {project: p.name, id});
       shown.data = await api("/api/live", {project: p.name}); drawLeft();
       await drawRight(id);
+      if (r.stopping) document.getElementById("lvmsg").textContent =
+        "It's processing a trading day right now (started elsewhere): it stops when that day is done.";
     };
   }
 }

@@ -87,3 +87,8 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `… (KIS-PAPER): orders go out during the pre-open auction …: skipped` | not an error: the run was outside 08:30–08:59 KST or not on a trading day. `--now` runs anyway (orders then fill at once) |
 | `… already trades this KIS account` | one 모의투자 account serves one strategy: stop the other deployment, or use another account |
 | `a KIS-PAPER deployment can't be backdated` | leave out `--start`; backdated tests run on klean's own paper broker |
+| `… skipped, already being run by pid …` | not an error: another klean process (a schedule, `klean update data`, the GUI) is trading this deployment's new days right now; it does the work |
+| `… stops after the day being processed now` | *Stop* came while a run was busy: it stops when the current trading day is done |
+| `waiting for pid … (another package install)` / `(building the live plugin)` / `(the data)` | another klean process is installing packages, building the plugin or using the data: this one goes on when it's done |
+| `warning: file locks don't work in …` | the workspace is on a drive without file locks (possibly `/mnt/c` under WSL), so klean can't keep its processes apart there: move it into your Linux home folder (`~`) |
+| `… (in /other/workspace) already trades this KIS account` / `… trades this account now: not run` | a deployment in another klean workspace trades this 모의투자 account: stop one of them |

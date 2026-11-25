@@ -13,3 +13,4 @@ klean.json
 *.key
 klean/plugin/bin/
 klean/plugin/obj/
+klean/plugin/.klean-plugin-build.lock

@@ -51,10 +51,14 @@ PACKAGES_CHECK = "import jupyterlab, ipykernel, nbconvert, clr_loader, matplotli
 
 
 def ensure_packages(ws: Workspace, log=print) -> None:
+    from klean import locks
     py = str(venv_python(ws.python_venv))
     if subprocess.run([py, "-c", PACKAGES_CHECK], capture_output=True).returncode:
-        log(f"klean: installing {' '.join(RESEARCH_PACKAGES)} into {ws.python_venv} (once, a few minutes)")
-        run([py, "-m", "pip", "install", "-q", *RESEARCH_PACKAGES], env=python_env(ws))
+        with locks.hold(Path(ws.python_venv) / ".klean-pip.lock", "installing JupyterLab",
+                        on_wait=lambda h: log(f"klean: waiting for {locks.describe(h)} (another package install)")):
+            if subprocess.run([py, "-c", PACKAGES_CHECK], capture_output=True).returncode:   # not done meanwhile
+                log(f"klean: installing {' '.join(RESEARCH_PACKAGES)} into {ws.python_venv} (once, a few minutes)")
+                run([py, "-m", "pip", "install", "-q", *RESEARCH_PACKAGES], env=python_env(ws))
 
 
 def prepare(ws: Workspace) -> dict[str, str]:
