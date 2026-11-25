@@ -146,6 +146,12 @@ def api_workspace(ws: Workspace, _q: dict) -> dict:
             "templates": list(projects.TEMPLATES)}
 
 
+def api_projects(ws: Workspace, _q: dict) -> dict:
+    """What the top bar needs on every page: quick (no setup check, no run lists)."""
+    return {"root": str(ws.root), "projects": [p.name for p in project_list(ws)],
+            "demo": results.is_demo_data(ws)}
+
+
 def api_project(ws: Workspace, q: dict) -> dict:
     p = inside(ws, ws.root / q["name"][0])
     lang = projects.language_of(p)
@@ -605,7 +611,7 @@ class Jobs:
 # ---------------------------------------------------------------- server
 
 def make_handler(ws: Workspace, token: str, jobs: Jobs):
-    gets = {"/api/workspace": api_workspace, "/api/project": api_project, "/api/run": api_run,
+    gets = {"/api/workspace": api_workspace, "/api/projects": api_projects, "/api/project": api_project, "/api/run": api_run,
             "/api/compare": api_compare, "/api/log": api_log, "/api/optimization": api_optimization,
             "/api/code-file": api_code_file, "/api/live": api_live, "/api/live-deployment": api_live_deployment,
             "/api/live-console": api_live_console}

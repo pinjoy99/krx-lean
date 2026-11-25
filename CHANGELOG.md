@@ -9,6 +9,9 @@
   `jupyterlab-autosave-on-focus-change` 0.4.1 (BSD-3) with JupyterLab: a file is saved as soon as
   it loses focus, also to klean's page. Existing environments get it the next time Research
   starts. It can be turned off in JupyterLab's settings.
+- Pages open faster: the top bar's project list comes from a small `/api/projects` (it used to
+  load the whole Workspace summary, setup check included, before every page) and loads beside the
+  page, not before it.
 
 ## 0.0.27 — 2026-11-25
 

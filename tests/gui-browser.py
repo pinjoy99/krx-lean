@@ -322,6 +322,7 @@ with sync_playwright() as pw:
     expect(page.locator("#lvconsole")).to_contain_text("KrxPaperBrokerage")
     page.screenshot(path=str(SHOTS / "live.png"), full_page=True)
     page.goto(BASE + "#/")
+    expect(page.locator("#newproj")).to_be_visible(timeout=30_000)     # the Workspace page (it runs the setup check)
     row = page.locator("table.runs tr", has=page.locator("a.projlink", has_text=re.compile("^HoldPy$")))
     expect(row.locator("a[href*='#/live/']")).to_contain_text(live_name)       # Workspace: last live run
     print("ok  paper deployment from the Live page")

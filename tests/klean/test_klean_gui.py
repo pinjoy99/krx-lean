@@ -64,6 +64,8 @@ class GuiTest(unittest.TestCase):
     def test_api(self):
         w = json.loads(self.get("/api/workspace")[1])
         self.assertEqual([(p["name"], p["runs"]) for p in w["projects"]], [("A", 2)])
+        self.assertEqual(json.loads(self.get("/api/projects")[1]),
+                         {"root": str(self.root), "projects": ["A"], "demo": False})       # the top bar's
         p = json.loads(self.get("/api/project?name=A")[1])
         self.assertEqual([r["name"] for r in p["runs"]], ["2026-10-28_11-00-00", "2026-10-28_10-00-00"])
         r = json.loads(self.get("/api/run?ref=A")[1])

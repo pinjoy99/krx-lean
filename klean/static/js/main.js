@@ -12,10 +12,10 @@ const remember = name => { try { localStorage.setItem(LAST, name); } catch { /* 
 const recalled = () => { try { return localStorage.getItem(LAST) || ""; } catch { return ""; } };
 
 async function workspaceInfo() {
-  const w = await api("/api/workspace");
-  nav.projects = w.projects.map(p => p.name);
+  const w = await api("/api/projects");          // quick: names only, no setup check
+  nav.projects = w.projects;
   document.getElementById("ws").textContent = w.root;
-  document.getElementById("demobar").hidden = !(w.data || {}).synthetic_demo_data;
+  document.getElementById("demobar").hidden = !w.demo;
 }
 
 // The top bar for dashboard `dash` ("" = Workspace) of `project`: the project list, the current
@@ -55,7 +55,7 @@ async function route() {
   try {
     if (!TOKEN) throw new Error("Open the URL printed by `klean gui` (it includes the access token).");
     if (dash === "") nav.projects = null;           // the Workspace page may list a new project
-    await drawNav(dash, project).catch(() => {});
+    const navDrawn = drawNav(dash, project).catch(() => {});      // the top bar and the page load side by side
     // addresses from klean <= 0.0.13 (bookmarks, links in reports) lead to the new dashboards
     if (parts[0] === "project") { location.replace(`#/backtest/${encodeURIComponent(parts[1])}`); return; }
     if (parts[0] === "run") { location.replace(runHash(parts.slice(1).join("/"))); return; }
@@ -68,6 +68,7 @@ async function route() {
     else if (parts[0] === "research") await pageResearch(parts[1] || "");
     else if (parts[0] === "live") await pageLive(parts[1], query);
     else await pageWorkspace();
+    await navDrawn;
   } catch (e) { showError(e); }
 }
 window.addEventListener("hashchange", route);
