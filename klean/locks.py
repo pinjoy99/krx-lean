@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import errno
 import fcntl
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -36,13 +38,16 @@ class Busy(KleanError):
 
 
 _checked: dict[str, bool] = {}
+UNSUPPORTED = {errno.ENOLCK, errno.EOPNOTSUPP, errno.ENOSYS, errno.EINVAL}
 
 
 def works_in(folder: Path) -> bool:
     """Does flock work in this folder? Two handles on one file must exclude each other."""
     key = str(folder.resolve())
     if key not in _checked:
-        probe = folder / ".klean-lock-probe"
+        # this process's own probe file: another klean process probing the folder at the same
+        # moment must not look like "locks don't work"
+        probe = folder / f".klean-lock-probe-{os.getpid()}-{threading.get_ident()}"
         ok = True
         try:
             with open(probe, "a+") as a, open(probe, "a+") as b:
@@ -50,10 +55,13 @@ def works_in(folder: Path) -> bool:
                 try:
                     fcntl.flock(b, fcntl.LOCK_EX | fcntl.LOCK_NB)
                     ok = False                      # both got it: flock does nothing here
-                except OSError:
-                    pass
-        except OSError:
-            ok = False                              # flock not supported at all
+                except OSError as e:
+                    if e.errno not in (errno.EWOULDBLOCK, errno.EAGAIN, errno.EACCES):
+                        ok = False                  # an error other than "held": not supported
+        except OSError as e:
+            ok = e.errno not in UNSUPPORTED         # no locks on this file system; else (e.g. read-only) leave it
+            if ok:
+                print(f"klean: warning: can't check file locks in {folder}: {e}", file=sys.stderr)
         finally:
             with contextlib.suppress(OSError):
                 probe.unlink()

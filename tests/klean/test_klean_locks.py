@@ -98,6 +98,22 @@ class LockTest(unittest.TestCase):
     def test_works_in_a_normal_folder(self):
         self.assertTrue(locks.works_in(self.dir))
 
+    def test_processes_checking_a_folder_at_once_all_find_locks_work(self):
+        """(CI found it: with one shared probe file, a process checking while another held the probe
+        concluded "locks don't work" and ran unlocked.)"""
+        folder, go = self.dir / "shared", self.dir / "go"
+        folder.mkdir()
+        kids = [child(f"""
+            while not Path({str(go)!r}).exists():
+                time.sleep(0.001)
+            print("WORKS" if locks.works_in(Path({str(folder)!r})) else "BROKEN")
+            """) for _ in range(8)]
+        time.sleep(1.0)                                   # all started and waiting
+        go.touch()
+        outs = [k.communicate(timeout=30)[0] for k in kids]
+        self.assertEqual([o.split()[-1] for o in outs], ["WORKS"] * 8, outs)
+        self.assertEqual(list(folder.iterdir()), [])          # no probe files left
+
     def test_replace_is_never_half_a_file(self):
         """A reader sees one whole version or the other while krx-lean's install rewrites files."""
         from krx_lean import lean_install

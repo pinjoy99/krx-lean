@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.27 — 2026-11-25
+
+- Fix (0.0.26): two klean processes starting at the same moment could each conclude that file
+  locks don't work in a folder (they checked with one shared probe file) and then run without
+  the lock. Each process now checks with its own file, and only an "unsupported" error counts.
+  Found by CI on Ubuntu; a test now races eight processes through the check.
+
 ## 0.0.26 — 2026-11-25
 
 klean processes (the GUI, schedules, the command line) no longer collide when they run at the
