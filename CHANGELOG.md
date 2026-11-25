@@ -6,6 +6,8 @@
   locks don't work in a folder (they checked with one shared probe file) and then run without
   the lock. Each process now checks with its own file, and only an "unsupported" error counts.
   Found by CI on Ubuntu; a test now races eight processes through the check.
+- "waiting for …" / "skipped, already being run by …" messages name the other process (its pid)
+  even when it has only just taken the lock.
 
 ## 0.0.26 — 2026-11-25
 

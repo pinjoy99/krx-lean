@@ -79,6 +79,16 @@ def describe(holder: dict) -> str:
     return f"pid {holder.get('pid', '?')} ({holder.get('what', 'klean')}, since {since[11:19] or since})"
 
 
+def _holder_soon(path: Path) -> dict:
+    """The holder's details: written just after it takes the lock, so give it a moment."""
+    for _ in range(25):
+        holder = holder_of(path)
+        if holder:
+            return holder
+        time.sleep(0.02)
+    return {}
+
+
 def holder_of(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8") or "{}")
@@ -102,7 +112,7 @@ def hold(path: Path, what: str, wait: bool = True, timeout: float | None = None,
         try:
             fcntl.flock(f, mode | fcntl.LOCK_NB)
         except OSError:
-            holder = holder_of(path)
+            holder = _holder_soon(path)
             if not wait:
                 raise Busy(f"{what}: busy, {describe(holder)} holds it", holder) from None
             if on_wait:

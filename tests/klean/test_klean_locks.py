@@ -294,7 +294,7 @@ class InstallLockTest(unittest.TestCase):
         self.assertEqual(outs.count("RAN True"), 2, outs)
         (s1, e1), (s2, e2) = sorted(tuple(map(float, line.split())) for line in spans.read_text().splitlines())
         self.assertLessEqual(e1, s2)                        # never at the same time
-        self.assertIn("waiting for pid", outs)
+        self.assertIn("klean: waiting for ", outs)            # the second one waited (and said so)
         # the second call of each process: the other one's install changed site-packages after the
         # first's stamp, so one of them re-runs; nothing changed after the last: skipped
         self.assertGreaterEqual(outs.count("AGAIN False"), 1, outs)
