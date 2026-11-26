@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.32 — 2026-11-26
+
+- The GUI uses the krx-lean site's icon (pinjoy99.github.io/krx-lean): in the browser tab and
+  next to "klean" in the top bar.
+
 ## 0.0.31 — 2026-11-26
 
 - `krx_benchmark("005930")` / `KrxIndex.Benchmark("005930")` with no data for that stock said only

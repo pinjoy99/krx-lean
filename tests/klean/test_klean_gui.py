@@ -58,6 +58,10 @@ class GuiTest(unittest.TestCase):
         status, body = self.get(f"/?token={self.token}", token=False)
         self.assertEqual(status, 200)
         self.assertIn(b"<title>klean</title>", body)
+        # the krx-lean site's icon (docs/index.html), as the tab icon and in the top bar
+        import re
+        site_icon = re.search(r'<link rel="icon" href="([^"]+)">', (Path(gui.__file__).parents[1] / "docs" / "index.html").read_text()).group(1)
+        self.assertEqual(body.count(site_icon.encode()), 2)
         # POST needs the header (a cross-site form can't set it), the query token isn't enough
         self.assertEqual(self.get(f"/api/backtest?token={self.token}", header=False, data=b"{}")[0], 403)
 
