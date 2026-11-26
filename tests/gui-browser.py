@@ -359,7 +359,11 @@ with sync_playwright() as pw:
     page.locator("#lvname").fill(live_name)
     page.locator("#lvstart").fill("2026-09-28")
     page.get_by_role("button", name="Deploy").click()
-    expect(page.locator("#lv-left tr.sel")).to_contain_text(live_name, timeout=600_000)
+    # the deployment selected once its days ran, or the page's error (e.g. outdated KRX models): stop at once
+    expect(page.locator(f"#lv-left tr.sel:has-text('{live_name}'), #lvstate .err")).to_be_visible(timeout=600_000)
+    if page.locator("#lvstate .err").count():
+        raise SystemExit(f"live deploy from the page refused: {page.locator('#lvstate .err').inner_text()}")
+    expect(page.locator("#lv-left tr.sel")).to_contain_text(live_name)
     expect(page.locator("#lv-left tr.sel")).to_contain_text("backdated")
     expect(page.locator("#lv-right .tile", has_text="Trading days")).to_contain_text("3")
     expect(page.locator("#lveq .uplot")).to_have_count(1)
