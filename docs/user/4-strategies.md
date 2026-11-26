@@ -90,6 +90,10 @@ example in both languages.
   rounding is exact only then).
 - **Benchmark:** use `krx_benchmark("kospi200")` / `KrxIndex.Benchmark("kospi200")` (or
   `"kospi"`; with KOSDAQ data `"kosdaq"`, `"kosdaq150"`), not an index symbol: an index symbol gives an empty benchmark (alpha and beta 0).
+  A stock or ETF works the same way by its code: `krx_benchmark("005930")` /
+  `KrxIndex.Benchmark("005930")` (its daily closes adjusted for splits and dividends, as LEAN
+  adjusts prices). `set_benchmark("005930")` doesn't work: LEAN takes a bare ticker for a US stock
+  unless the security was added first, and asks for hourly bars, which KRX data doesn't have.
 - **Delistings:** LEAN closes positions on a security's last trading day.
 - **Common vs preferred:** codes ending in `0` are common shares (KRX convention);
   `securities.csv` has `share_class` if you ran `krx-info`.

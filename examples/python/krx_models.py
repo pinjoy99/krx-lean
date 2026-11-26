@@ -208,10 +208,47 @@ def load_index(ticker: str, data_folder: str = None) -> tuple:
     return dates, closes
 
 
+def load_stock(code: str, data_folder: str = None) -> tuple:
+    """(dates, closes) of a stock or ETF from data/equity/krx/daily/{code}.zip, adjusted for splits
+    and dividends with its factor file the way LEAN adjusts prices (the factor of the first row
+    dated on or after the day; latest prices unchanged)."""
+    folder = os.path.join(data_folder or _data_folder(), "equity", "krx")
+    path = os.path.join(folder, "daily", f"{code.lower()}.zip")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"no daily data for {code} at {path}")
+    rows = []                                   # (date, price factor x split factor), by date
+    factors = os.path.join(folder, "factor_files", f"{code.lower()}.csv")
+    if os.path.exists(factors):
+        with open(factors, encoding="utf-8") as f:
+            for line in f:
+                c = line.strip().split(",")
+                if len(c) >= 3 and c[0].isdigit():
+                    rows.append((datetime.strptime(c[0], "%Y%m%d").date(), float(c[1]) * float(c[2])))
+        rows.sort()
+    row_dates = [d for d, _ in rows]
+    dates, closes = [], []
+    with zipfile.ZipFile(path) as z:
+        for line in z.read(z.namelist()[0]).decode().splitlines():
+            c = line.split(",")
+            if len(c) >= 5:
+                day = datetime.strptime(c[0][:8], "%Y%m%d").date()
+                i = bisect.bisect_left(row_dates, day)
+                dates.append(day)
+                closes.append(float(c[4]) / 10000 * (rows[i][1] if i < len(rows) else 1.0))
+    return dates, closes
+
+
 def krx_benchmark(ticker: str = "kospi200", data_folder: str = None):
     """Benchmark function for ``self.set_benchmark(...)``: the last daily close on or before the
-    time asked. (LEAN would subscribe an index symbol hourly, but the KRX index data is daily.)"""
-    dates, closes = load_index(ticker, data_folder)
+    time asked, of a KRX index ("kospi200", "kosdaq", ...) or of a stock or ETF by its code
+    ("005930": adjusted for splits and dividends). LEAN would subscribe a benchmark symbol hourly,
+    and the KRX data is daily, so ``set_benchmark("005930")`` gets no data."""
+    index = os.path.join(data_folder or _data_folder(), "index", "krx", "daily", f"{ticker.lower()}.zip")
+    stock = os.path.join(data_folder or _data_folder(), "equity", "krx", "daily", f"{ticker.lower()}.zip")
+    if not os.path.exists(index) and os.path.exists(stock):
+        dates, closes = load_stock(ticker, data_folder)
+    else:
+        dates, closes = load_index(ticker, data_folder)        # (its error names the index files)
 
     def level(time) -> float:
         i = bisect.bisect_right(dates, time.date()) - 1

@@ -270,10 +270,59 @@ namespace QuantConnect.Algorithm.CSharp
             return levels;
         }
 
-        /// <summary>Benchmark function: the last close on or before the given time.</summary>
+        /// <summary>
+        /// Daily closes of a stock or ETF from Data/equity/krx/daily/{code}.zip, adjusted for splits
+        /// and dividends with its factor file the way LEAN adjusts prices (the factor of the first
+        /// row dated on or after the day; latest prices unchanged).
+        /// </summary>
+        public static SortedList<DateTime, decimal> LoadStockDaily(string code, string dataFolder = null)
+        {
+            var folder = Path.Combine(dataFolder ?? Globals.DataFolder, "equity", "krx");
+            var path = Path.Combine(folder, "daily", $"{code.ToLowerInvariant()}.zip");
+            if (!File.Exists(path)) throw new FileNotFoundException($"no daily data for {code} at {path}", path);
+            var rows = new SortedList<DateTime, decimal>();            // date -> price factor x split factor
+            var factors = Path.Combine(folder, "factor_files", $"{code.ToLowerInvariant()}.csv");
+            if (File.Exists(factors))
+            {
+                foreach (var line in File.ReadLines(factors))
+                {
+                    var c = line.Trim().Split(',');
+                    if (c.Length < 3 || c[0].Length != 8 || !char.IsDigit(c[0][0])) continue;
+                    var date = DateTime.ParseExact(c[0], "yyyyMMdd", CultureInfo.InvariantCulture);
+                    rows[date] = decimal.Parse(c[1], CultureInfo.InvariantCulture) * decimal.Parse(c[2], CultureInfo.InvariantCulture);
+                }
+            }
+            var closes = new SortedList<DateTime, decimal>();
+            using var zip = System.IO.Compression.ZipFile.OpenRead(path);
+            using var reader = new StreamReader(zip.Entries[0].Open());
+            string bar;
+            while ((bar = reader.ReadLine()) != null)
+            {
+                var c = bar.Split(',');
+                if (c.Length < 5) continue;
+                var day = DateTime.ParseExact(c[0].Substring(0, 8), "yyyyMMdd", CultureInfo.InvariantCulture);
+                var factor = 1m;
+                for (var i = 0; i < rows.Count; i++)
+                {
+                    if (rows.Keys[i] >= day) { factor = rows.Values[i]; break; }
+                }
+                closes[day] = decimal.Parse(c[4], CultureInfo.InvariantCulture) / 10000m * factor;
+            }
+            return closes;
+        }
+
+        /// <summary>
+        /// Benchmark function: the last close on or before the given time, of a KRX index
+        /// ("kospi200", "kosdaq", ...) or of a stock or ETF by its code ("005930": adjusted for splits
+        /// and dividends). LEAN would subscribe a benchmark symbol hourly, and the KRX data is daily,
+        /// so SetBenchmark("005930") gets no data.
+        /// </summary>
         public static Func<DateTime, decimal> Benchmark(string ticker, string dataFolder = null)
         {
-            var levels = LoadDaily(ticker, dataFolder);
+            var root = dataFolder ?? Globals.DataFolder;
+            var isStock = !File.Exists(Path.Combine(root, "index", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip"))
+                && File.Exists(Path.Combine(root, "equity", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip"));
+            var levels = isStock ? LoadStockDaily(ticker, dataFolder) : LoadDaily(ticker, dataFolder);
             var dates = levels.Keys;
             return time =>
             {

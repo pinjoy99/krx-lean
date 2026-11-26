@@ -45,7 +45,7 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `No module named krx_models` | keep `krx_models.py` next to `main.py` |
 | `No module named …` (another package) | add it to the project's `requirements.txt` |
 | `expected one class deriving from QCAlgorithm` | keep exactly one algorithm class per project |
-| alpha and beta are 0 | use `krx_benchmark(...)` / `KrxIndex.Benchmark(...)`, not an index symbol |
+| alpha and beta are 0 | use `krx_benchmark(...)` / `KrxIndex.Benchmark(...)` with an index (`"kospi200"`) or a stock code (`"005930"`), not `set_benchmark("005930")` or an index symbol (LEAN asks for hourly benchmark data; KRX data is daily) |
 | `GIL must always be released` stack trace at the end of a Python run | harmless: pythonnet's shutdown, after the results are written (klean says so) |
 | C# compile errors | read them in the output; they name the file and line |
 | WSL: very slow runs | move the workspace out of `/mnt/c` into `~` |

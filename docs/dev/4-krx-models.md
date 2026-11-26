@@ -12,7 +12,7 @@ project; a strategy uses them as shown in [user 4. Writing strategies](../user/4
 | `KrxSlippageModel` | `KrxSlippageModel` | slippage of N ticks per share (off by default) |
 | `KrxModels.Initialize` | `krx_initialize` | security initializer setting the three models above |
 | `KrxUniverseData` | `KrxUniverseData` | the daily universe files |
-| `KrxIndex.Benchmark` | `krx_benchmark` | KOSPI / KOSPI 200 as a benchmark function |
+| `KrxIndex.Benchmark` | `krx_benchmark` | an index (KOSPI, KOSPI 200, …) or a stock / ETF (adjusted closes) as a benchmark function |
 
 ## Sell-side tax
 
@@ -61,6 +61,15 @@ is empty (alpha 0, beta 0). `KrxIndex.Benchmark` / `krx_benchmark` read the dail
 return the last close on or before the time asked, as a benchmark function. If the index file is
 missing, both stop with a message naming the file and how to get it (`krx-lean krx-index`, or
 the demo data).
+
+A name with no index file but a stock file (`equity/krx/daily/{code}.zip`) is a stock or ETF:
+`KrxIndex.LoadStockDaily` / `load_stock` read its daily closes (stored ×10000) and multiply each
+day's by price factor × split factor of the first factor-file row dated on or after that day,
+which is how LEAN's `CorporateFactorProvider.GetScalingFactors` adjusts prices (rows are dated
+the last trading day before each event). Checked against LEAN's own adjusted prices in a
+backtest: identical over 118 days across a 5:1 split and dividends, in both languages.
+`set_benchmark("005930")` can't work: `QCAlgorithm.SetBenchmark(string)` makes a bare ticker a
+`Market.USA` equity unless it was added first, and either way subscribes it hourly.
 
 ## Period
 

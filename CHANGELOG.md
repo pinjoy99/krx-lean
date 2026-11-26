@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.30 — 2026-11-26
+
+- **A stock or ETF as the benchmark:** `krx_benchmark("005930")` / `KrxIndex.Benchmark("005930")`,
+  its daily closes adjusted for splits and dividends exactly as LEAN adjusts prices (checked
+  against LEAN over a split and dividends; Python and C# identical). Indices as before.
+  `set_benchmark("005930")` gives no benchmark (LEAN makes a bare ticker a US stock and asks for
+  hourly data): the docs say so. The KRX models changed: `klean update models NAME` (or `--all`)
+  for existing projects (a live deployment needs the current models).
+
 ## 0.0.29 — 2026-11-25
 
 - **One browser tab at a time per project's Research.** With a project's Research open in two
