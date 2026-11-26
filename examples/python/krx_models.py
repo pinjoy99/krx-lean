@@ -247,8 +247,13 @@ def krx_benchmark(ticker: str = "kospi200", data_folder: str = None):
     stock = os.path.join(data_folder or _data_folder(), "equity", "krx", "daily", f"{ticker.lower()}.zip")
     if not os.path.exists(index) and os.path.exists(stock):
         dates, closes = load_stock(ticker, data_folder)
-    else:
+    elif os.path.exists(index) or not (len(ticker) == 6 and any(ch.isdigit() for ch in ticker)):   # a code?
         dates, closes = load_index(ticker, data_folder)        # (its error names the index files)
+    else:
+        raise FileNotFoundError(
+            f"no KRX index or stock {ticker}: neither {index} nor {stock} exists. A stock code needs its "
+            "daily file in the workspace's data (`klean status data`; `klean update data`), and an index "
+            "name an index file (`krx-lean krx-index`).")
 
     def level(time) -> float:
         i = bisect.bisect_right(dates, time.date()) - 1

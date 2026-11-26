@@ -322,6 +322,16 @@ namespace QuantConnect.Algorithm.CSharp
             var root = dataFolder ?? Globals.DataFolder;
             var isStock = !File.Exists(Path.Combine(root, "index", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip"))
                 && File.Exists(Path.Combine(root, "equity", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip"));
+            if (!isStock && ticker.Length == 6 && System.Linq.Enumerable.Any(ticker, char.IsDigit)    // a code?
+                && !File.Exists(Path.Combine(root, "index", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip")))
+            {
+                var index = Path.Combine(root, "index", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip");
+                var stock = Path.Combine(root, "equity", "krx", "daily", $"{ticker.ToLowerInvariant()}.zip");
+                throw new FileNotFoundException(
+                    $"no KRX index or stock {ticker}: neither {index} nor {stock} exists. A stock code needs its " +
+                    "daily file in the workspace's data (`klean status data`; `klean update data`), and an index " +
+                    "name an index file (`krx-lean krx-index`).", stock);
+            }
             var levels = isStock ? LoadStockDaily(ticker, dataFolder) : LoadDaily(ticker, dataFolder);
             var dates = levels.Keys;
             return time =>

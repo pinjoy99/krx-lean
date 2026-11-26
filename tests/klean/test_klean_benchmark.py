@@ -64,7 +64,11 @@ class StockBenchmarkTest(unittest.TestCase):
         self.assertAlmostEqual(self.ns["krx_benchmark"]("b00002")(datetime(2018, 5, 2)), 7_000, places=6)
         self.assertEqual(self.ns["krx_benchmark"]("kospi200")(datetime(2018, 5, 2)), 330.5)       # indices first
         with self.assertRaisesRegex(FileNotFoundError, "no NOPE index data"):
-            self.ns["krx_benchmark"]("NOPE")
+            self.ns["krx_benchmark"]("NOPE")                        # a name: an index
+        with self.assertRaisesRegex(FileNotFoundError, "no KRX index or stock 005930: neither .*index.* nor .*equity"):
+            self.ns["krx_benchmark"]("005930")                      # a code: say both
+        with self.assertRaisesRegex(FileNotFoundError, "no KRX index or stock 0041B0"):
+            self.ns["krx_benchmark"]("0041B0")                      # newer codes have letters
 
 
 if __name__ == "__main__":

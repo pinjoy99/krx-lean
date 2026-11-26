@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.31 — 2026-11-26
+
+- `krx_benchmark("005930")` / `KrxIndex.Benchmark("005930")` with no data for that stock said only
+  "no 005930 index data"; for a code it now names both places it looked (the index file and the
+  stock's daily file) and how to get the data. Codes with letters (`0041B0`) count as codes.
+  (A project whose models copy predates 0.0.30 shows the old index-only error:
+  `klean update models NAME`.)
+
 ## 0.0.30 — 2026-11-26
 
 - **A stock or ETF as the benchmark:** `krx_benchmark("005930")` / `KrxIndex.Benchmark("005930")`,
