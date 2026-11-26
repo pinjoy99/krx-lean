@@ -10,7 +10,14 @@ export const MAIN = ["Compounding Annual Return", "Drawdown", "Sharpe Ratio", "N
 export const pageState = {
   pollTimer: null,
   lastJob: null,   // the latest backtest started from a project page, shown after the page refreshes
+  stale: false,    // the shown project's runs changed (a run deleted or renamed): reload them
 };
+
+// Go to a dashboard address, redrawing it even when it's the address already shown.
+export function go(hash) {
+  if (location.hash === hash) window.dispatchEvent(new HashChangeEvent("hashchange"));
+  else location.hash = hash;
+}
 
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));

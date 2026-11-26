@@ -1,12 +1,22 @@
-import {COLORS, MAIN, TOKEN, api, backtestHash, compact, esc, fmtStat, full, optHash, pageState, runHash, signClass, statVal, won} from "../util.js";
+import {COLORS, MAIN, TOKEN, api, backtestHash, compact, day, esc, fmtStat, full, go, optHash, pageState, runHash, signClass, statVal, won} from "../util.js";
 import {lineChart} from "../chart.js";
 
 // One run's results, in the Backtest dashboard's right column.
+
+// "Maximum drawdown: −23.4% on 2020-03-19 (from the peak of 2020-01-17; recovered 2020-11-24)"
+function ddText(w) {
+  if (!w) return "";
+  if (!w.time) return '<p class="muted small">No drawdown: the equity never fell below a previous peak.</p>';
+  const pct = (w.value < 0 ? "−" : "") + Math.abs(w.value).toFixed(2) + "%";
+  return `<p class="ddmax"><b>Maximum drawdown: <span class="neg">${pct}</span></b> on <b>${day(w.time)}</b>
+    <span class="muted">(from the peak of ${day(w.peak)}; ${w.recovered ? `recovered ${day(w.recovered)}` : "not recovered by the end"})</span></p>`;
+}
 export async function renderRun(el, ref) {
   const r = await api("/api/run", {ref});
   const parts = r.ref.split("/"), project = parts[0];
   const optCrumb = parts[1] === "optimizations" ? `<div class="crumbs">from <a href="${optHash(project, parts[2])}">optimization ${esc(parts[2])}</a></div>` : "";
   const st = r.statistics, m = r.manifest || {};
+  const bench = r.benchmark_name || "Benchmark";      // which one, found by klean from its values
   const tiles = MAIN.map(k => `<div class="tile"><div class="k">${esc(k)}</div><div class="v ${k === "Compounding Annual Return" || k === "Net Profit" ? signClass(st[k]) : ""}">${esc(statVal(st, k) || "—")}</div></div>`).join("");
   const statsRows = Object.entries(st).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${esc(fmtStat(k, v))}</td></tr>`).join("");
   const half = Math.ceil(Object.keys(st).length / 2), sr = statsRows.split("</tr>").filter(Boolean).map(x => x + "</tr>");
@@ -22,8 +32,8 @@ export async function renderRun(el, ref) {
       ${parts[1] === "backtests" && !r.running ? '<span style="margin-left:auto"></span><button class="secondary" id="rename">Rename</button><button class="secondary" id="delete">Delete</button>' : ""}</div>
     ${r.running ? '<div class="panel"><span class="badge run">running</span> This backtest is still running; reload the page for its results.</div>' : ""}
     <div class="tiles">${tiles}</div>
-    <div class="panel"><h2>Equity</h2><p class="muted small">KOSPI 200 scaled to the start equity. Drag across a chart to zoom, double-click to reset.</p><div id="eq"></div></div>
-    <div class="panel"><h2>Drawdown</h2><div id="dd"></div></div>
+    <div class="panel"><h2>Equity</h2><p class="muted small">${r.benchmark.length ? `Benchmark: ${esc(bench)}, scaled to the start equity.` : "No benchmark data in this run."} Drag across a chart to zoom, double-click to reset.</p><div id="eq"></div></div>
+    <div class="panel"><h2>Drawdown</h2>${ddText(r.max_drawdown)}<div id="dd"></div></div>
     <div class="panel"><div class="tabs"><a data-t="stats" class="on">Statistics</a><a data-t="orders">Orders (${r.orders.length})</a><a data-t="log">Log</a><a data-t="code">Code (${r.code.length})</a><a data-t="manifest">Run record</a></div>
       <div data-p="stats" class="grid"><table>${sr.slice(0, half).join("")}</table><table>${sr.slice(half).join("")}</table></div>
       <div data-p="orders" style="display:none" class="scroll"><table><tr><th class="num">#</th><th>Time (UTC)</th><th>Symbol</th><th>Type</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Value</th><th>Status</th><th>Tag</th></tr>${orders}</table></div>
@@ -34,7 +44,7 @@ export async function renderRun(el, ref) {
       <div data-p="manifest" style="display:none">${Object.keys(m).length ? `<table>${Object.entries(m).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${typeof v === "object" ? `<pre>${esc(JSON.stringify(v, null, 2))}</pre>` : esc(v)}</td></tr>`).join("")}</table>` : '<p class="muted">No manifest (run made before klean 0.2).</p>'}
         <p class="muted">Folder: ${esc(r.folder)}</p></div>
     </div>`;
-  lineChart(el.querySelector("#eq"), [{label: "Strategy", points: r.equity}, {label: "KOSPI 200", points: r.benchmark, color: COLORS[1], dashed: true}], {yFmt: v => "₩" + compact.format(v), log: true});
+  lineChart(el.querySelector("#eq"), [{label: "Strategy", points: r.equity}, {label: bench, points: r.benchmark, color: COLORS[1], dashed: true}], {yFmt: v => "₩" + compact.format(v), log: true});
   lineChart(el.querySelector("#dd"), [{label: "Drawdown", points: r.drawdown.map(([t, v]) => [t, -Math.abs(v)]), color: COLORS[5]}], {height: 160, yFmt: v => v.toFixed(1) + "%", area: true, zero: true});
   el.querySelectorAll(".tabs a").forEach(a => a.onclick = () => {
     el.querySelectorAll(".tabs a").forEach(x => x.classList.toggle("on", x === a));
@@ -55,12 +65,12 @@ export async function renderRun(el, ref) {
       const current = parts.at(-1).replace(/^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_?/, "");
       const name = prompt("Name for this run (the date and time stay in front):", current);
       if (name === null) return;
-      try { const x = await api("/api/run-rename", {}, {ref: r.ref, name}); location.hash = runHash(x.ref); }
+      try { const x = await api("/api/run-rename", {}, {ref: r.ref, name}); pageState.stale = true; go(runHash(x.ref)); }
       catch (e) { alert(e.message); }
     };
     el.querySelector("#delete").onclick = async () => {
       if (!confirm(`Delete the run ${parts.at(-1)} and all its files? This can't be undone.`)) return;
-      try { await api("/api/run-delete", {}, {ref: r.ref}); location.hash = backtestHash(project); }
+      try { await api("/api/run-delete", {}, {ref: r.ref}); pageState.stale = true; go(backtestHash(project)); }
       catch (e) { alert(e.message); }
     };
   }

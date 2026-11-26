@@ -260,3 +260,80 @@ def last_data_date(ws: Workspace) -> str:
         return data_status(ws).get("last_date", "")
     except Exception:  # noqa: BLE001 - the manifest shouldn't fail on odd data
         return ""
+
+
+# ---------------------------------------------------------------- the benchmark a run used
+
+INDEX_NAMES = {"kospi": "KOSPI", "kospi200": "KOSPI 200", "kosdaq": "KOSDAQ", "kosdaq150": "KOSDAQ 150",
+               "konex": "KONEX"}
+
+
+def _daily_closes(path: Path, scale: float = 1.0, factors: Path | None = None) -> list[tuple[str, float]]:
+    """(yyyymmdd, close) from a LEAN daily zip, adjusted with a factor file as LEAN adjusts prices
+    (the factor of the first row dated on or after the day)."""
+    rows = []
+    if factors is not None and factors.exists():
+        for line in factors.read_text(encoding="utf-8").splitlines():
+            c = line.strip().split(",")
+            if len(c) >= 3 and c[0].isdigit():
+                rows.append((c[0], float(c[1]) * float(c[2])))
+        rows.sort()
+    out = []
+    with zipfile.ZipFile(path) as z:
+        for line in z.read(z.namelist()[0]).decode().splitlines():
+            c = line.split(",")
+            if len(c) >= 5:
+                day = c[0][:8]
+                f = next((v for d, v in rows if d >= day), 1.0)
+                out.append((day, float(c[4]) * scale * f))
+    return out
+
+
+def benchmark_name(ws: Workspace, code: Path, parameters: dict, bench: list) -> str:
+    """Which benchmark a run used, found from its values (the result doesn't name it, and a strategy
+    can choose it at run time): the raw benchmark series equals the daily closes of one KRX index,
+    or of a stock or ETF whose code is in the run's code or parameters. "" when none matches."""
+    import bisect
+    import datetime as dt
+    import re
+    points = [(t, v) for t, v in bench if v]
+    if not points:
+        return ""
+    sample = points[:: max(1, len(points) // 12)][:12] + points[-1:]
+    candidates: list[tuple[str, Path, float, Path | None]] = []
+    index_dir = ws.data / "index" / "krx" / "daily"
+    for f in sorted(index_dir.glob("*.zip")) if index_dir.is_dir() else []:
+        candidates.append((INDEX_NAMES.get(f.stem, f.stem.upper()), f, 1.0, None))
+    text = " ".join(p.read_text(encoding="utf-8", errors="replace") for p in code.rglob("*")
+                    if p.is_file() and p.suffix in (".py", ".cs") and p.name not in ("krx_models.py", "KrxModels.cs")
+                    ) if code.is_dir() else ""
+    text += " " + json.dumps(parameters or {})
+    names = {}
+    securities = ws.data / "equity" / "krx" / "securities.csv"
+    if securities.exists():
+        with open(securities, encoding="utf-8", newline="") as f:
+            names = {row["code"].upper(): row.get("name", "") for row in csv.DictReader(f)}
+    for code in dict.fromkeys(m.upper() for m in re.findall(r"\b(?=\w*\d)[A-Za-z0-9]{6}\b", text)):
+        daily = ws.data / "equity" / "krx" / "daily" / f"{code.lower()}.zip"
+        if daily.exists():
+            label = f"{code} {names.get(code, '')}".strip()
+            candidates.append((label, daily, 1 / 10000, ws.data / "equity" / "krx" / "factor_files" / f"{code.lower()}.csv"))
+    for label, path, scale, factors in candidates:
+        closes = _daily_closes(path, scale, factors)
+        days = [d for d, _ in closes]
+
+        def close_on(day: str):                   # the last close on or before it (krx_benchmark: the first before)
+            i = bisect.bisect_right(days, day) - 1
+            return closes[max(i, 0)][1] if closes else None
+
+        ok = True
+        for t, v in sample:
+            day = dt.datetime.fromtimestamp(t, dt.timezone.utc)
+            # sampled around midnight in Korea (the day before in UTC): a day either side
+            options = {close_on((day + dt.timedelta(days=k)).strftime("%Y%m%d")) for k in (-1, 0, 1)}
+            if not any(c is not None and abs(c - v) <= 1e-6 * max(abs(v), 1) for c in options):
+                ok = False
+                break
+        if ok:
+            return label
+    return ""

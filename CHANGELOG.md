@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.33 — 2026-11-26
+
+Backtest dashboard:
+- The left column reads top to bottom: *New backtest*, *Backtest runs*, *New optimization*,
+  *Optimization runs* (always shown).
+- Deleting or renaming a run refreshes the runs list and the right column at once (deleting the
+  run shown by default left the page unchanged).
+- The Equity chart names the run's own benchmark instead of always "KOSPI 200": klean finds it from
+  the benchmark's values (an index, or a stock named in the code or parameters), so a strategy
+  that picks KOSDAQ at run time shows KOSDAQ; "Benchmark" if it can't tell.
+- The Drawdown chart says the maximum drawdown, its date, the peak before it and when (or whether)
+  it recovered.
+
 ## 0.0.32 — 2026-11-26
 
 - The GUI uses the krx-lean site's icon (pinjoy99.github.io/krx-lean): in the browser tab and

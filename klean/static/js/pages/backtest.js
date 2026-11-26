@@ -14,7 +14,8 @@ let shown = null;      // {project, data}: the project whose left column is on t
 export async function pageBacktest(project, query) {
   setTitle(`Backtest · ${project}`);
   const left = document.getElementById("bt-left");
-  if (!shown || shown.project !== project || !left || !document.body.contains(left)) {
+  if (!shown || shown.project !== project || !left || !document.body.contains(left) || pageState.stale) {
+    pageState.stale = false;
     await drawDashboard(project);
   }
   await drawRight(query);
@@ -55,6 +56,11 @@ function drawLeft() {
       <div class="row"><button id="go">Start backtest</button><span id="jobstate" class="muted">${pageState.lastJob && pageState.lastJob.project === p.name ? pageState.lastJob.html : ""}</span></div>
       <pre id="console" style="display:none;margin-top:10px"></pre>
     </details>
+    <div class="panel"><div class="row" style="justify-content:space-between"><h2>Backtest runs (${p.runs.length})</h2>
+        <button class="secondary" id="cmp" disabled>Compare selected</button></div>
+      ${p.runs.length ? `<div class="scroll"><table class="runs"><tr><th></th><th>Run</th><th class="num">CAGR</th><th class="num">Sharpe</th><th class="num">DD</th></tr>
+        ${p.runs.map(runRow).join("")}</table></div>` : '<p class="muted">No runs yet: start one above.</p>'}
+    </div>
     <details class="panel" id="newopt"><summary><h2>New optimization (grid search)</h2></summary>
       <div class="field">Parameters: name, min, max, step <a id="addo">+ add</a>${p.parameters?.some(x => NUMERIC.has(x.kind)) ? `<div class="muted small">The strategy's numeric parameters, at their defaults (min = max keeps a value fixed): widen the ranges to search, remove the rows you don't need.</div>` : ""}<div id="oparams"></div></div>
       <div class="grid2">
@@ -69,17 +75,12 @@ function drawLeft() {
       <div class="row"><button id="ogo">Start optimization</button><span id="ostate" class="muted"></span></div>
       <pre id="oconsole" style="display:none;margin-top:10px"></pre>
     </details>
-    <div class="panel"><div class="row" style="justify-content:space-between"><h2>Runs (${p.runs.length})</h2>
-        <button class="secondary" id="cmp" disabled>Compare selected</button></div>
-      ${p.runs.length ? `<div class="scroll"><table class="runs"><tr><th></th><th>Run</th><th class="num">CAGR</th><th class="num">Sharpe</th><th class="num">DD</th></tr>
-        ${p.runs.map(runRow).join("")}</table></div>` : '<p class="muted">No runs yet: start one above.</p>'}
-    </div>
-    ${p.optimizations.length ? `<div class="panel"><h2>Optimizations (${p.optimizations.length})</h2><table class="runs">
+    <div class="panel"><h2>Optimization runs (${p.optimizations.length})</h2>${p.optimizations.length ? `<table class="runs">
       <tr><th>Optimization</th><th>Best</th><th class="num">Runs</th></tr>
       ${p.optimizations.map(o => `<tr data-opt="${esc(o.name)}"><td><a href="${optHash(p.name, o.name)}">${esc(o.name)}</a>
           <div class="muted small2">${esc(o.direction)} ${esc(o.target)}</div></td>
         <td>${o.best ? esc(Object.entries(o.best.parameters).map(([k, v]) => k + "=" + v).join(", ")) + ` <span class="muted">(${esc(o.best.target)})</span>` : '<span class="muted">none met the constraints</span>'}</td>
-        <td class="num">${o.runs}</td></tr>`).join("")}</table></div>` : ""}`;
+        <td class="num">${o.runs}</td></tr>`).join("")}</table>` : '<p class="muted">No optimizations yet: start one above.</p>'}</div>`;
   wireForms();
 }
 

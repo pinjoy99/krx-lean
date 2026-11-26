@@ -9,6 +9,7 @@ must be inside the workspace.
 from __future__ import annotations
 
 import json
+import zipfile
 import platform
 import re
 import secrets
@@ -248,16 +249,36 @@ def api_optimization(ws: Workspace, q: dict) -> dict:
             "refs": refs, "points": [[r["parameters"], r["target_value"], r["ok"] and r["passes"]] for r in by_index]}
 
 
+def max_drawdown(drawdown: list) -> dict | None:
+    """The deepest point of LEAN's drawdown series (percent, 0 or negative), from the full series
+    (the chart's is thinned out): value, its time, the peak before it and the recovery after it
+    (None if it never got back to the peak)."""
+    if not drawdown:
+        return None
+    i = min(range(len(drawdown)), key=lambda k: drawdown[k][1])
+    value = drawdown[i][1]
+    if value >= 0:
+        return {"value": 0.0, "time": None, "peak": None, "recovered": None}
+    peak = next((drawdown[k][0] for k in range(i, -1, -1) if drawdown[k][1] >= 0), drawdown[0][0])
+    recovered = next((drawdown[k][0] for k in range(i, len(drawdown)) if drawdown[k][1] >= 0), None)
+    return {"value": value, "time": drawdown[i][0], "peak": peak, "recovered": recovered}
+
+
 def api_run(ws: Workspace, q: dict) -> dict:
     run = run_ref(ws, q["ref"][0])
     full = full_result(run)
     charts = full.get("charts", {})
     equity = series(charts.get("Strategy Equity", {}), "Equity", close=True)
     bench = series(charts.get("Benchmark", {}), "Benchmark")
+    try:
+        bench_name = results.benchmark_name(ws, code_dir(run), manifest(run).get("parameters", {}), bench)
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile):
+        bench_name = ""
     if equity and bench:                  # benchmark rescaled to the starting equity
         b0 = next((v for _, v in bench if v), 0)
         bench = [[t, v / b0 * equity[0][1]] for t, v in bench] if b0 else []
     drawdown = series(charts.get("Drawdown", {}), "Equity Drawdown")
+    worst = max_drawdown(drawdown)
     orders = []
     for o in sorted(full.get("orders", {}).values(), key=lambda o: o.get("id", 0)):
         orders.append({"id": o.get("id"), "time": o.get("time"), "symbol": o.get("symbol", {}).get("value"),
@@ -272,6 +293,7 @@ def api_run(ws: Workspace, q: dict) -> dict:
     return {"ref": run.relative_to(ws.root).as_posix(), "folder": str(run),
             "statistics": results.statistics(run), "runtime": full.get("runtimeStatistics", {}),
             "equity": downsample(equity), "benchmark": downsample(bench), "drawdown": downsample(drawdown),
+            "benchmark_name": bench_name, "max_drawdown": worst,
             "orders": orders, "manifest": manifest(run), "log": log, "report": (run / "report.html").exists(),
             "error": "" if results.is_running(run) else results.run_error(run),
             "running": results.is_running(run), "demo": results.run_is_demo(run),

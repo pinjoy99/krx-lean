@@ -190,6 +190,8 @@ with sync_playwright() as pw:
     expect(page.locator("#nav-project")).to_have_value("Py")
     expect(page.locator("iframe.lab")).to_be_visible(timeout=300_000)    # may install JupyterLab first
     lab = page.frame_locator("iframe.lab")
+    # the project's saved layout may have another file in front (a reused workspace): the notebook's tab
+    lab.locator(".lm-DockPanel-tabBar .lm-TabBar-tabLabel", has_text="research.ipynb").click(timeout=120_000)
     expect(lab.locator(".jp-Notebook")).to_be_visible(timeout=120_000)
     # wait until the kernel (with LEAN loaded) is idle: a keypress sent earlier can be lost
     expect(lab.get_by_text(re.compile(r"\| Idle"))).to_be_visible(timeout=180_000)
@@ -311,6 +313,15 @@ with sync_playwright() as pw:
     expect(orows.first.locator("input").nth(1)).to_have_value("20")
     expect(orows.first.locator("input").nth(3)).to_have_value("1")
     print("ok  backtest and optimization forms prefilled with the strategy's parameters")
+    # the left column's order; the benchmark named from the run's values; the maximum drawdown
+    heads = [h.strip() for h in page.locator("#bt-left h2").all_inner_texts()]
+    if [re.sub(r" \(.*", "", h) for h in heads] != ["New backtest", "Backtest runs", "New optimization", "Optimization runs"]:
+        raise SystemExit(f"backtest dashboard: left column order {heads}")
+    page.locator("#bt-left tr[data-ref]", has_text="kosdaq").locator("a").first.click()       # market=KOSDAQ
+    expect(page.locator("#bt-right .runtitle")).to_contain_text("kosdaq")
+    expect(page.locator("#bt-right .panel", has=page.locator("#eq"))).to_contain_text("Benchmark: KOSDAQ,")
+    expect(page.locator("#bt-right .ddmax")).to_contain_text(re.compile(r"Maximum drawdown: −\d+\.\d\d% on \d{4}-\d\d-\d\d"))
+    print("ok  backtest dashboard: column order, benchmark named (KOSDAQ), maximum drawdown with its date")
     page.close()
 
     # a backtest started from the page finishes and shows up in the runs list
@@ -328,6 +339,16 @@ with sync_playwright() as pw:
     if json.loads((newest / "manifest.json").read_text()).get("parameters"):
         raise SystemExit("backtest from the page: unchanged prefilled parameters were sent")
     print("ok  backtest started from the page")
+    # deleting it: the list and the right column refresh without reloading the page
+    runs_now = page.locator("#bt-left tr[data-ref]").count()
+    page.once("dialog", lambda d: d.accept())
+    page.locator("#bt-right #delete").click()
+    expect(page.locator("#bt-left tr[data-ref]")).to_have_count(runs_now - 1)
+    expect(page.locator("#bt-left h2", has_text="Backtest runs")).to_contain_text(f"({runs_now - 1})")
+    expect(page.locator("#bt-right .runtitle")).not_to_contain_text("from-gui")
+    if newest.exists():
+        raise SystemExit("delete: the run folder is still there")
+    print("ok  deleting a run refreshes the dashboard")
 
     # Live: deploy from the page; it trades the days and shows its account
     page.goto(BASE + "#/live/HoldPy")

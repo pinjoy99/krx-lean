@@ -209,6 +209,16 @@ autosave extension saves), waits 1.5 s, removes the iframe and answers `released
 JupyterLab after that (or after 400 ms without an answer). *Open in a new tab* does the same before
 `window.open`.
 
+**Run view** (`api_run`, `run.js`): LEAN's result doesn't name the benchmark, and a strategy can
+choose it at run time (top-market-cap: KOSDAQ or KOSPI 200 by a parameter), so
+`results.benchmark_name` finds it from the raw benchmark series: it equals the daily closes (the
+last on or before each sample, the first before the data, a day either side for LEAN's midnight-KST
+sampling) of one of the workspace's index files, or the factor-adjusted closes of a stock whose
+code appears in the run's code snapshot or parameters; else "Benchmark". `max_drawdown` takes the
+deepest point of the full drawdown series (the chart's is thinned), the peak before it and the
+recovery after it. Deleting or renaming a run sets `pageState.stale` and re-routes (`go`), so the
+left column reloads even when the address doesn't change.
+
 **Top bar** (`main.js`): *Workspace*, a project list (from `/api/workspace`, refreshed on the
 Workspace page; the last project in `localStorage`, try/catch) and the project's Research ·
 Backtest · Live as tabs; choosing a project keeps the dashboard.
