@@ -33,7 +33,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetTimeZone("Asia/Seoul");
             SetAccountCurrency("KRW");
             KrxModels.SetPeriod(this, "2011-01-01", "2026-09-30");   // start_date / end_date parameters override it
-            SetCash(1_000_000_000);
+            SetCash(100_000_000);         // 100,000,000 KRW, as every template
 
             _holdings = GetParameter("holdings", 20);
             // parameter "market": KOSPI (default), KOSDAQ, or ALL (both); the benchmark follows it

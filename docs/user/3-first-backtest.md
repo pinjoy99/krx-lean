@@ -37,7 +37,9 @@ klean backtest Top20
 
 Templates: `buy-hold` (default: buys Samsung Electronics; another stock with
 `--parameter code 000660`), `top-market-cap` (the example
-strategy: the 20 largest KOSPI common stocks, equal weight, rebalanced monthly), `empty`.
+strategy: the 20 largest KOSPI common stocks, equal weight, rebalanced monthly), `empty`. Every
+template starts with ₩100,000,000 (`set_cash` / `SetCash` in `main.py` / `Main.cs`); live
+deployments start with the same by default (`--cash`, or the form on the Live page).
 For C#: `klean create-project Top20CS --language csharp --template top-market-cap`.
 Every project also gets a starter research notebook, `research.ipynb` ([5. Tools](5-tools.md#research-notebooks)).
 In the GUI (`klean gui`), the Workspace dashboard's *New project* box does the same and opens

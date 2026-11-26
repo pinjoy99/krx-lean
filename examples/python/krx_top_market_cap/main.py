@@ -21,7 +21,7 @@ class KrxTopMarketCapAlgorithm(QCAlgorithm):
         self.set_time_zone("Asia/Seoul")
         self.set_account_currency("KRW")
         set_period(self, "2011-01-01", "2026-09-30")   # start_date / end_date parameters override it
-        self.set_cash(1_000_000_000)
+        self.set_cash(100_000_000)          # 100,000,000 KRW, as every template
 
         self.holdings = int(self.get_parameter("holdings", str(self.HOLDINGS)))
         # parameter "market": KOSPI (default), KOSDAQ, or ALL (both); the benchmark follows it

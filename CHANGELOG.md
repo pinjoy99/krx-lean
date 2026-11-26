@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.34 — 2026-11-26
+
+- Starting cash is ₩100,000,000 everywhere by default: the top-market-cap template and example
+  (Python and C#) started with ₩1,000,000,000; the other templates and live deployments already
+  used ₩100,000,000. Existing projects keep the cash in their own `main.py` / `Main.cs`.
+
 ## 0.0.33 — 2026-11-26
 
 Backtest dashboard:
