@@ -3,7 +3,7 @@
 import {TOKEN, api, compareHash, esc, href, optHash, pageState, runHash, showError} from "./util.js";
 import {pageWorkspace} from "./pages/workspace.js";
 import {pageBacktest} from "./pages/backtest.js";
-import {pageResearch} from "./pages/research.js";
+import {leaveResearch, pageResearch} from "./pages/research.js";
 import {pageLive} from "./pages/live.js";
 
 const LAST = "klean-last-project";
@@ -48,9 +48,12 @@ async function route() {
   const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
   const dash = ["research", "backtest", "live"].includes(parts[0]) ? parts[0] : "";
   const project = dash ? parts[1] || "" : "";
-  // leaving a project's Research: save its JupyterLab layout into the project now (also every minute)
-  if (nav.dash === "research" && nav.project && (dash !== "research" || project !== nav.project))
-    api("/api/research-layout", {}, {project: nav.project, action: "save"}).catch(() => {});
+  // leaving Research: let JupyterLab finish saving open files, then save the project's layout
+  // into the project (also done every minute)
+  if (nav.dash === "research" && (dash !== "research" || project !== nav.project)) {
+    await leaveResearch();
+    if (nav.project) api("/api/research-layout", {}, {project: nav.project, action: "save"}).catch(() => {});
+  }
   nav.dash = dash; nav.project = project;
   try {
     if (!TOKEN) throw new Error("Open the URL printed by `klean gui` (it includes the access token).");

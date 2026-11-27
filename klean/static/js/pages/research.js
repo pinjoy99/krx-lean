@@ -50,6 +50,17 @@ async function saveByLeaving(frame) {
   await sleep(1500);
 }
 
+// Leaving the Research dashboard (another dashboard or project): the autosave extension saves
+// open files when JupyterLab loses focus, but replacing the page right away can cut that save off
+// mid-request (an edit lost). Take focus out of JupyterLab and give the save a moment first.
+export async function leaveResearch() {
+  const frame = document.querySelector("iframe.lab");
+  if (!frame) return;
+  frame.blur();
+  window.focus();
+  await sleep(800);
+}
+
 const STATUS = {
   installing: "Installing JupyterLab into the workspace's Python environment (first time only, a few minutes)…",
   starting: "Starting JupyterLab…",

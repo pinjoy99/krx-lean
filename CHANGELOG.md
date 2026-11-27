@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.37 — 2026-11-27
+
+- Fix: an edit made in Research right before switching to another dashboard or project could be
+  lost (seen once in CI): the autosave extension starts saving when JupyterLab loses focus, but
+  the page was replaced at once, which could cut the save off. Leaving Research now takes focus
+  out of JupyterLab and waits a moment for the save before switching.
+
 ## 0.0.36 — 2026-11-27
 
 - `klean live status`: once the pre-open run is scheduled, a KIS-PAPER deployment's "missed" note
