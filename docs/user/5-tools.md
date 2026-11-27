@@ -271,7 +271,19 @@ klean's own paper broker: broker `kis-paper`. klean only ever connects to KIS's 
    days. At that time the strategy gets the previous trading day's prices from KIS (the KRX
    files have them only later that day; universe strategies use the latest KRX universe file),
    and its market orders join the opening auction: they fill at the open, as in a backtest.
-   Runs outside the window are skipped, so two schedules are fine:
+   **Without this schedule the deployment never trades** (no other run happens in that window;
+   `klean update data` skips KIS-PAPER deployments). The easy way, in your time zone:
+
+   ```bash
+   cd ~/krx-workspace
+   klean schedule install      # the pre-open run (and the daily data update, unless you have one)
+   klean schedule status       # what's scheduled, next and last runs, whether cron runs
+   ```
+
+   `klean live deploy --broker kis-paper` (and the Live page) warn when no pre-open run is
+   scheduled; `klean live status` shows each deployment's broker, its next pre-open run, and
+   "missed N pre-open runs" when a trading day's pre-open passed without one. By hand instead:
+   runs outside the window are skipped, so two schedules are fine:
 
    | You are in | Run `klean live run` at (local) |
    |---|---|

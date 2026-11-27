@@ -33,8 +33,18 @@ function brokerBadge(d) {
     : '<span class="badge paper">paper</span>';
 }
 
+// "2026-11-30T08:30:00+09:00" -> "Mon 2026-11-30 08:30 KST (Sun 18:30 here)"
+function kst(iso) {
+  const t = new Date(iso), days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const k = new Date(t.getTime() + 9 * 3600e3);       // KST wall clock, read in UTC
+  const two = n => String(n).padStart(2, "0");
+  return `${days[k.getUTCDay()]} ${k.toISOString().slice(0, 10)} ${two(k.getUTCHours())}:${two(k.getUTCMinutes())} KST` +
+    ` (${days[t.getDay()]} ${two(t.getHours())}:${two(t.getMinutes())} here)`;
+}
+
 function stateBadge(d) {
-  const cls = {running: "ok", stopped: "", failed: "no", "waiting for data": "run"}[d.state] ?? "";
+  const cls = {running: "ok", stopped: "", failed: "no", "waiting for data": "run", "waiting for the pre-open run": "run"}[d.state]
+    ?? (d.state.startsWith("missed") ? "no" : "");
   return `${brokerBadge(d)} <span class="badge ${cls}">${esc(d.state)}</span>${d.backdated ? ' <span class="badge demo">backdated</span>' : ""}`;
 }
 
@@ -152,7 +162,11 @@ async function drawRight(id) {
           <button class="secondary" id="lvstop">Stop</button>` : ""}</div>
       <p class="muted">${d.broker === "kis-paper" || d.broker === "kis" ? "KIS-PAPER (Korea Investment 모의투자) · orders at the pre-open auction (08:30–08:59 KST) · " : "Paper broker · "}trading from <b>${esc(d.first_session)}</b> with ${params}${d.source_run ? ` (from ${esc(d.source_run)})` : ""}.
         Code frozen ${esc(d.created_utc.slice(0, 10))}, starting cash ${won(d.start_cash)}.
-        ${d.state === "waiting for data" ? `Waiting for the first trading day's data: <code>klean update data</code> runs it.` : ""}</p>
+        ${d.state === "waiting for data" ? `Waiting for the first trading day's data: <code>klean update data</code> runs it.` : ""}
+        ${d.next_pre_open ? `Next pre-open run: <b>${esc(kst(d.next_pre_open))}</b>.` : ""}</p>
+      ${d.missed_pre_opens?.length ? `<div class="failbox"><b>Missed ${d.missed_pre_opens.length} pre-open run(s)</b> (${esc(d.missed_pre_opens.join(", "))}): no
+        <code>klean live run</code> ran in the 08:30–08:59 KST window, so nothing was traded those days.</div>` : ""}
+      ${d.schedule_warning ? `<div class="failbox"><b>Not scheduled.</b> ${esc(d.schedule_warning)}</div>` : ""}
       <span id="lvmsg" class="muted"></span>
     </div>
     <div class="tiles">

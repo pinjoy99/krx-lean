@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.35 — 2026-11-27
+
+A KIS-PAPER deployment trades only when `klean live run` runs in KRX's pre-open auction
+(08:30–08:59 KST). Without that schedule it waited silently, shown as "waiting for data":
+- **`klean live status`** has a broker column; KIS-PAPER deployments say "waiting for the pre-open
+  run" with the next pre-open in KST and your local time, and **"missed N pre-open runs"** when a
+  trading day's pre-open passed without a run. The Live page shows the same, and a "Not scheduled"
+  warning while no pre-open run is in the crontab.
+- **`klean live deploy --broker kis-paper`** checks the crontab and warns with the exact line to add.
+- **`klean schedule install | status | remove`**: the daily data update and the KIS-PAPER pre-open run
+  in your crontab, at the right times for your time zone (both daylight-saving hours). It keeps
+  lines you wrote (a data update you scheduled yourself stays), saves the old crontab first, logs
+  to `.klean/logs/`; `status` shows next and last runs and whether cron is running.
+
 ## 0.0.34 — 2026-11-26
 
 - Starting cash is ₩100,000,000 everywhere by default: the top-market-cap template and example

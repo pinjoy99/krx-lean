@@ -31,6 +31,13 @@ Recent days that KRX hasn't published yet are retried on the next run. Rerun `ri
 
 ## Run it automatically
 
+The easy way: `klean schedule install` (in the workspace) adds the daily data update and, for
+KIS-PAPER deployments, the pre-open run to your crontab, at the right times for your time zone
+(daylight saving included). It keeps lines you wrote yourself; `klean schedule status` shows
+what's scheduled, the next and last runs (logs in `.klean/logs/`) and whether cron is running;
+`klean schedule remove` takes klean's lines out again. Under WSL cron runs only while WSL is up:
+Windows Task Scheduler (below) is more reliable. By hand instead:
+
 Save as `~/bin/krx-update` and `chmod +x` it (use the folder `which klean` shows if yours
 differs from `~/.krx-lean/venv/bin`):
 

@@ -33,6 +33,7 @@ Live paper trading (LEAN live mode on daily KRX data, klean's paper broker; no r
     klean live stop NAME ID                             stop one (its account stays)
     klean live deploy NAME --broker kis-paper           KIS-PAPER: a Korea Investment 모의투자 account
     klean live kis-check                                check the KIS-PAPER keys in ~/.config/krx-lean.env
+    klean schedule install | status | remove           the daily jobs in your crontab: data update, KIS-PAPER pre-open
 
 Other
     klean gui [--port N] [--no-browser]                 local web page: projects, runs, charts, compare
@@ -262,6 +263,33 @@ def cmd_project_create(args) -> None:
     project = projects.create(ws, args.name, args.language, args.template)
     print(f"created {project} ({args.language}, {args.template}): {projects.main_file(project).name}, research.ipynb.\n"
           f"Run: klean backtest \"{args.name}\"   or open the notebook: klean research \"{args.name}\"")
+
+
+def cmd_schedule(args) -> int:
+    from klean import schedule
+    ws = Workspace.load(Path.cwd())
+    if args.schedule_cmd == "install":
+        jobs = tuple(j for j in ("data", "kis") if not getattr(args, f"no_{j}"))
+        schedule.install(ws, jobs)
+    elif args.schedule_cmd == "remove":
+        schedule.remove(ws)
+    else:
+        schedule.status(ws)
+    return 0
+
+
+def kis_note(name: str, sm: dict) -> str:
+    """The line under `klean live status` for a KIS-PAPER deployment: its next pre-open run, and
+    what to do if pre-open runs were missed."""
+    import datetime as dt
+    nxt = dt.datetime.fromisoformat(sm["next_pre_open"])
+    local = nxt.astimezone()
+    text = (f"{name} (KIS-PAPER): next pre-open {nxt:%a %Y-%m-%d %H:%M} KST = {local:%a %H:%M} here; "
+            "`klean live run` must run then (08:30-08:59 KST)")
+    if sm.get("missed_pre_opens"):
+        text += (f"\n  missed: no run at the pre-open of {', '.join(sm['missed_pre_opens'])}. "
+                 "Schedule it: `klean schedule install` (or see `klean schedule status`)")
+    return text
 
 
 def cmd_project_delete(args) -> int:
@@ -592,7 +620,9 @@ def cmd_live(args) -> int:
                   f"worth ₩{record['cash']:,.0f}; "
                   "it trades at the pre-open auction (08:30-08:59 KST) of each trading day, from the next one"
                   + (f", parameters {record['parameters']}" if record["parameters"] else ""))
-            print("  schedule `klean live run` inside that window (docs/user/5-tools.md, KIS-PAPER)")
+            from klean import schedule
+            hint = schedule.kis_hint(ws)
+            print(f"  WARNING: {hint}" if hint else "  the pre-open `klean live run` is scheduled (`klean schedule status`)")
             return 0
         print(f"live paper deployment {project.name}/{dep.name}: ₩{record['cash']:,.0f}, trading from "
               f"{record['first_session']}" + (" (BACKDATED: days the data already had)" if record["backdated"] else "")
@@ -602,15 +632,19 @@ def cmd_live(args) -> int:
             print("  waiting for the next trading day's data: `klean update data` runs it")
         return 0 if all(r["ok"] for r in runs) else 1
     if args.live_cmd == "status":
-        rows = []
+        rows, notes = [], []
         for project in ([ws.root / args.project] if args.project else projects.list_projects(ws)):
             for dep in live.deployments(project):
                 sm = live.summary(ws, dep)
-                rows.append([f"{project.name}/{dep.name}", sm["state"] + (" (backdated)" if sm["backdated"] else ""),
+                rows.append([f"{project.name}/{dep.name}", sm["broker"], sm["state"] + (" (backdated)" if sm["backdated"] else ""),
                              sm["first_session"], sm["last_session"] or "—", f"{sm['days']}",
                              f"₩{sm['equity']:,.0f}", f"{sm['net_profit']:+.2f}%", f"{sm['open_orders']}"])
-        print(results.format_table(["deployment", "state", "from", "to", "days", "equity", "net", "waiting orders"], rows)
+                if sm.get("next_pre_open"):
+                    notes.append(kis_note(f"{project.name}/{dep.name}", sm))
+        print(results.format_table(["deployment", "broker", "state", "from", "to", "days", "equity", "net", "waiting orders"], rows)
               if rows else "no live deployments (`klean live deploy PROJECT`)")
+        for note in notes:
+            print(note)
         return 0
     if args.live_cmd == "run":
         if args.id:
@@ -981,6 +1015,15 @@ def main(argv: list[str] | None = None) -> int:
     l.add_argument("project")
     l.add_argument("id")
     l.set_defaults(func=cmd_live)
+
+    s = sub.add_parser("schedule", help="the daily jobs in your crontab: data update, KIS-PAPER pre-open run (install | status | remove)")
+    ssub = s.add_subparsers(dest="schedule_cmd", required=True, metavar="<action>")
+    x = ssub.add_parser("install", help="add the jobs not scheduled yet, in your time zone (keeps lines you wrote)")
+    x.add_argument("--no-data", action="store_true", help="leave out the daily data update")
+    x.add_argument("--no-kis", action="store_true", help="leave out the KIS-PAPER pre-open run")
+    x.set_defaults(func=cmd_schedule)
+    ssub.add_parser("status", help="what's scheduled, next and last runs, whether cron runs").set_defaults(func=cmd_schedule)
+    ssub.add_parser("remove", help="remove klean's lines for this workspace").set_defaults(func=cmd_schedule)
 
     s = sub.add_parser("doctor", help="check dotnet, the LEAN build, data and the Python env")
     s.set_defaults(func=cmd_doctor)

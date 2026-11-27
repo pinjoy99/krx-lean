@@ -131,6 +131,41 @@ def previous_trading_day(ws: Workspace, day: dt.date) -> str:
     return d.isoformat()
 
 
+PRE_OPEN = dt.time(8, 30)              # KST: KRX's pre-open auction, 08:30-08:59:30 (kis.in_pre_open)
+PRE_OPEN_END = dt.time(8, 59, 30)
+
+
+def next_pre_open(ws: Workspace, now_kst: dt.datetime) -> dt.datetime:
+    """The next pre-open auction (its 08:30 KST start) on a trading day, or the one in progress."""
+    holidays = krx_holidays(ws)
+    day = now_kst.date()
+    if now_kst.time() >= PRE_OPEN_END:
+        day += dt.timedelta(days=1)
+    while not is_trading_day(ws, day, holidays):
+        day += dt.timedelta(days=1)
+    return dt.datetime.combine(day, PRE_OPEN, tzinfo=now_kst.tzinfo)
+
+
+def missed_pre_opens(ws: Workspace, record: dict, last_session: str, now_kst: dt.datetime) -> list[str]:
+    """KIS-PAPER: the trading days whose pre-open auction has passed since the deployment was made
+    without a run (each would have traded the previous trading day's session)."""
+    try:
+        created = dt.datetime.fromisoformat(record["created_utc"].replace("Z", "+00:00")).astimezone(now_kst.tzinfo)
+    except (KeyError, ValueError):
+        return []
+    holidays = krx_holidays(ws)
+    ran = {r["session"] for r in record.get("runs", [])}
+    missed, day = [], created.date()
+    while day <= now_kst.date():
+        end = dt.datetime.combine(day, PRE_OPEN_END, tzinfo=now_kst.tzinfo)
+        if is_trading_day(ws, day, holidays) and created < end < now_kst:
+            session = previous_trading_day(ws, day)
+            if session >= record.get("first_session", "") and session not in ran and session > (last_session or ""):
+                missed.append(day.isoformat())
+        day += dt.timedelta(days=1)
+    return missed
+
+
 # ---------------------------------------------------------------- deployments
 
 def live_dir(project: Path) -> Path:
@@ -515,12 +550,21 @@ def summary(ws: Workspace, dep: Path) -> dict:
     record, book = load(dep), ledger(dep)
     equity = book.get("equity", [])
     last_run = record["runs"][-1] if record["runs"] else None
+    kis_info = {}
+    if is_kis(record) and record["status"] != "stopped":
+        from klean import kis
+        now = kis.now_kst()
+        missed = missed_pre_opens(ws, record, book.get("last_session", ""), now)
+        kis_info = {"next_pre_open": next_pre_open(ws, now).isoformat(), "missed_pre_opens": missed}
     if record["status"] == "stopped":
         state = "stopped"
     elif last_run and not last_run["ok"]:
         state = "failed"
+    elif kis_info.get("missed_pre_opens"):
+        n = len(kis_info["missed_pre_opens"])
+        state = f"missed {n} pre-open run{'s' if n > 1 else ''}"           # no `klean live run` in the window
     elif not equity:
-        state = "waiting for data"
+        state = "waiting for the pre-open run" if kis_info else "waiting for data"
     else:
         state = "running"
     start_cash = book.get("start_cash") or record["cash"]
@@ -529,7 +573,8 @@ def summary(ws: Workspace, dep: Path) -> dict:
             "last_session": book.get("last_session", ""), "last_run": last_run,
             "equity": end, "net_profit": (end / start_cash - 1) * 100 if start_cash else 0.0,
             "start_cash": start_cash, "cash": book.get("cash"), "holdings": len(book.get("holdings", {})),
-            "open_orders": len(book.get("open_orders", []))}
+            "open_orders": len(book.get("open_orders", [])), "broker": "kis-paper" if is_kis(record) else "paper",
+            **kis_info}
 
 
 # ---------------------------------------------------------------- for the GUI

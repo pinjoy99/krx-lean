@@ -89,7 +89,7 @@ class CommandsTest(unittest.TestCase):
         listed = text.split("positional arguments:")[1].split("options:")[0]
         commands = [line.split()[0] for line in listed.splitlines() if line.startswith("    ") and line[4] != " "]
         self.assertEqual(commands, ["install", "init", "update", "status", "create-project", "delete-project", "backtest", "optimize",
-                                    "report", "research", "logs", "compare", "config", "live", "doctor", "gui"])
+                                    "report", "research", "logs", "compare", "config", "live", "schedule", "doctor", "gui"])
         self.assertIn("klean update all", text)
 
     def test_noun_required(self):

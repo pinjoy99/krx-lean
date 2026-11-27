@@ -92,3 +92,7 @@ prints and `console.txt` in the run folder (`klean logs PROJECT --console`).
 | `waiting for pid … (another package install)` / `(building the live plugin)` / `(the data)` | another klean process is installing packages, building the plugin or using the data: this one goes on when it's done |
 | `warning: file locks don't work in …` | the workspace is on a drive without file locks (possibly `/mnt/c` under WSL), so klean can't keep its processes apart there: move it into your Linux home folder (`~`) |
 | `… (in /other/workspace) already trades this KIS account` / `… trades this account now: not run` | a deployment in another klean workspace trades this 모의투자 account: stop one of them |
+| `waiting for the pre-open run` (KIS-PAPER) | normal until the next pre-open auction (08:30–08:59 KST) on a trading day; `klean live status` shows when that is in your time |
+| `missed N pre-open runs` (KIS-PAPER) | no `klean live run` ran during the pre-open auction on those days, so nothing was traded. Schedule it: `klean schedule install`, then `klean schedule status`. It trades again from the next pre-open (missed days can't be traded afterwards) |
+| `klean schedule status`: `cron: NOT RUNNING` | `sudo service cron start` (WSL: also keep WSL running, or use Windows Task Scheduler: [6. Daily update](6-daily-update.md#wsl2-windows-task-scheduler-recommended)) |
+| `no crontab command` | `sudo apt install -y cron`, or schedule the jobs another way |

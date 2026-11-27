@@ -220,7 +220,11 @@ def _env_has_kis() -> bool:
 
 def api_live_deployment(ws: Workspace, q: dict) -> dict:
     dep = live.find(inside(ws, ws.root / q["project"][0]), q["id"][0])
-    return live.detail(ws, dep)
+    d = live.detail(ws, dep)
+    if d.get("broker") == "kis-paper" and d.get("status") == "running":
+        from klean import schedule
+        d["schedule_warning"] = schedule.kis_hint(ws)        # no pre-open run scheduled: it never trades
+    return d
 
 
 def api_live_console(ws: Workspace, q: dict) -> dict:
