@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.36 — 2026-11-27
+
+- `klean live status`: once the pre-open run is scheduled, a KIS-PAPER deployment's "missed" note
+  says so ("it trades from the next one") instead of still asking to schedule it; a deployment with
+  no trading day yet shows "—" in the "to" column (it showed the day before its first).
+
 ## 0.0.35 — 2026-11-27
 
 A KIS-PAPER deployment trades only when `klean live run` runs in KRX's pre-open auction

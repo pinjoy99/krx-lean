@@ -278,7 +278,16 @@ def cmd_schedule(args) -> int:
     return 0
 
 
-def kis_note(name: str, sm: dict) -> str:
+def kis_scheduled(ws) -> bool | None:
+    """Is a pre-open `klean live run` in the crontab? (None: can't tell, e.g. no crontab command)"""
+    from klean import schedule
+    try:
+        return schedule.scheduled(ws, "kis")
+    except KleanError:
+        return None
+
+
+def kis_note(name: str, sm: dict, scheduled: bool | None = None) -> str:
     """The line under `klean live status` for a KIS-PAPER deployment: its next pre-open run, and
     what to do if pre-open runs were missed."""
     import datetime as dt
@@ -287,8 +296,9 @@ def kis_note(name: str, sm: dict) -> str:
     text = (f"{name} (KIS-PAPER): next pre-open {nxt:%a %Y-%m-%d %H:%M} KST = {local:%a %H:%M} here; "
             "`klean live run` must run then (08:30-08:59 KST)")
     if sm.get("missed_pre_opens"):
-        text += (f"\n  missed: no run at the pre-open of {', '.join(sm['missed_pre_opens'])}. "
-                 "Schedule it: `klean schedule install` (or see `klean schedule status`)")
+        text += f"\n  missed: no run at the pre-open of {', '.join(sm['missed_pre_opens'])}. "
+        text += ("The pre-open run is scheduled now: it trades from the next one (`klean schedule status`)"
+                 if scheduled else "Schedule it: `klean schedule install` (or see `klean schedule status`)")
     return text
 
 
@@ -637,10 +647,10 @@ def cmd_live(args) -> int:
             for dep in live.deployments(project):
                 sm = live.summary(ws, dep)
                 rows.append([f"{project.name}/{dep.name}", sm["broker"], sm["state"] + (" (backdated)" if sm["backdated"] else ""),
-                             sm["first_session"], sm["last_session"] or "—", f"{sm['days']}",
+                             sm["first_session"], (sm["last_session"] if sm["days"] else "") or "—", f"{sm['days']}",
                              f"₩{sm['equity']:,.0f}", f"{sm['net_profit']:+.2f}%", f"{sm['open_orders']}"])
                 if sm.get("next_pre_open"):
-                    notes.append(kis_note(f"{project.name}/{dep.name}", sm))
+                    notes.append(kis_note(f"{project.name}/{dep.name}", sm, kis_scheduled(ws)))
         print(results.format_table(["deployment", "broker", "state", "from", "to", "days", "equity", "net", "waiting orders"], rows)
               if rows else "no live deployments (`klean live deploy PROJECT`)")
         for note in notes:

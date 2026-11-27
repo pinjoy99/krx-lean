@@ -104,6 +104,10 @@ class KisStatusTest(unittest.TestCase):
         self.assertIn("next pre-open Mon 2026-11-30 08:30 KST", note)
         self.assertIn("missed: no run at the pre-open of 2026-11-26, 2026-11-27", note)
         self.assertIn("klean schedule install", note)
+        with self.at("2026-11-28T04:59"):                       # once scheduled, the note says so
+            note = cli.kis_note("top10/x", live.summary(self.ws, self.dep), scheduled=True)
+        self.assertIn("The pre-open run is scheduled now: it trades from the next one", note)
+        self.assertNotIn("klean schedule install", note)
 
 
 class ScheduleTest(unittest.TestCase):
